@@ -24,6 +24,7 @@ body {
 
 button,
 input,
+select,
 .loadButton {
   font: inherit;
 }
@@ -149,7 +150,8 @@ h2 {
   font-size: 12px;
 }
 
-.field input {
+.field input,
+.field select {
   width: 100%;
   min-height: 36px;
   border: 1px solid #3f463f;
@@ -227,6 +229,10 @@ h2 {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
+}
+
+.lightingFields {
+  grid-template-columns: repeat(3, minmax(78px, 1fr));
 }
 
 .renderGallery {

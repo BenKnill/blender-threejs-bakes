@@ -1,5 +1,6 @@
 import { createEditorScene } from "./scene.js";
 import { createInstanceStore } from "./instances.js";
+import { applyLightingToControls, createLightingControls, currentLighting } from "./lighting.js";
 import { applyLayoutFields, cameraSnapshot, currentLayout, downloadLayout } from "./layout-io.js";
 import { loadManifest } from "./manifest-loader.js";
 import { createProxyLoader } from "./proxies.js";
@@ -19,6 +20,18 @@ const renderInputs = {
   height: document.querySelector("#renderHeight"),
   samples: document.querySelector("#renderSamples"),
 };
+const lightingInputs = {
+  preset: document.querySelector("#lightingPreset"),
+  azimuth: document.querySelector("#sunAzimuth"),
+  elevation: document.querySelector("#sunElevation"),
+  sunColor: document.querySelector("#sunColor"),
+  sunStrength: document.querySelector("#sunStrength"),
+  sunAngle: document.querySelector("#sunAngle"),
+  worldType: document.querySelector("#worldType"),
+  worldStrength: document.querySelector("#worldStrength"),
+  worldColor: document.querySelector("#worldColor"),
+  exposure: document.querySelector("#exposure"),
+};
 
 let savedCamera = null;
 const assetMap = new Map();
@@ -30,6 +43,10 @@ const store = createInstanceStore({
   assetMap,
   createProxyObject: proxyLoader.createProxyObject,
   onChange: renderInstances,
+});
+createLightingControls({
+  elements: lightingInputs,
+  onChange: editorScene.applyLighting,
 });
 
 createSelection({
@@ -186,6 +203,7 @@ function readCurrentLayout() {
   return currentLayout({
     nameInput: layoutNameInput,
     renderInputs,
+    lighting: currentLighting(lightingInputs),
     instances: store.instances,
     camera: editorScene.camera,
     orbit: editorScene.orbit,
@@ -213,6 +231,12 @@ async function loadLayoutFromFile(event) {
   applyLayoutFields(layout, {
     nameInput: layoutNameInput,
     renderInputs,
+    lightingControls: {
+      apply(lighting) {
+        applyLightingToControls(lightingInputs, lighting);
+        editorScene.applyLighting(currentLighting(lightingInputs));
+      },
+    },
     camera: editorScene.camera,
     orbit: editorScene.orbit,
   });

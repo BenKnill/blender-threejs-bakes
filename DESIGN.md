@@ -1,7 +1,7 @@
 # Blender ⇄ Three.js Bake Workflow — Design
 
 Date: 2026-06-25
-Status: **Design only** (no code yet — approved scope: plan, full design + file layout)
+Status: **Implemented prototype** — schema-v2 layouts carry camera, render, and lighting intent.
 
 ## Goal
 
@@ -97,7 +97,7 @@ many times).
 ```json
 {
   "name": "first_composition",
-  "schema": 1,
+  "schema": 2,
   "space": "threejs_yup",
   "instances": [
     {
@@ -114,11 +114,31 @@ many times).
     "fov_deg":  45,
     "up":       [0, 1, 0]
   },
-  "render": { "width": 1920, "height": 1080, "samples": 256 }
+  "render": { "width": 1920, "height": 1080, "samples": 256 },
+  "lighting": {
+    "preset": "golden_hour",
+    "sun": {
+      "azimuth_deg": 120,
+      "elevation_deg": 10,
+      "color": [1.0, 0.78, 0.48],
+      "strength": 4.0,
+      "angle_deg": 1.8
+    },
+    "world": {
+      "type": "sky",
+      "strength": 0.8,
+      "color": [0.05, 0.055, 0.06],
+      "rotation_deg": 0
+    },
+    "exposure": 0.35
+  }
 }
 ```
 
 Why quaternion not euler: avoids gimbal/order ambiguity across the two engines.
+
+Schema 1 layouts without a `lighting` block are still accepted by the Blender renderer
+and use the legacy soft area key. Schema 2 is what the editor writes.
 
 ## Coordinate conversion (the one piece of real math)
 
@@ -170,8 +190,9 @@ it works offline). Features, in priority order:
    the render camera to the current view (stores pos/target/fov).
 4. **Instance list** — select, duplicate, delete, rename.
 5. **Export Layout** → downloads `<name>.layout.json`. **Load Layout** → restores.
-6. Matte/neutral lighting + ground plane far below (per findings: a too-close
-   floor turns it into a "table accident"). Preview is for blocking, not beauty.
+6. Lighting preset controls drive the preview directional/hemisphere lights and are
+   serialized into the layout for Blender. Preview is predictive for direction, warmth,
+   and rough intensity, not pixel-identical to Cycles.
 
 Deliberately **not** in the editor: materials, final lighting, bloom. Those live
 in the `.blend` assets and the render script. The editor is a blocking tool.
@@ -189,8 +210,8 @@ Blender --background --python scripts/render_layout.py -- layouts/foo.layout.jso
    memory, but append is simpler and avoids broken relative paths.)
 3. Build camera from converted pos/target, set `lens`/`fov`, aim with track-to.
 4. Engine = Cycles, samples from layout (default 256), set resolution, denoise on.
-5. Lighting: start with a world HDRI (the BlenderKit `night` EXR is already on
-   disk) so first renders aren't black. Add a lighting-rig hook later.
+5. Lighting: schema-v2 layouts build a SUN lamp plus color/Nishita world and exposure.
+   Schema-1 layouts use the legacy soft area key for back compatibility.
 6. Render → `renders/<name>.png`. Write a small `renders/<name>.receipt.json`
    (inputs, sample count, asset list, timestamp) — receipts proved their worth
    in the prior run.
