@@ -1,0 +1,50 @@
+{
+  "name": "first_composition",
+  "schema": 1,
+  "space": "threejs_yup",
+  "instances": [
+    {
+      "instance_id": "japanese_zen_shrine_asian_temple_001",
+      "asset_id": "japanese_zen_shrine_asian_temple",
+      "position": [
+        0,
+        -0.4728286139579865,
+        1.296374089732919
+      ],
+      "quaternion": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        0.26393177500886383,
+        1
+      ]
+    }
+  ],
+  "camera": {
+    "position": [
+      -18.82546005740278,
+      20.067272265419252,
+      5.33761127955087
+    ],
+    "target": [
+      0,
+      0.8,
+      0
+    ],
+    "fov_deg": 45,
+    "up": [
+      0,
+      1,
+      0
+    ]
+  },
+  "render": {
+    "width": 1920,
+    "height": 1080,
+    "samples": 256
+  }
+}

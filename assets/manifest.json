@@ -1,0 +1,443 @@
+{
+  "generated": "2026-06-26T03:13:07.199590+00:00",
+  "assets": [
+    {
+      "id": "bone_broken",
+      "name": "Bone Broken",
+      "glb": "glb/bone_broken.glb",
+      "source_blend": "/Users/boxer/asset-menagerie/blenderkit-live/model/bone-broken_c48f5413-8af7-4c41-88b5-ddf8256a9dbd.blend",
+      "collection": "Bone broken",
+      "bbox": [
+        0.3164,
+        0.1988,
+        0.1485
+      ],
+      "up_axis": "Z",
+      "proxy": {
+        "mode": "full",
+        "triangles_before": 155532,
+        "triangles_target": null,
+        "size_mb": 14.652
+      }
+    },
+    {
+      "id": "cave2",
+      "name": "Cave2",
+      "glb": "glb/cave2.glb",
+      "source_blend": "/Users/boxer/asset-menagerie/blenderkit-live/model/cave2_2ca4e0a6-8aed-427e-97c5-2d2c84bf8978.blend",
+      "collection": "Cave2",
+      "bbox": [
+        16.8942,
+        12.5851,
+        6.069
+      ],
+      "up_axis": "Z",
+      "proxy": {
+        "mode": "lightweight",
+        "triangles_before": 750043,
+        "triangles_target": 50000,
+        "decimate_ratio": 0.066663,
+        "full_size_mb": 429.304,
+        "size_mb": 2.103
+      }
+    },
+    {
+      "id": "crystal_formation_yellow_red",
+      "name": "Crystal Formation Yellow Red",
+      "glb": "glb/crystal_formation_yellow_red.glb",
+      "source_blend": "/Users/boxer/asset-menagerie/blenderkit-live/model/crystal-formation-yellow-red_445e6d52-075e-4608-bb18-ac567c20bf4d.blend",
+      "collection": "Crystal Formation Yellow Red",
+      "bbox": [
+        0.3789,
+        0.3568,
+        0.2908
+      ],
+      "up_axis": "Z",
+      "proxy": {
+        "mode": "full",
+        "triangles_before": 13200,
+        "triangles_target": null,
+        "size_mb": 0.746
+      }
+    },
+    {
+      "id": "domestic_thumb_oiler_bronze",
+      "name": "Domestic Thumb Oiler Bronze",
+      "glb": "glb/domestic_thumb_oiler_bronze.glb",
+      "source_blend": "/Users/boxer/asset-menagerie/blenderkit-live/model/domestic-thumb-oiler-bronze_c7531541-5e6a-48ff-aef5-32d53fcd1530.blend",
+      "collection": "Domestic Thumb Oiler Bronze",
+      "bbox": [
+        0.0865,
+        0.0865,
+        0.2746
+      ],
+      "up_axis": "Z",
+      "proxy": {
+        "mode": "full",
+        "triangles_before": 3740,
+        "triangles_target": null,
+        "size_mb": 16.385
+      }
+    },
+    {
+      "id": "japanese_zen_shrine_asian_temple",
+      "name": "Japanese Zen Shrine Asian Temple",
+      "glb": "glb/japanese_zen_shrine_asian_temple.glb",
+      "source_blend": "/Users/boxer/asset-menagerie/blenderkit-live/model/japanese-zen-shrine---asian-temple_db2ac6be-4fcb-4fbe-8f93-861ef422c947.blend",
+      "collection": "Japanese Zen Shrine - Asian Temple",
+      "bbox": [
+        13.1607,
+        9.5672,
+        9.2728
+      ],
+      "up_axis": "Z",
+      "proxy": {
+        "mode": "lightweight",
+        "triangles_before": 684729,
+        "triangles_target": 50000,
+        "decimate_ratio": 0.073022,
+        "full_size_mb": 73.904,
+        "size_mb": 11.15
+      }
+    },
+    {
+      "id": "lava_asteroid",
+      "name": "Lava Asteroid",
+      "glb": "glb/lava_asteroid.glb",
+      "source_blend": "/Users/boxer/asset-menagerie/blenderkit-live/model/lava-asteroid_f0efeff9-eeb5-4e59-989e-edef1b5fe52b.blend",
+      "collection": "Lava Asteroid",
+      "bbox": [
+        3.46,
+        3.46,
+        3.46
+      ],
+      "up_axis": "Z",
+      "proxy": {
+        "mode": "full",
+        "triangles_before": 192,
+        "triangles_target": null,
+        "size_mb": 1.064
+      }
+    },
+    {
+      "id": "medieval_prop_chimney",
+      "name": "Medieval Chimney",
+      "glb": "glb/medieval_prop_chimney.glb",
+      "source_blend": "/Users/boxer/blender-threejs-bakes/assets/source_blends/medieval_prop_chimney.blend",
+      "source_asset": "/Users/boxer/asset-menagerie/extracted/environment-kits/medieval-village-megakit-standard/Medieval Village MegaKit[Standard]/OBJ/Prop_Chimney.obj",
+      "collection": "medieval_prop_chimney",
+      "bbox": [
+        0.9458,
+        1.0,
+        3.1779
+      ],
+      "up_axis": "Z",
+      "proxy": {
+        "mode": "full",
+        "triangles_before": 618,
+        "triangles_target": null,
+        "size_mb": 0.022
+      }
+    },
+    {
+      "id": "medieval_prop_crate",
+      "name": "Medieval Crate",
+      "glb": "glb/medieval_prop_crate.glb",
+      "source_blend": "/Users/boxer/blender-threejs-bakes/assets/source_blends/medieval_prop_crate.blend",
+      "source_asset": "/Users/boxer/asset-menagerie/extracted/environment-kits/medieval-village-megakit-standard/Medieval Village MegaKit[Standard]/OBJ/Prop_Crate.obj",
+      "collection": "medieval_prop_crate",
+      "bbox": [
+        1.0836,
+        1.0836,
+        1.0596
+      ],
+      "up_axis": "Z",
+      "proxy": {
+        "mode": "full",
+        "triangles_before": 230,
+        "triangles_target": null,
+        "size_mb": 0.017
+      }
+    },
+    {
+      "id": "medieval_wall_plaster",
+      "name": "Medieval Plaster Wall",
+      "glb": "glb/medieval_wall_plaster.glb",
+      "source_blend": "/Users/boxer/blender-threejs-bakes/assets/source_blends/medieval_wall_plaster.blend",
+      "source_asset": "/Users/boxer/asset-menagerie/extracted/environment-kits/medieval-village-megakit-standard/Medieval Village MegaKit[Standard]/OBJ/Wall_Plaster_Straight.obj",
+      "collection": "medieval_wall_plaster",
+      "bbox": [
+        2.0,
+        0.4065,
+        3.1248
+      ],
+      "up_axis": "Z",
+      "proxy": {
+        "mode": "full",
+        "triangles_before": 86,
+        "triangles_target": null,
+        "size_mb": 0.007
+      }
+    },
+    {
+      "id": "medieval_roof_tiles",
+      "name": "Medieval Roof Tiles",
+      "glb": "glb/medieval_roof_tiles.glb",
+      "source_blend": "/Users/boxer/blender-threejs-bakes/assets/source_blends/medieval_roof_tiles.blend",
+      "source_asset": "/Users/boxer/asset-menagerie/extracted/environment-kits/medieval-village-megakit-standard/Medieval Village MegaKit[Standard]/OBJ/Roof_RoundTiles_6x8.obj",
+      "collection": "medieval_roof_tiles",
+      "bbox": [
+        8.2498,
+        9.6827,
+        5.6722
+      ],
+      "up_axis": "Z",
+      "proxy": {
+        "mode": "full",
+        "triangles_before": 3796,
+        "triangles_target": null,
+        "size_mb": 0.148
+      }
+    },
+    {
+      "id": "medieval_wall_door_round",
+      "name": "Medieval Round Door Wall",
+      "glb": "glb/medieval_wall_door_round.glb",
+      "source_blend": "/Users/boxer/blender-threejs-bakes/assets/source_blends/medieval_wall_door_round.blend",
+      "source_asset": "/Users/boxer/asset-menagerie/extracted/environment-kits/medieval-village-megakit-standard/Medieval Village MegaKit[Standard]/OBJ/Wall_UnevenBrick_Door_Round.obj",
+      "collection": "medieval_wall_door_round",
+      "bbox": [
+        2.0,
+        0.4065,
+        3.1227
+      ],
+      "up_axis": "Z",
+      "proxy": {
+        "mode": "full",
+        "triangles_before": 136,
+        "triangles_target": null,
+        "size_mb": 0.008
+      }
+    },
+    {
+      "id": "medieval_window_round",
+      "name": "Medieval Round Window",
+      "glb": "glb/medieval_window_round.glb",
+      "source_blend": "/Users/boxer/blender-threejs-bakes/assets/source_blends/medieval_window_round.blend",
+      "source_asset": "/Users/boxer/asset-menagerie/extracted/environment-kits/medieval-village-megakit-standard/Medieval Village MegaKit[Standard]/OBJ/Window_Wide_Round1.obj",
+      "collection": "medieval_window_round",
+      "bbox": [
+        1.3649,
+        0.5296,
+        1.7257
+      ],
+      "up_axis": "Z",
+      "proxy": {
+        "mode": "full",
+        "triangles_before": 354,
+        "triangles_target": null,
+        "size_mb": 0.019
+      }
+    },
+    {
+      "id": "medieval_stairs",
+      "name": "Medieval Stairs",
+      "glb": "glb/medieval_stairs.glb",
+      "source_blend": "/Users/boxer/blender-threejs-bakes/assets/source_blends/medieval_stairs.blend",
+      "source_asset": "/Users/boxer/asset-menagerie/extracted/environment-kits/medieval-village-megakit-standard/Medieval Village MegaKit[Standard]/OBJ/Stairs_Exterior_Straight.obj",
+      "collection": "medieval_stairs",
+      "bbox": [
+        2.0,
+        2.0779,
+        1.2037
+      ],
+      "up_axis": "Z",
+      "proxy": {
+        "mode": "full",
+        "triangles_before": 62,
+        "triangles_target": null,
+        "size_mb": 0.006
+      }
+    },
+    {
+      "id": "medieval_prop_wagon",
+      "name": "Medieval Wagon",
+      "glb": "glb/medieval_prop_wagon.glb",
+      "source_blend": "/Users/boxer/blender-threejs-bakes/assets/source_blends/medieval_prop_wagon.blend",
+      "source_asset": "/Users/boxer/asset-menagerie/extracted/environment-kits/medieval-village-megakit-standard/Medieval Village MegaKit[Standard]/OBJ/Prop_Wagon.obj",
+      "collection": "medieval_prop_wagon",
+      "bbox": [
+        1.9514,
+        4.024,
+        1.5292
+      ],
+      "up_axis": "Z",
+      "proxy": {
+        "mode": "full",
+        "triangles_before": 1672,
+        "triangles_target": null,
+        "size_mb": 0.08
+      }
+    },
+    {
+      "id": "medieval_wood_fence",
+      "name": "Medieval Wood Fence",
+      "glb": "glb/medieval_wood_fence.glb",
+      "source_blend": "/Users/boxer/blender-threejs-bakes/assets/source_blends/medieval_wood_fence.blend",
+      "source_asset": "/Users/boxer/asset-menagerie/extracted/environment-kits/medieval-village-megakit-standard/Medieval Village MegaKit[Standard]/OBJ/Prop_WoodenFence_Single.obj",
+      "collection": "medieval_wood_fence",
+      "bbox": [
+        2.0641,
+        0.1198,
+        0.8381
+      ],
+      "up_axis": "Z",
+      "proxy": {
+        "mode": "full",
+        "triangles_before": 40,
+        "triangles_target": null,
+        "size_mb": 0.004
+      }
+    },
+    {
+      "id": "mushroom",
+      "name": "Mushroom",
+      "glb": "glb/mushroom.glb",
+      "source_blend": "/Users/boxer/asset-menagerie/blenderkit-live/model/mushroom_9d33bee4-cc5b-4e80-b0f8-906dd03ac50b.blend",
+      "collection": "Mushroom",
+      "bbox": [
+        0.0872,
+        0.0872,
+        0.068
+      ],
+      "up_axis": "Z",
+      "proxy": {
+        "mode": "full",
+        "triangles_before": 188,
+        "triangles_target": null,
+        "size_mb": 7.574
+      }
+    },
+    {
+      "id": "nasa_sls_core_stage",
+      "name": "NASA SLS Core Stage",
+      "glb": "glb/nasa_sls_core_stage.glb",
+      "source_blend": "/Users/boxer/blender-threejs-bakes/assets/source_blends/nasa_sls_core_stage.blend",
+      "source_asset": "/Users/boxer/asset-menagerie/extracted/spaceflight/nasa-space-launch-system-core-stage/source/NASA Space Launch System Core Stage.glb",
+      "collection": "nasa_sls_core_stage",
+      "bbox": [
+        1.5667,
+        1.4818,
+        12.8965
+      ],
+      "up_axis": "Z",
+      "proxy": {
+        "mode": "full",
+        "triangles_before": 37844,
+        "triangles_target": null,
+        "size_mb": 1.129
+      }
+    },
+    {
+      "id": "plant",
+      "name": "Plant",
+      "glb": "glb/plant.glb",
+      "source_blend": "/Users/boxer/asset-menagerie/blenderkit-live/model/plant_06e92ff3-62a6-4e0a-81a7-678894e969ef.blend",
+      "collection": "Plant",
+      "bbox": [
+        1.027,
+        0.9311,
+        1.1595
+      ],
+      "up_axis": "Z",
+      "proxy": {
+        "mode": "full",
+        "triangles_before": 51996,
+        "triangles_target": null,
+        "size_mb": 32.56
+      }
+    },
+    {
+      "id": "procedural_portal",
+      "name": "Procedural Portal",
+      "glb": "glb/procedural_portal.glb",
+      "source_blend": "/Users/boxer/asset-menagerie/blenderkit-live/model/procedural-portal_88790368-e2cc-4230-b6e3-e013a7dd53ba.blend",
+      "collection": "Procedural Portal",
+      "bbox": [
+        1.1914,
+        1.1914,
+        0.0
+      ],
+      "up_axis": "Z",
+      "proxy": {
+        "mode": "full",
+        "triangles_before": 4,
+        "triangles_target": null,
+        "size_mb": 22.982
+      }
+    },
+    {
+      "id": "scan_rubble_ruins",
+      "name": "Scan Rubble Ruins",
+      "glb": "glb/scan_rubble_ruins.glb",
+      "source_blend": "/Users/boxer/asset-menagerie/blenderkit-live/model/scan-rubble-ruins_01def269-bd99-43ff-b060-c1129a9bd1fb.blend",
+      "collection": "Scan Rubble ruins",
+      "bbox": [
+        12.2633,
+        2.921,
+        0.4849
+      ],
+      "up_axis": "Z",
+      "proxy": {
+        "mode": "lightweight",
+        "triangles_before": 149968,
+        "triangles_target": 50000,
+        "decimate_ratio": 0.333404,
+        "full_size_mb": 102.151,
+        "size_mb": 3.26
+      }
+    },
+    {
+      "id": "statue",
+      "name": "Statue",
+      "glb": "glb/statue.glb",
+      "source_blend": "/Users/boxer/asset-menagerie/blenderkit-live/model/statue_dcc9c997-5e74-4a41-903b-e05dbfaf499a.blend",
+      "collection": "Statue",
+      "bbox": [
+        0.1003,
+        0.2768,
+        0.0847
+      ],
+      "up_axis": "Z",
+      "proxy": {
+        "mode": "lightweight",
+        "triangles_before": 35394,
+        "triangles_target": 50000,
+        "decimate_ratio": 1.0,
+        "full_size_mb": 50.595,
+        "size_mb": 0.781
+      }
+    },
+    {
+      "id": "terrified_alien_octopus_toy",
+      "name": "Terrified Alien Octopus Toy",
+      "glb": "glb/terrified_alien_octopus_toy.glb",
+      "source_blend": "/Users/boxer/asset-menagerie/blenderkit-live/model/terrified-alien-octopus-toy_2edbcd39-f477-4352-aee6-cf4b9da79d98.blend",
+      "collection": "Terrified Alien Octopus Toy",
+      "bbox": [
+        0.4301,
+        0.4306,
+        0.1981
+      ],
+      "up_axis": "Z",
+      "proxy": {
+        "mode": "lightweight",
+        "triangles_before": 18966,
+        "triangles_target": 50000,
+        "decimate_ratio": 1.0,
+        "full_size_mb": 53.318,
+        "size_mb": 0.425
+      }
+    }
+  ]
+}

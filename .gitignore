@@ -1,0 +1,9 @@
+assets/glb/
+assets/source_blends/
+renders/
+__pycache__/
+*.pyc
+.DS_Store
+node_modules/
+.ruff_cache/
+.run/

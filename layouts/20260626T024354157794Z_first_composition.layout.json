@@ -1,0 +1,50 @@
+{
+  "name": "first_composition",
+  "schema": 1,
+  "space": "threejs_yup",
+  "instances": [
+    {
+      "instance_id": "mushroom_001",
+      "asset_id": "mushroom",
+      "position": [
+        0,
+        1.967573525235681,
+        0
+      ],
+      "quaternion": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        17.201834862385322,
+        17.201834862385322,
+        17.201834862385322
+      ]
+    }
+  ],
+  "camera": {
+    "position": [
+      0.4866103715452248,
+      -7.610443995325142,
+      -0.5173414228576574
+    ],
+    "target": [
+      0,
+      0.8,
+      0
+    ],
+    "fov_deg": 45,
+    "up": [
+      0,
+      1,
+      0
+    ]
+  },
+  "render": {
+    "width": 1920,
+    "height": 1080,
+    "samples": 256
+  }
+}

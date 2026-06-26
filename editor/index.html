@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Blender Three.js Bake Editor</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/three.module.js",
+          "three/addons/": "./vendor/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <main id="app">
+      <section id="viewport" aria-label="3D layout viewport">
+        <div id="viewportHud" class="viewportHud" aria-hidden="true">
+          <span id="hudMode" class="hudMode">Move</span>
+          <span id="hudSelection" class="hudSelection">nothing selected</span>
+          <span class="hudKeys">click to select · G move · R rotate · S scale</span>
+        </div>
+      </section>
+
+      <aside id="sidebar" aria-label="Layout controls">
+        <header class="topbar">
+          <div>
+            <h1>Bake Layout</h1>
+            <p id="manifestStatus">Loading manifest...</p>
+          </div>
+          <button id="saveCamera" type="button" title="Save current view as render camera">
+            Save Camera
+          </button>
+        </header>
+
+        <label class="field">
+          <span>Layout name</span>
+          <input id="layoutName" type="text" value="first_composition" autocomplete="off" />
+        </label>
+
+        <div class="toolrow" aria-label="Transform mode">
+          <button id="modeTranslate" type="button" title="Move (G)">Move</button>
+          <button id="modeRotate" type="button" title="Rotate (R)">Rotate</button>
+          <button id="modeScale" type="button" title="Scale (S)">Scale</button>
+        </div>
+
+        <section class="panel">
+          <h2>Assets</h2>
+          <div id="assetPalette" class="list"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panelHeader">
+            <h2>Instances</h2>
+            <div class="minirow">
+              <button id="duplicateInstance" type="button" title="Duplicate selected instance">
+                Duplicate
+              </button>
+              <button id="deleteInstance" type="button" title="Delete selected instance">
+                Delete
+              </button>
+            </div>
+          </div>
+          <div id="instanceList" class="list"></div>
+        </section>
+
+        <section class="panel">
+          <h2>Render</h2>
+          <div class="gridFields">
+            <label class="field">
+              <span>Width</span>
+              <input id="renderWidth" type="number" min="64" step="1" value="1920" />
+            </label>
+            <label class="field">
+              <span>Height</span>
+              <input id="renderHeight" type="number" min="64" step="1" value="1080" />
+            </label>
+            <label class="field">
+              <span>Samples</span>
+              <input id="renderSamples" type="number" min="1" step="1" value="256" />
+            </label>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panelHeader">
+            <h2>Renders</h2>
+            <button id="refreshRenders" type="button" title="Refresh render thumbnails">
+              Refresh
+            </button>
+          </div>
+          <div id="renderGallery" class="renderGallery"></div>
+        </section>
+
+        <footer class="actions">
+          <button id="exportLayout" type="button">Export Layout</button>
+          <button id="saveForBake" type="button">Send Layout</button>
+          <button id="bakeLayout" type="button">Bake</button>
+          <label class="loadButton">
+            Load Layout
+            <input id="loadLayout" type="file" accept=".json,.layout.json,application/json" />
+          </label>
+        </footer>
+      </aside>
+    </main>
+    <script type="module" src="./editor.js"></script>
+  </body>
+</html>

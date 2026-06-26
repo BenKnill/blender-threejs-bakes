@@ -1,0 +1,70 @@
+{
+  "name": "first_composition",
+  "schema": 1,
+  "space": "threejs_yup",
+  "instances": [
+    {
+      "instance_id": "medieval_prop_crate_001",
+      "asset_id": "medieval_prop_crate",
+      "position": [
+        2.222577567133289,
+        1.4564830756135003,
+        -0.7867754620736682
+      ],
+      "quaternion": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1.3842746400885937,
+        1.3842746400885937,
+        1.3842746400885937
+      ]
+    },
+    {
+      "instance_id": "medieval_stairs_002",
+      "asset_id": "medieval_stairs",
+      "position": [
+        2.200513258710026,
+        0.6503772284585597,
+        1.0053600133960692
+      ],
+      "quaternion": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    }
+  ],
+  "camera": {
+    "position": [
+      -3.4088379807125113,
+      7.402419889022983,
+      4.881132110627261
+    ],
+    "target": [
+      0,
+      0.8,
+      0
+    ],
+    "fov_deg": 45,
+    "up": [
+      0,
+      1,
+      0
+    ]
+  },
+  "render": {
+    "width": 1920,
+    "height": 1080,
+    "samples": 256
+  }
+}

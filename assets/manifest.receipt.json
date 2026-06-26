@@ -1,0 +1,236 @@
+{
+  "generated": "2026-06-26T03:04:26.071809+00:00",
+  "source_dir": "/Users/boxer/asset-menagerie/blenderkit-live/model",
+  "asset_args": [],
+  "limit": 12,
+  "blender_version": "5.1.1",
+  "manifest": "/Users/boxer/blender-threejs-bakes/assets/manifest.json",
+  "assets": [
+    {
+      "id": "bone_broken",
+      "source_blend": "/Users/boxer/asset-menagerie/blenderkit-live/model/bone-broken_c48f5413-8af7-4c41-88b5-ddf8256a9dbd.blend",
+      "source_mtime": 1782355714.8770025,
+      "glb": "/Users/boxer/blender-threejs-bakes/assets/glb/bone_broken.glb",
+      "collection": "Bone broken",
+      "bbox": [
+        0.3164,
+        0.1988,
+        0.1485
+      ],
+      "proxy": {
+        "mode": "full",
+        "triangles_before": 155532,
+        "triangles_target": null,
+        "size_mb": 14.652
+      }
+    },
+    {
+      "id": "cave2",
+      "source_blend": "/Users/boxer/asset-menagerie/blenderkit-live/model/cave2_2ca4e0a6-8aed-427e-97c5-2d2c84bf8978.blend",
+      "source_mtime": 1782355709.000162,
+      "glb": "/Users/boxer/blender-threejs-bakes/assets/glb/cave2.glb",
+      "collection": "Cave2",
+      "bbox": [
+        16.8942,
+        12.5851,
+        6.069
+      ],
+      "proxy": {
+        "mode": "lightweight",
+        "triangles_before": 750043,
+        "triangles_target": 50000,
+        "decimate_ratio": 0.066663,
+        "full_size_mb": 429.304,
+        "size_mb": 2.103
+      }
+    },
+    {
+      "id": "crystal_formation_yellow_red",
+      "source_blend": "/Users/boxer/asset-menagerie/blenderkit-live/model/crystal-formation-yellow-red_445e6d52-075e-4608-bb18-ac567c20bf4d.blend",
+      "source_mtime": 1782354807.8401835,
+      "glb": "/Users/boxer/blender-threejs-bakes/assets/glb/crystal_formation_yellow_red.glb",
+      "collection": "Crystal Formation Yellow Red",
+      "bbox": [
+        0.3789,
+        0.3568,
+        0.2908
+      ],
+      "proxy": {
+        "mode": "full",
+        "triangles_before": 13200,
+        "triangles_target": null,
+        "size_mb": 0.746
+      }
+    },
+    {
+      "id": "domestic_thumb_oiler_bronze",
+      "source_blend": "/Users/boxer/asset-menagerie/blenderkit-live/model/domestic-thumb-oiler-bronze_c7531541-5e6a-48ff-aef5-32d53fcd1530.blend",
+      "source_mtime": 1782355712.8095703,
+      "glb": "/Users/boxer/blender-threejs-bakes/assets/glb/domestic_thumb_oiler_bronze.glb",
+      "collection": "Domestic Thumb Oiler Bronze",
+      "bbox": [
+        0.0865,
+        0.0865,
+        0.2746
+      ],
+      "proxy": {
+        "mode": "full",
+        "triangles_before": 3740,
+        "triangles_target": null,
+        "size_mb": 16.385
+      }
+    },
+    {
+      "id": "japanese_zen_shrine_asian_temple",
+      "source_blend": "/Users/boxer/asset-menagerie/blenderkit-live/model/japanese-zen-shrine---asian-temple_db2ac6be-4fcb-4fbe-8f93-861ef422c947.blend",
+      "source_mtime": 1782355698.1326406,
+      "glb": "/Users/boxer/blender-threejs-bakes/assets/glb/japanese_zen_shrine_asian_temple.glb",
+      "collection": "Japanese Zen Shrine - Asian Temple",
+      "bbox": [
+        13.1607,
+        9.5672,
+        9.2728
+      ],
+      "proxy": {
+        "mode": "lightweight",
+        "triangles_before": 684729,
+        "triangles_target": 50000,
+        "decimate_ratio": 0.073022,
+        "full_size_mb": 73.904,
+        "size_mb": 11.15
+      }
+    },
+    {
+      "id": "lava_asteroid",
+      "source_blend": "/Users/boxer/asset-menagerie/blenderkit-live/model/lava-asteroid_f0efeff9-eeb5-4e59-989e-edef1b5fe52b.blend",
+      "source_mtime": 1782355713.638196,
+      "glb": "/Users/boxer/blender-threejs-bakes/assets/glb/lava_asteroid.glb",
+      "collection": "Lava Asteroid",
+      "bbox": [
+        3.46,
+        3.46,
+        3.46
+      ],
+      "proxy": {
+        "mode": "full",
+        "triangles_before": 192,
+        "triangles_target": null,
+        "size_mb": 1.064
+      }
+    },
+    {
+      "id": "mushroom",
+      "source_blend": "/Users/boxer/asset-menagerie/blenderkit-live/model/mushroom_9d33bee4-cc5b-4e80-b0f8-906dd03ac50b.blend",
+      "source_mtime": 1782354804.9236386,
+      "glb": "/Users/boxer/blender-threejs-bakes/assets/glb/mushroom.glb",
+      "collection": "Mushroom",
+      "bbox": [
+        0.0872,
+        0.0872,
+        0.068
+      ],
+      "proxy": {
+        "mode": "full",
+        "triangles_before": 188,
+        "triangles_target": null,
+        "size_mb": 7.574
+      }
+    },
+    {
+      "id": "plant",
+      "source_blend": "/Users/boxer/asset-menagerie/blenderkit-live/model/plant_06e92ff3-62a6-4e0a-81a7-678894e969ef.blend",
+      "source_mtime": 1782354807.364014,
+      "glb": "/Users/boxer/blender-threejs-bakes/assets/glb/plant.glb",
+      "collection": "Plant",
+      "bbox": [
+        1.027,
+        0.9311,
+        1.1595
+      ],
+      "proxy": {
+        "mode": "full",
+        "triangles_before": 51996,
+        "triangles_target": null,
+        "size_mb": 32.56
+      }
+    },
+    {
+      "id": "procedural_portal",
+      "source_blend": "/Users/boxer/asset-menagerie/blenderkit-live/model/procedural-portal_88790368-e2cc-4230-b6e3-e013a7dd53ba.blend",
+      "source_mtime": 1782355694.1400008,
+      "glb": "/Users/boxer/blender-threejs-bakes/assets/glb/procedural_portal.glb",
+      "collection": "Procedural Portal",
+      "bbox": [
+        1.1914,
+        1.1914,
+        0.0
+      ],
+      "proxy": {
+        "mode": "full",
+        "triangles_before": 4,
+        "triangles_target": null,
+        "size_mb": 22.982
+      }
+    },
+    {
+      "id": "scan_rubble_ruins",
+      "source_blend": "/Users/boxer/asset-menagerie/blenderkit-live/model/scan-rubble-ruins_01def269-bd99-43ff-b060-c1129a9bd1fb.blend",
+      "source_mtime": 1782355696.802129,
+      "glb": "/Users/boxer/blender-threejs-bakes/assets/glb/scan_rubble_ruins.glb",
+      "collection": "Scan Rubble ruins",
+      "bbox": [
+        12.2633,
+        2.921,
+        0.4849
+      ],
+      "proxy": {
+        "mode": "lightweight",
+        "triangles_before": 149968,
+        "triangles_target": 50000,
+        "decimate_ratio": 0.333404,
+        "full_size_mb": 102.151,
+        "size_mb": 3.26
+      }
+    },
+    {
+      "id": "statue",
+      "source_blend": "/Users/boxer/asset-menagerie/blenderkit-live/model/statue_dcc9c997-5e74-4a41-903b-e05dbfaf499a.blend",
+      "source_mtime": 1782355717.5942445,
+      "glb": "/Users/boxer/blender-threejs-bakes/assets/glb/statue.glb",
+      "collection": "Statue",
+      "bbox": [
+        0.1003,
+        0.2768,
+        0.0847
+      ],
+      "proxy": {
+        "mode": "lightweight",
+        "triangles_before": 35394,
+        "triangles_target": 50000,
+        "decimate_ratio": 1.0,
+        "full_size_mb": 50.595,
+        "size_mb": 0.781
+      }
+    },
+    {
+      "id": "terrified_alien_octopus_toy",
+      "source_blend": "/Users/boxer/asset-menagerie/blenderkit-live/model/terrified-alien-octopus-toy_2edbcd39-f477-4352-aee6-cf4b9da79d98.blend",
+      "source_mtime": 1782355711.329886,
+      "glb": "/Users/boxer/blender-threejs-bakes/assets/glb/terrified_alien_octopus_toy.glb",
+      "collection": "Terrified Alien Octopus Toy",
+      "bbox": [
+        0.4301,
+        0.4306,
+        0.1981
+      ],
+      "proxy": {
+        "mode": "lightweight",
+        "triangles_before": 18966,
+        "triangles_target": 50000,
+        "decimate_ratio": 1.0,
+        "full_size_mb": 53.318,
+        "size_mb": 0.425
+      }
+    }
+  ]
+}

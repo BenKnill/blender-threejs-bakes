@@ -1,0 +1,19 @@
+[tool.ruff]
+# Blender scripts target the Python that ships inside Blender (3.11 on Blender 4.x/5.x).
+target-version = "py311"
+line-length = 100
+src = ["scripts"]
+
+[tool.ruff.lint]
+# Pragmatic-but-strict starter set. Add rules; don't silently disable them inline
+# without a `# noqa: <code>  -- reason` explaining why.
+select = ["E", "F", "I", "UP", "B", "SIM", "RET", "PTH"]
+ignore = [
+  "E501",  # line length is enforced by the formatter, not the linter
+]
+
+[tool.ruff.lint.isort]
+known-third-party = ["bpy", "mathutils"]
+
+[tool.ruff.format]
+quote-style = "double"

@@ -1,0 +1,50 @@
+{
+  "name": "first_composition",
+  "schema": 1,
+  "space": "threejs_yup",
+  "instances": [
+    {
+      "instance_id": "statue_002",
+      "asset_id": "statue",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "quaternion": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        33.52081369787401,
+        33.52081369787401,
+        33.52081369787401
+      ]
+    }
+  ],
+  "camera": {
+    "position": [
+      -18.82546005740278,
+      20.067272265419252,
+      5.33761127955087
+    ],
+    "target": [
+      0,
+      0.8,
+      0
+    ],
+    "fov_deg": 45,
+    "up": [
+      0,
+      1,
+      0
+    ]
+  },
+  "render": {
+    "width": 1920,
+    "height": 1080,
+    "samples": 256
+  }
+}

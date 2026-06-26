@@ -1,0 +1,90 @@
+{
+  "name": "first_composition",
+  "schema": 1,
+  "space": "threejs_yup",
+  "instances": [
+    {
+      "instance_id": "lava_asteroid_001",
+      "asset_id": "lava_asteroid",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "quaternion": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "instance_id": "statue_002",
+      "asset_id": "statue",
+      "position": [
+        1.3935969524943908,
+        0.9751759455823985,
+        -1.132584208377652
+      ],
+      "quaternion": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        5.419075144508671,
+        5.419075144508671,
+        5.419075144508671
+      ]
+    },
+    {
+      "instance_id": "terrified_alien_octopus_toy_003",
+      "asset_id": "terrified_alien_octopus_toy",
+      "position": [
+        -0.19415084865530408,
+        1.7421948308318322,
+        -0.7159324516596395
+      ],
+      "quaternion": [
+        -0.06825492179676867,
+        -0.5878379046847836,
+        0.08166787673809522,
+        0.801946520271403
+      ],
+      "scale": [
+        3.4835113794705066,
+        3.4835113794705066,
+        3.4835113794705066
+      ]
+    }
+  ],
+  "camera": {
+    "position": [
+      -3.5553476429220843,
+      2.8035497015669657,
+      -7.388185956736759
+    ],
+    "target": [
+      0,
+      0.8,
+      0
+    ],
+    "fov_deg": 45,
+    "up": [
+      0,
+      1,
+      0
+    ]
+  },
+  "render": {
+    "width": 1920,
+    "height": 1080,
+    "samples": 256
+  }
+}
