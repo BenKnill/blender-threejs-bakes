@@ -241,6 +241,12 @@ h2 {
   gap: 8px;
 }
 
+.statusLine {
+  min-height: 16px;
+  color: #c8b46c;
+  font-size: 12px;
+}
+
 .renderTile {
   display: grid;
   gap: 6px;
