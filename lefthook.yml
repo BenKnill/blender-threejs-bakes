@@ -10,6 +10,11 @@
 # so `**` patterns would silently match nothing here. Flat globs also auto-skip editor/vendor/.
 # If source ever nests into subdirectories, widen these globs accordingly.
 
+commit-msg:
+  commands:
+    shape:
+      run: ./scripts/check_commit_msg.sh {1}
+
 pre-commit:
   parallel: true
   commands:
