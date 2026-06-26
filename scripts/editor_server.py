@@ -75,6 +75,7 @@ class EditorHandler(SimpleHTTPRequestHandler):
             )
             return
 
+        before = {path.name for path in RENDERS.glob("*.png")}
         cmd = [
             str(BLENDER),
             "--background",
@@ -101,7 +102,21 @@ class EditorHandler(SimpleHTTPRequestHandler):
                 HTTPStatus.INTERNAL_SERVER_ERROR,
             )
             return
-        self.send_json({"ok": True, "stdout": proc.stdout[-4000:], "renders": list_renders()})
+        renders = list_renders()
+        new_renders = [render for render in renders if render["name"] not in before]
+        if not new_renders:
+            self.send_json(
+                {
+                    "error": "Blender reported success but wrote no render",
+                    "stdout": proc.stdout[-4000:],
+                    "stderr": proc.stderr[-4000:],
+                },
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+            return
+        self.send_json(
+            {"ok": True, "stdout": proc.stdout[-4000:], "renders": renders, "new": new_renders}
+        )
 
     def read_json(self) -> dict:
         length = int(self.headers.get("Content-Length", "0"))

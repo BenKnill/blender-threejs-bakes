@@ -7,6 +7,7 @@ import argparse
 import json
 import math
 import sys
+import traceback
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -14,7 +15,15 @@ import bpy
 import mathutils
 from mathutils import Matrix, Vector
 
-from lighting_model import color_tuple, default_lighting, merge_lighting, sun_direction_three
+SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPT_DIR))
+
+from lighting_model import (  # noqa: E402 -- Blender --python omits the script dir from sys.path.
+    color_tuple,
+    default_lighting,
+    merge_lighting,
+    sun_direction_three,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = ROOT / "assets" / "manifest.json"
@@ -314,4 +323,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        traceback.print_exc()
+        sys.exit(1)

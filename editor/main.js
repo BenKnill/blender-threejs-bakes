@@ -13,6 +13,7 @@ const viewport = document.querySelector("#viewport");
 const assetPalette = document.querySelector("#assetPalette");
 const instanceList = document.querySelector("#instanceList");
 const renderGallery = document.querySelector("#renderGallery");
+const renderStatus = document.querySelector("#renderStatus");
 const manifestStatus = document.querySelector("#manifestStatus");
 const layoutNameInput = document.querySelector("#layoutName");
 const renderInputs = {
@@ -84,7 +85,9 @@ function wireControls() {
   document.querySelector("#duplicateInstance").addEventListener("click", store.duplicateSelected);
   document.querySelector("#deleteInstance").addEventListener("click", store.deleteSelected);
   document.querySelector("#exportLayout").addEventListener("click", exportLayout);
-  document.querySelector("#saveForBake").addEventListener("click", saveForBake);
+  document.querySelector("#saveForBake").addEventListener("click", () => {
+    saveForBake().catch((error) => setRenderStatus(error.message));
+  });
   document.querySelector("#bakeLayout").addEventListener("click", bakeLayout);
   document.querySelector("#refreshRenders").addEventListener("click", refreshRenders);
   document.querySelector("#loadLayout").addEventListener("change", loadLayoutFromFile);
@@ -139,6 +142,7 @@ function exportLayout() {
 
 async function saveForBake() {
   captureCurrentCamera();
+  setRenderStatus("Sending layout...");
   const response = await fetch("/api/save-layout", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -146,16 +150,18 @@ async function saveForBake() {
   });
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || "Save failed");
+  setRenderStatus("Layout sent");
   flashButton("#saveForBake", "Sent");
   return result;
 }
 
 async function bakeLayout() {
-  const saveResult = await saveForBake();
   const button = document.querySelector("#bakeLayout");
   button.disabled = true;
-  button.textContent = "Baking...";
   try {
+    const saveResult = await saveForBake();
+    button.textContent = "Baking...";
+    setRenderStatus("Baking...");
     const response = await fetch("/api/render-layout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -164,7 +170,11 @@ async function bakeLayout() {
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "Bake failed");
     renderRenderGallery(result.renders || []);
+    setRenderStatus(result.new?.[0]?.name ? `Baked ${result.new[0].name}` : "Baked");
     button.textContent = "Baked";
+  } catch (error) {
+    setRenderStatus(error.message);
+    button.textContent = "Bake failed";
   } finally {
     window.setTimeout(() => {
       button.disabled = false;
@@ -178,6 +188,7 @@ async function refreshRenders() {
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || "Render list failed");
   renderRenderGallery(result.renders || []);
+  setRenderStatus(result.renders?.length ? `${result.renders.length} renders` : "No renders yet");
 }
 
 function renderRenderGallery(renders) {
@@ -222,6 +233,10 @@ function flashButton(selector, text) {
   window.setTimeout(() => {
     button.textContent = oldText;
   }, 1200);
+}
+
+function setRenderStatus(message) {
+  renderStatus.textContent = message;
 }
 
 async function loadLayoutFromFile(event) {
