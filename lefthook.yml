@@ -1,0 +1,29 @@
+# Local git hooks — fast, parallel, no CI dependency.
+# Install: `just hooks` (or `npm install`, which runs `lefthook install` via prepare).
+#
+# Each command only sees the *staged* files that match its glob, so commits stay quick.
+# Formatters auto-fix and re-stage; linters just report and block the commit on error.
+# Python uses `ruff` if on PATH, else `uvx ruff` (uv is available; ruff need not be global).
+#
+# Globs are flat ("editor/*.js", not "editor/**/*.js") because all source lives directly
+# in editor/ and scripts/ — lefthook's glob engine treats `**/` as requiring a subdirectory,
+# so `**` patterns would silently match nothing here. Flat globs also auto-skip editor/vendor/.
+# If source ever nests into subdirectories, widen these globs accordingly.
+
+pre-commit:
+  parallel: true
+  commands:
+    prettier:
+      glob: "editor/*.{js,css,html}"
+      run: npx prettier --write {staged_files}
+      stage_fixed: true
+    eslint:
+      glob: "editor/*.js"
+      run: npx eslint {staged_files}
+    ruff-format:
+      glob: "scripts/*.py"
+      run: sh -c 'command -v ruff >/dev/null 2>&1 && ruff format "$@" || uvx ruff format "$@"' _ {staged_files}
+      stage_fixed: true
+    ruff-check:
+      glob: "scripts/*.py"
+      run: sh -c 'command -v ruff >/dev/null 2>&1 && ruff check "$@" || uvx ruff check "$@"' _ {staged_files}
