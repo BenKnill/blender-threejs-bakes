@@ -21,8 +21,8 @@ and replaces a stale listener on the same port. Useful commands:
 ```
 
 The editor reads `assets/manifest.json`, lets you place and transform instances,
-saves the current OrbitControls camera, and exports a `*.layout.json` file that
-the Blender renderer can consume.
+saves the current OrbitControls camera, stores lighting presets/sun/world intent,
+and exports a `*.layout.json` file that the Blender renderer can consume.
 
 ## Generate GLB proxies
 

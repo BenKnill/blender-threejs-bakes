@@ -14,6 +14,8 @@ import bpy
 import mathutils
 from mathutils import Matrix, Vector
 
+from lighting_model import color_tuple, default_lighting, merge_lighting, sun_direction_three
+
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = ROOT / "assets" / "manifest.json"
 RENDER_DIR = ROOT / "renders"
@@ -43,6 +45,10 @@ def layout_output_name(layout: dict, layout_path: Path) -> str:
 
 def three_point_to_blender(values: list[float]) -> Vector:
     return Vector((values[0], -values[2], values[1]))
+
+
+def three_direction_to_blender(values: list[float]) -> Vector:
+    return (C.to_3x3() @ Vector(values)).normalized()
 
 
 def three_matrix_to_blender(instance: dict) -> Matrix:
@@ -167,7 +173,22 @@ def setup_camera(layout: dict) -> None:
     bpy.context.scene.camera = camera
 
 
-def setup_lighting() -> None:
+def setup_lighting(layout: dict) -> dict:
+    if not layout.get("lighting"):
+        return setup_legacy_lighting()
+    lighting = merge_lighting(layout)
+    setup_world(lighting)
+    lighting["sun_direction_blender"] = setup_sun(lighting)
+    scene = bpy.context.scene
+    scene.view_settings.exposure = float(lighting["exposure"])
+    view_transforms = scene.view_settings.bl_rna.properties["view_transform"].enum_items.keys()
+    if "AgX" in view_transforms:
+        scene.view_settings.view_transform = "AgX"
+    return lighting
+
+
+def setup_legacy_lighting() -> dict:
+    lighting = default_lighting()
     world = bpy.context.scene.world or bpy.data.worlds.new("World")
     bpy.context.scene.world = world
     world.color = (0.035, 0.04, 0.045)
@@ -178,6 +199,61 @@ def setup_lighting() -> None:
     light = bpy.data.objects.new("Soft Key", light_data)
     light.location = (3, -4, 6)
     bpy.context.scene.collection.objects.link(light)
+    return lighting
+
+
+def setup_sun(lighting: dict) -> list[float]:
+    sun = lighting["sun"]
+    light_data = bpy.data.lights.new("Layout Sun", type="SUN")
+    light_data.energy = max(0.0, float(sun.get("strength", 4)))
+    light_data.angle = math.radians(max(0.1, float(sun.get("angle_deg", 1.5))))
+    light_data.color = color_tuple(sun.get("color", [1, 0.85, 0.65]))
+    light = bpy.data.objects.new("Layout Sun", light_data)
+    direction = three_direction_to_blender(sun_direction_three(sun))
+    light.location = direction * 10
+    bpy.context.scene.collection.objects.link(light)
+    look_at(light, Vector((0, 0, 0)), Vector((0, 0, 1)))
+    return [round(value, 6) for value in direction]
+
+
+def setup_world(lighting: dict) -> None:
+    world_config = lighting["world"]
+    world = bpy.context.scene.world or bpy.data.worlds.new("World")
+    bpy.context.scene.world = world
+    world.color = color_tuple(world_config.get("color", [0.035, 0.04, 0.045]))
+    world.use_nodes = True
+    nodes = world.node_tree.nodes
+    links = world.node_tree.links
+    nodes.clear()
+    output = nodes.new(type="ShaderNodeOutputWorld")
+    background = nodes.new(type="ShaderNodeBackground")
+    background.inputs["Strength"].default_value = max(0.0, float(world_config.get("strength", 1)))
+    if world_config.get("type") == "sky":
+        sky = nodes.new(type="ShaderNodeTexSky")
+        configure_sky_texture(sky, lighting["sun"])
+        links.new(sky.outputs["Color"], background.inputs["Color"])
+    else:
+        background.inputs["Color"].default_value = (*world.color, 1)
+    links.new(background.outputs["Background"], output.inputs["Surface"])
+
+
+def configure_sky_texture(sky, sun: dict) -> None:
+    if hasattr(sky, "sky_type"):
+        sky_types = sky.bl_rna.properties["sky_type"].enum_items.keys()
+        if "NISHITA" in sky_types:
+            sky.sky_type = "NISHITA"
+        elif "MULTIPLE_SCATTERING" in sky_types:
+            sky.sky_type = "MULTIPLE_SCATTERING"
+    if hasattr(sky, "sun_elevation"):
+        sky.sun_elevation = math.radians(float(sun.get("elevation_deg", 10)))
+    if hasattr(sky, "sun_rotation"):
+        sky.sun_rotation = math.radians(float(sun.get("azimuth_deg", 120)))
+    if "Sun Elevation" in sky.inputs:
+        sky.inputs["Sun Elevation"].default_value = math.radians(
+            float(sun.get("elevation_deg", 10))
+        )
+    if "Sun Rotation" in sky.inputs:
+        sky.inputs["Sun Rotation"].default_value = math.radians(float(sun.get("azimuth_deg", 120)))
 
 
 def configure_render(layout: dict, out_path: Path) -> None:
@@ -201,7 +277,7 @@ def render_layout(layout_path: Path, manifest_path: Path, render_dir: Path) -> d
     for instance in layout.get("instances", []):
         placements.append(place_instance(instance, assets[instance["asset_id"]]))
     setup_camera(layout)
-    setup_lighting()
+    lighting = setup_lighting(layout)
 
     render_dir.mkdir(exist_ok=True)
     name = layout_output_name(layout, layout_path)
@@ -217,6 +293,7 @@ def render_layout(layout_path: Path, manifest_path: Path, render_dir: Path) -> d
         "timestamp": datetime.now(UTC).isoformat(),
         "samples": bpy.context.scene.cycles.samples,
         "assets": sorted({item["asset_id"] for item in layout.get("instances", [])}),
+        "lighting": lighting,
         "placements": placements,
     }
     (render_dir / f"{output_stem}.receipt.json").write_text(

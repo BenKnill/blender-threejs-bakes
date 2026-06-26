@@ -1,7 +1,15 @@
-export function currentLayout({ nameInput, renderInputs, instances, camera, orbit, savedCamera }) {
+export function currentLayout({
+  nameInput,
+  renderInputs,
+  lighting,
+  instances,
+  camera,
+  orbit,
+  savedCamera,
+}) {
   return {
     name: slug(nameInput.value || "composition"),
-    schema: 1,
+    schema: 2,
     space: "threejs_yup",
     instances: [...instances.values()].map(objectToInstance),
     camera: savedCamera || cameraSnapshot(camera, orbit),
@@ -10,6 +18,7 @@ export function currentLayout({ nameInput, renderInputs, instances, camera, orbi
       height: intValue(renderInputs.height, 1080),
       samples: intValue(renderInputs.samples, 256),
     },
+    lighting,
   };
 }
 
@@ -41,11 +50,15 @@ export function downloadLayout(layout) {
   URL.revokeObjectURL(link.href);
 }
 
-export function applyLayoutFields(layout, { nameInput, renderInputs, camera, orbit }) {
+export function applyLayoutFields(
+  layout,
+  { nameInput, renderInputs, lightingControls, camera, orbit }
+) {
   nameInput.value = layout.name || "loaded_composition";
   renderInputs.width.value = layout.render?.width || 1920;
   renderInputs.height.value = layout.render?.height || 1080;
   renderInputs.samples.value = layout.render?.samples || 256;
+  if (layout.lighting && lightingControls) lightingControls.apply(layout.lighting);
 
   if (layout.camera) {
     camera.position.fromArray(layout.camera.position);

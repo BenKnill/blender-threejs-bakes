@@ -5,7 +5,7 @@
   "description": "Tooling-only manifest. The editor itself has NO build step and ships vendored ESM.",
   "scripts": {
     "prepare": "lefthook install",
-    "serve": "python3 -m http.server 8090 --bind 127.0.0.1",
+    "serve": "./scripts/serve.sh",
     "lint": "eslint editor && prettier --check 'editor/**/*.{js,css,html}'",
     "format": "prettier --write 'editor/**/*.{js,css,html}'"
   },

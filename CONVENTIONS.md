@@ -22,6 +22,8 @@ elsewhere, extract it to a shared module — do not copy the matrix.
 
 - Every layout carries `"schema": <int>`. Bump it on any breaking change and handle
   old versions in `render_layout.py` (or reject them loudly).
+- Current editor output is schema 2: camera + render + lighting. Schema 1 layouts
+  remain accepted by `render_layout.py` and use legacy lighting defaults.
 - `asset_id` is the stable join key across GLB proxy ⇄ manifest ⇄ source `.blend`.
   Never reuse or rename an id casually.
 - Schemas are documented in `DESIGN.md`. Update it in the same change that alters them.

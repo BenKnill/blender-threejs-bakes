@@ -65,7 +65,7 @@ def main() -> None:
             json.dumps(
                 {
                     "name": "translated",
-                    "schema": 1,
+                    "schema": 2,
                     "space": "threejs_yup",
                     "instances": [
                         {
@@ -82,6 +82,23 @@ def main() -> None:
                         "fov_deg": 45,
                         "up": [0, 1, 0],
                     },
+                    "lighting": {
+                        "preset": "golden_hour",
+                        "sun": {
+                            "azimuth_deg": 90,
+                            "elevation_deg": 30,
+                            "color": [1.0, 0.8, 0.55],
+                            "strength": 2.0,
+                            "angle_deg": 1.5,
+                        },
+                        "world": {
+                            "type": "sky",
+                            "strength": 0.5,
+                            "color": [0.03, 0.04, 0.05],
+                            "rotation_deg": 0,
+                        },
+                        "exposure": 0.1,
+                    },
                     "render": {"width": 48, "height": 48, "samples": 1},
                 }
             ),
@@ -95,6 +112,13 @@ def main() -> None:
         if actual != expected:
             raise AssertionError(
                 f"Root object did not inherit layout transform: {actual} != {expected}"
+            )
+        lighting_direction = receipt["lighting"]["sun_direction_blender"]
+        expected_direction = [0.866025, 0.0, 0.5]
+        if lighting_direction != expected_direction:
+            raise AssertionError(
+                "Blender sun direction did not match the schema-v2 layout: "
+                f"{lighting_direction} != {expected_direction}"
             )
         print(f"roundtrip ok: root object location {actual}, render {receipt['output']}")
 

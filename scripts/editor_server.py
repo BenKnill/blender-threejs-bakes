@@ -118,8 +118,8 @@ class EditorHandler(SimpleHTTPRequestHandler):
 
 
 def validate_layout(layout: dict) -> None:
-    if layout.get("schema") != 1:
-        raise ValueError("layout schema must be 1")
+    if layout.get("schema") not in (1, 2):
+        raise ValueError("layout schema must be 1 or 2")
     if layout.get("space") != "threejs_yup":
         raise ValueError("layout space must be threejs_yup")
     if not isinstance(layout.get("instances"), list):

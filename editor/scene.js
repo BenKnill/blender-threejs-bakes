@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { TransformControls } from "three/addons/controls/TransformControls.js";
 import { installUniformScale } from "./uniform-scale.js";
+import { sunDirection } from "./lighting.js";
 
 export function createEditorScene(viewport, onTransformChange) {
   const scene = new THREE.Scene();
@@ -66,7 +67,20 @@ export function createEditorScene(viewport, onTransformChange) {
 
   scene.add(transform);
 
-  setupSceneGuides(scene);
+  const lights = setupSceneGuides(scene);
+
+  function applyLighting(lighting) {
+    const [x, y, z] = sunDirection(lighting);
+    lights.key.position.set(x * 10, y * 10, z * 10);
+    lights.key.color.setRGB(...lighting.sun.color);
+    lights.key.intensity = Math.max(0, lighting.sun.strength);
+    lights.hemi.color.setRGB(...lighting.world.color);
+    lights.hemi.groundColor.setRGB(0.12, 0.14, 0.12);
+    lights.hemi.intensity = Math.max(0.05, lighting.world.strength);
+    scene.background = new THREE.Color(...lighting.world.color).multiplyScalar(
+      lighting.world.type === "sky" ? 1.45 : 1
+    );
+  }
 
   function resize() {
     const bounds = viewport.getBoundingClientRect();
@@ -84,7 +98,7 @@ export function createEditorScene(viewport, onTransformChange) {
   resize();
   window.addEventListener("resize", resize);
 
-  return { scene, camera, renderer, orbit, transform, resize, animate };
+  return { scene, camera, renderer, orbit, transform, resize, animate, applyLighting };
 }
 
 function setupSceneGuides(scene) {
@@ -107,4 +121,6 @@ function setupSceneGuides(scene) {
   ground.position.y = -2.5;
   ground.receiveShadow = true;
   scene.add(ground);
+
+  return { hemi, key };
 }
