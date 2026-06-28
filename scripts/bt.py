@@ -6,8 +6,11 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import shutil
 import subprocess
 import sys
+import tempfile
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -41,12 +44,14 @@ from btlib.presets import (
     preset_layout,
     validate_preset,
 )
-from btlib.validate import ContractError, validate_layout, validate_manifest
+from btlib.validate import ContractError, validate_layout, validate_manifest, validate_shot
 
 
 def validate_file(path: Path) -> None:
     data = load_json(path)
-    if "layout" in data and "required_assets" in data:
+    if path.name == "shot.json" or ("frames" in data and "source_layouts" in data):
+        validate_shot(data)
+    elif "layout" in data and "required_assets" in data:
         validate_preset(data)
     elif path.name == "manifest.json" or "assets" in data:
         validate_manifest(data, path, check_proxy_files=True)
@@ -400,6 +405,8 @@ def cmd_render(args: argparse.Namespace) -> int:
     layout = resolve_repo_path(args.layout)
     if not layout.exists():
         raise ValueError(f"layout does not exist: {layout}")
+    if args.shot:
+        return cmd_render_shot(args, layout)
     output_dir = resolve_repo_path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     before = {path.name for path in output_dir.glob("*.png")} if output_dir.exists() else set()
@@ -433,6 +440,211 @@ def cmd_render(args: argparse.Namespace) -> int:
         "renders": [render_metadata(path) for path in renders],
     }
     return print_result(payload, args.json)
+
+
+def cmd_render_shot(args: argparse.Namespace, layout_path: Path) -> int:
+    if args.pose != "base":
+        raise ValueError("--shot owns frame pose selection; omit --pose")
+    layout = load_layout(layout_path)
+    shot_id = normalize_shot_id(args.shot)
+    shot_dir = resolve_repo_path(args.output_dir) / "shots" / shot_id
+    shot_dir.mkdir(parents=True, exist_ok=True)
+    if any((shot_dir / name).exists() for name in ("first.png", "last.png", "shot.json")):
+        raise ValueError(f"shot package already exists; remove it first: {shot_dir}")
+
+    keyframed = bool(layout.get("keyframes"))
+    frames = [("first", "a" if keyframed else "base")]
+    if keyframed:
+        frames.append(("last", "b"))
+
+    render_layout = prepare_render_layout(layout_path, args)
+    rendered_frames = {}
+    render_receipts = []
+    with tempfile.TemporaryDirectory(prefix=".bt-shot-", dir=shot_dir) as staging:
+        staging_dir = Path(staging)
+        for frame_name, pose in frames:
+            result = render_one_frame(render_layout, args, staging_dir, pose)
+            if result["returncode"] != 0:
+                payload = {
+                    "ok": False,
+                    "shot": shot_id,
+                    "frame": frame_name,
+                    "pose": pose,
+                    "returncode": result["returncode"],
+                    "stdout": result["stdout"][-4000:],
+                    "stderr": result["stderr"][-4000:],
+                }
+                if args.json:
+                    print_json(payload)
+                else:
+                    print(
+                        f"Blender render failed for shot {shot_id} frame {frame_name}",
+                        file=sys.stderr,
+                    )
+                    print(result["stderr"][-4000:], file=sys.stderr)
+                return 3
+            source_png = result["png"]
+            target_png = shot_dir / f"{frame_name}.png"
+            shutil.copy2(source_png, target_png)
+            receipt = result.get("receipt") or {}
+            render_receipts.append(receipt)
+            rendered_frames[frame_name] = {
+                "path": relative(target_png),
+                "pose": pose,
+                "bytes": target_png.stat().st_size,
+                "source_render": relative(source_png),
+                "source_receipt": receipt,
+            }
+
+    shot = build_shot_package(
+        shot_id=shot_id,
+        shot_dir=shot_dir,
+        layout_path=layout_path,
+        layout=layout,
+        args=args,
+        frames=rendered_frames,
+        render_receipts=render_receipts,
+    )
+    shot_path = shot_dir / "shot.json"
+    validate_shot(shot)
+    shot_path.write_text(json.dumps(shot, indent=2) + "\n", encoding="utf-8")
+    payload = {
+        "ok": True,
+        "shot": shot_id,
+        "directory": relative(shot_dir),
+        "frames": {
+            name: {
+                key: value
+                for key, value in frame.items()
+                if key not in ("source_receipt", "source_render")
+            }
+            for name, frame in rendered_frames.items()
+        },
+        "shot_json": relative(shot_path),
+    }
+    return print_result(payload, args.json)
+
+
+def render_one_frame(
+    render_layout: Path, args: argparse.Namespace, output_dir: Path, pose: str
+) -> dict[str, Any]:
+    before = {path.name for path in output_dir.glob("*.png")}
+    result = run_render(render_layout, args, output_dir, pose)
+    if result["returncode"] != 0:
+        return result
+    new_pngs = [
+        path
+        for path in sorted(output_dir.glob("*.png"), key=lambda item: item.stat().st_mtime)
+        if path.name not in before
+    ]
+    if not new_pngs:
+        return {
+            **result,
+            "returncode": 3,
+            "stderr": result["stderr"] + "\nBlender reported success but wrote no PNG.",
+        }
+    png = new_pngs[-1]
+    receipt_path = png.with_suffix(".receipt.json")
+    receipt = load_json(receipt_path) if receipt_path.exists() else {}
+    return {**result, "png": png, "receipt": receipt}
+
+
+def build_shot_package(
+    *,
+    shot_id: str,
+    shot_dir: Path,
+    layout_path: Path,
+    layout: dict[str, Any],
+    args: argparse.Namespace,
+    frames: dict[str, dict[str, Any]],
+    render_receipts: list[dict[str, Any]],
+) -> dict[str, Any]:
+    shot_config = layout.get("shot") or {}
+    prompt = args.prompt if args.prompt is not None else shot_config.get("prompt", layout["name"])
+    negative = args.negative if args.negative is not None else shot_config.get("negative", "")
+    duration_s = (
+        args.duration_s if args.duration_s is not None else float(shot_config.get("duration_s", 5))
+    )
+    fps_target = (
+        args.fps_target if args.fps_target is not None else int(shot_config.get("fps_target", 24))
+    )
+    model_hint = (
+        args.model_hint
+        if args.model_hint is not None
+        else shot_config.get("model_hint", "seedance|kling")
+    )
+    seed = args.seed if args.seed is not None else shot_config.get("seed")
+    shot = {
+        "schema": 1,
+        "shot_id": shot_id,
+        "prompt": prompt,
+        "negative": negative,
+        "duration_s": duration_s,
+        "fps_target": fps_target,
+        "model_hint": model_hint,
+        "source_layouts": [relative(layout_path)],
+        "frames": {
+            name: {
+                "path": frame["path"],
+                "pose": frame["pose"],
+                "bytes": frame["bytes"],
+            }
+            for name, frame in frames.items()
+        },
+        "render_metadata": {
+            "generated_at": datetime.now(UTC).isoformat(),
+            "generator": "bt render --shot",
+            "shot_dir": relative(shot_dir),
+            "manifest": relative(resolve_repo_path(args.manifest)),
+            "render_overrides": {
+                key: value
+                for key, value in {
+                    "width": args.width,
+                    "height": args.height,
+                    "samples": args.samples,
+                }.items()
+                if value is not None
+            },
+            "layout_render": layout.get("render", {}),
+            "renders": render_receipts,
+        },
+    }
+    optional_fields = {
+        "subject": args.subject if args.subject is not None else shot_config.get("subject"),
+        "motion_notes": args.motion_notes
+        if args.motion_notes is not None
+        else shot_config.get("motion_notes"),
+        "camera_move": camera_move_summary(layout),
+        "seed": seed,
+    }
+    for key, value in optional_fields.items():
+        if value not in (None, ""):
+            shot[key] = value
+    return shot
+
+
+def camera_move_summary(layout: dict[str, Any]) -> Any:
+    keyframes = layout.get("keyframes") or {}
+    moves = {
+        pose: keyframe["camera_move"]
+        for pose, keyframe in keyframes.items()
+        if isinstance(keyframe, dict) and "camera_move" in keyframe
+    }
+    if moves:
+        return moves
+    return None
+
+
+def normalize_shot_id(value: str) -> str:
+    cleaned = value.strip()
+    if not cleaned:
+        raise ValueError("shot id cannot be empty")
+    allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-")
+    if any(char not in allowed for char in cleaned):
+        raise ValueError("shot id may only contain letters, numbers, dot, underscore, or dash")
+    if cleaned in {".", ".."}:
+        raise ValueError("shot id cannot be . or ..")
+    return cleaned
 
 
 def run_render(
@@ -859,6 +1071,21 @@ def build_parser() -> argparse.ArgumentParser:
     render.add_argument("--height", type=int)
     render.add_argument("--samples", type=int)
     render.add_argument("--pose", choices=("base", "a", "b", "both"), default="base")
+    render.add_argument(
+        "--shot",
+        metavar="SHOT_ID",
+        help="write renders/shots/SHOT_ID/{first.png,last.png,shot.json}",
+    )
+    render.add_argument("--prompt", help="shot prompt; defaults to layout shot.prompt or name")
+    render.add_argument("--negative", help="shot negative prompt")
+    render.add_argument("--duration-s", type=float, help="target video duration in seconds")
+    render.add_argument("--fps-target", type=int, help="target video frame rate")
+    render.add_argument(
+        "--model-hint", help="video model target hint, for example seedance or kling"
+    )
+    render.add_argument("--subject", help="short subject description for shot.json")
+    render.add_argument("--motion-notes", help="motion notes for shot.json")
+    render.add_argument("--seed", type=int, help="optional downstream video seed")
     add_json_arg(render)
     render.set_defaults(func=cmd_render)
 

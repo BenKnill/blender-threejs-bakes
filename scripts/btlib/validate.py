@@ -63,6 +63,51 @@ def validate_manifest(
     raise_if_errors(errors)
 
 
+def validate_shot(shot: dict[str, Any]) -> None:
+    load_schema("shot")
+    errors: list[str] = []
+    require_object(shot, "", errors)
+    if shot.get("schema") != 1:
+        errors.append("/schema: expected 1")
+    require_string(shot, "/shot_id", "shot_id", errors)
+    require_string(shot, "/prompt", "prompt", errors)
+    if not isinstance(shot.get("negative"), str):
+        errors.append("/negative: expected string")
+    require_number(shot, "/duration_s", "duration_s", errors, low=0.000001)
+    require_int(shot, "/fps_target", "fps_target", errors, low=1)
+    require_string(shot, "/model_hint", "model_hint", errors)
+    require_array(shot, "/source_layouts", "source_layouts", errors)
+    for index, source in enumerate(shot.get("source_layouts", [])):
+        if not isinstance(source, str) or not source:
+            errors.append(f"/source_layouts/{index}: expected non-empty string")
+    frames = shot.get("frames")
+    if require_object(frames, "/frames", errors):
+        validate_shot_frame(frames.get("first"), "/frames/first", errors, required=True)
+        if "last" in frames:
+            validate_shot_frame(frames["last"], "/frames/last", errors, required=False)
+    render_metadata = shot.get("render_metadata")
+    if require_object(render_metadata, "/render_metadata", errors):
+        require_string(render_metadata, "/render_metadata/generated_at", "generated_at", errors)
+        require_string(render_metadata, "/render_metadata/generator", "generator", errors)
+        require_string(render_metadata, "/render_metadata/shot_dir", "shot_dir", errors)
+        require_string(render_metadata, "/render_metadata/manifest", "manifest", errors)
+        require_array(render_metadata, "/render_metadata/renders", "renders", errors)
+    raise_if_errors(errors)
+
+
+def validate_shot_frame(value: Any, pointer: str, errors: list[str], *, required: bool) -> None:
+    if value is None:
+        if required:
+            errors.append(f"{pointer}: missing required object")
+        return
+    if not require_object(value, pointer, errors):
+        return
+    require_string(value, f"{pointer}/path", "path", errors)
+    if value.get("pose") not in ("base", "a", "b"):
+        errors.append(f"{pointer}/pose: expected base, a, or b")
+    require_int(value, f"{pointer}/bytes", "bytes", errors, low=0)
+
+
 def validate_instance(value: Any, pointer: str, errors: list[str]) -> None:
     if not require_object(value, pointer, errors):
         return
