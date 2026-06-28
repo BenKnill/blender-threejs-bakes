@@ -235,6 +235,19 @@ h2 {
   grid-template-columns: repeat(3, minmax(78px, 1fr));
 }
 
+.inspectorPanel input:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.scaleFields {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.cameraFovField {
+  max-width: calc((100% - 16px) / 3);
+}
+
 .renderGallery {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

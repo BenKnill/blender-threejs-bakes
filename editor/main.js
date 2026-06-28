@@ -1,5 +1,6 @@
 import { createEditorScene } from "./scene.js";
 import { createInstanceStore } from "./instances.js";
+import { createInspector } from "./inspector.js";
 import { applyLightingToControls, createLightingControls, currentLighting } from "./lighting.js";
 import { applyLayoutFields, cameraSnapshot, currentLayout, downloadLayout } from "./layout-io.js";
 import { loadManifest } from "./manifest-loader.js";
@@ -33,10 +34,32 @@ const lightingInputs = {
   worldColor: document.querySelector("#worldColor"),
   exposure: document.querySelector("#exposure"),
 };
+const instanceFields = {
+  positionX: document.querySelector("#instancePositionX"),
+  positionY: document.querySelector("#instancePositionY"),
+  positionZ: document.querySelector("#instancePositionZ"),
+  rotationX: document.querySelector("#instanceRotationX"),
+  rotationY: document.querySelector("#instanceRotationY"),
+  rotationZ: document.querySelector("#instanceRotationZ"),
+  uniformScale: document.querySelector("#instanceUniformScale"),
+  scaleX: document.querySelector("#instanceScaleX"),
+  scaleY: document.querySelector("#instanceScaleY"),
+  scaleZ: document.querySelector("#instanceScaleZ"),
+};
+const cameraFields = {
+  positionX: document.querySelector("#cameraPositionX"),
+  positionY: document.querySelector("#cameraPositionY"),
+  positionZ: document.querySelector("#cameraPositionZ"),
+  targetX: document.querySelector("#cameraTargetX"),
+  targetY: document.querySelector("#cameraTargetY"),
+  targetZ: document.querySelector("#cameraTargetZ"),
+  fov: document.querySelector("#cameraFov"),
+};
 
 let savedCamera = null;
+let inspector = null;
 const assetMap = new Map();
-const editorScene = createEditorScene(viewport, renderInstances);
+const editorScene = createEditorScene(viewport, renderInstances, () => inspector?.updateCamera());
 const proxyLoader = createProxyLoader();
 const store = createInstanceStore({
   scene: editorScene.scene,
@@ -44,6 +67,16 @@ const store = createInstanceStore({
   assetMap,
   createProxyObject: proxyLoader.createProxyObject,
   onChange: renderInstances,
+});
+inspector = createInspector({
+  instanceFields,
+  cameraFields,
+  getSelected: store.selected,
+  transform: editorScene.transform,
+  camera: editorScene.camera,
+  orbit: editorScene.orbit,
+  onInstanceEdit: renderInstances,
+  onCameraEdit: saveCamera,
 });
 createLightingControls({
   elements: lightingInputs,
@@ -124,6 +157,7 @@ function renderInstances() {
   document.querySelector("#hudSelection").textContent = selected
     ? selected.userData.instanceId
     : "nothing selected";
+  inspector?.updateInstance();
 }
 
 function saveCamera() {
@@ -260,5 +294,6 @@ async function loadLayoutFromFile(event) {
   });
   savedCamera = layout.camera || null;
   await store.restore(layout);
+  inspector.update();
   event.target.value = "";
 }

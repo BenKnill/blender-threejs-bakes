@@ -4,7 +4,7 @@ import { TransformControls } from "three/addons/controls/TransformControls.js";
 import { installUniformScale } from "./uniform-scale.js";
 import { sunDirection } from "./lighting.js";
 
-export function createEditorScene(viewport, onTransformChange) {
+export function createEditorScene(viewport, onTransformChange, onCameraChange = () => {}) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x171a18);
 
@@ -19,6 +19,7 @@ export function createEditorScene(viewport, onTransformChange) {
   const orbit = new OrbitControls(camera, renderer.domElement);
   orbit.target.set(0, 0.8, 0);
   orbit.enableDamping = true;
+  orbit.addEventListener("change", onCameraChange);
 
   const transform = new TransformControls(camera, renderer.domElement);
   transform.setMode("translate");
