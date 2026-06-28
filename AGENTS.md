@@ -59,6 +59,7 @@ Validate a layout or manifest contract:
 ```sh
 python3 scripts/bt.py validate layouts/live.layout.json
 python3 scripts/bt.py validate assets/manifest.json --json
+python3 scripts/check_lighting_presets.py
 ```
 
 Author and render a layout without the browser:
@@ -76,6 +77,14 @@ python3 scripts/bt.py render layouts/cli_demo.layout.json --width 640 --height 3
 
 CLI exit codes: 0 means success, 2 means invalid input or contract failure, and
 3 means Blender render failure.
+
+Lighting preset calibration changes should also run:
+
+```sh
+python3 scripts/bt.py layout new preset_sanity --layout /tmp/preset_sanity.layout.json
+python3 scripts/bt.py light preset golden_hour --layout /tmp/preset_sanity.layout.json
+python3 scripts/bt.py inspect /tmp/preset_sanity.layout.json
+```
 
 ## Architecture Invariants
 

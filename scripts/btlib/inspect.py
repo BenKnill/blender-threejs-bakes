@@ -136,6 +136,7 @@ def inspect_lighting(layout: dict[str, Any]) -> dict:
         elevation_word = "low"
     else:
         elevation_word = "mid"
+    warnings = lighting_warnings(lighting, elevation)
     return {
         "present": True,
         "preset": lighting["preset"],
@@ -143,8 +144,28 @@ def inspect_lighting(layout: dict[str, Any]) -> dict:
         "relative_to_camera": " ".join(horizontal_words),
         "elevation": elevation_word,
         "description": f"{elevation_word} sun from camera {'/'.join(horizontal_words)}",
-        "warnings": [],
+        "warnings": warnings,
     }
+
+
+def lighting_warnings(lighting: dict[str, Any], elevation: float) -> list[str]:
+    warnings = []
+    exposure = float(lighting.get("exposure", 0.0))
+    sun = lighting["sun"]
+    world = lighting["world"]
+    sun_strength = float(sun.get("strength", 0.0))
+    world_strength = float(world.get("strength", 0.0))
+    if exposure > 0.25:
+        warnings.append(f"exposure {exposure:g} may wash out whites and material identity")
+    if elevation < 15 and sun_strength >= 3.5:
+        warnings.append(
+            f"low sun elevation {elevation:g} with strength {sun_strength:g} can overheat highlights"
+        )
+    if sun_strength >= 3.5 and world_strength >= 0.75:
+        warnings.append(
+            f"world fill {world_strength:g} plus sun strength {sun_strength:g} may flatten contrast"
+        )
+    return warnings
 
 
 def inspect_scale(scale: Vec3, asset: dict[str, Any]) -> dict:

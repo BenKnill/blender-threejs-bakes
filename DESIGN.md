@@ -127,18 +127,18 @@ many times).
     "preset": "golden_hour",
     "sun": {
       "azimuth_deg": 120,
-      "elevation_deg": 10,
-      "color": [1.0, 0.78, 0.48],
-      "strength": 4.0,
-      "angle_deg": 1.8
+      "elevation_deg": 8,
+      "color": [1.0, 0.86, 0.68],
+      "strength": 2.4,
+      "angle_deg": 2.6
     },
     "world": {
       "type": "sky",
-      "strength": 0.8,
-      "color": [0.05, 0.055, 0.06],
+      "strength": 0.45,
+      "color": [0.055, 0.058, 0.065],
       "rotation_deg": 0
     },
-    "exposure": 0.35
+    "exposure": 0.0
   }
 }
 ```
