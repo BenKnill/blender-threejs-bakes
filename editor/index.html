@@ -17,6 +17,7 @@
   <body>
     <main id="app">
       <section id="viewport" aria-label="3D layout viewport" data-testid="viewport">
+        <div id="safeFrame" class="safeFrame" aria-hidden="true" data-testid="safe-frame"></div>
         <div id="viewportHud" class="viewportHud" aria-hidden="true" data-testid="viewport-hud">
           <span id="hudMode" class="hudMode" data-testid="hud-mode">Move</span>
           <span id="hudSelection" class="hudSelection" data-testid="hud-selection">
@@ -238,6 +239,26 @@
         <section class="panel inspectorPanel" data-testid="camera-inspector">
           <div class="panelHeader">
             <h2>Camera</h2>
+            <div class="minirow">
+              <button
+                id="frameSelected"
+                type="button"
+                title="Move camera to frame the selected instance"
+                aria-label="Frame selected instance with camera"
+                data-testid="frame-selected"
+              >
+                Frame Selected
+              </button>
+              <button
+                id="frameAll"
+                type="button"
+                title="Move camera to frame every instance"
+                aria-label="Frame all instances with camera"
+                data-testid="frame-all"
+              >
+                Frame All
+              </button>
+            </div>
           </div>
           <div class="gridFields">
             <label class="field">
