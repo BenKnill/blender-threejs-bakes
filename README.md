@@ -3,6 +3,8 @@
 Static Three.js blocking editor plus Blender scripts for final Cycles renders from
 original `.blend` assets.
 
+For agent-facing operating notes, see [AGENTS.md](AGENTS.md).
+
 ## Run the editor
 
 ```sh
