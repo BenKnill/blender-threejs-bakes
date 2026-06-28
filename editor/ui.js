@@ -6,11 +6,20 @@ export function renderAssetPalette(assetPalette, assets, onAdd) {
     button.className = `assetButton ${assetHealthClass(asset)}`;
     button.setAttribute("aria-label", `Add asset ${asset.name || asset.id}`);
     button.dataset.testid = `asset-row:${asset.id}`;
+    button.dataset.assetId = asset.id;
+    button.dataset.assetCategory = asset.category || "prop";
+    button.dataset.assetSizeClass = asset.size_class || "human";
+    button.dataset.assetStarterScale = String(asset.starter_scale ?? "");
+    button.dataset.assetProxyStatus = asset.health?.proxyStatus || "unknown";
+    button.dataset.assetHealthLabels = assetHealthLabels(asset).join(",");
     const proxyLabel = assetProxyLabel(asset);
-    button.title = asset.health?.proxyMessage || proxyLabel;
+    const metadataLabel = assetMetadataLabel(asset);
+    button.title = [metadataLabel, asset.health?.proxyMessage || proxyLabel]
+      .filter(Boolean)
+      .join(" · ");
     button.innerHTML = `<strong>${escapeHtml(asset.name || asset.id)}</strong><span>${escapeHtml(
-      proxyLabel
-    )}</span>`;
+      metadataLabel
+    )}</span><span class="assetMetaDetail">${escapeHtml(proxyLabel)}</span>`;
     button.addEventListener("click", () => onAdd(asset.id));
     assetPalette.appendChild(button);
   }
@@ -55,6 +64,19 @@ function assetHealthClass(asset) {
 
 function assetProxyLabel(asset) {
   return `${asset.id} · ${assetRenderableText(asset)} · ${assetPreviewText(asset)}`;
+}
+
+function assetMetadataLabel(asset) {
+  return [asset.category || "prop", asset.size_class || "human", ...assetHealthLabels(asset)].join(
+    " · "
+  );
+}
+
+function assetHealthLabels(asset) {
+  const labels = Array.isArray(asset.health_labels) ? [...asset.health_labels] : [];
+  const previewText = assetPreviewText(asset);
+  if (previewText && !labels.includes(previewText)) labels.push(previewText);
+  return labels;
 }
 
 function assetRenderableText(asset) {

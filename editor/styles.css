@@ -220,6 +220,10 @@ h2 {
   font-size: 12px;
 }
 
+.assetButton .assetMetaDetail {
+  color: #7f857b;
+}
+
 .assetButton.previewReady {
   border-color: #516757;
 }
