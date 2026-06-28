@@ -50,10 +50,13 @@ Output lands in `renders/<layout-name>.png` with a matching receipt JSON.
 ```sh
 python3 scripts/bt.py validate layouts/live.layout.json
 python3 scripts/bt.py validate assets/manifest.json --json
+python3 scripts/check_lighting_presets.py
 ```
 
 Validation errors use JSON-pointer-style paths such as
 `/instances/3/quaternion: expected 4 numbers`.
+The lighting preset check compares the browser editor presets against the CLI
+presets so calibration changes cannot silently drift.
 
 ## Author from the CLI
 
@@ -71,3 +74,12 @@ python3 scripts/bt.py render layouts/cli_demo.layout.json --width 640 --height 3
 ```
 
 Most commands accept `--json`; contract errors exit 2 and render failures exit 3.
+
+For a small preset sanity pass without writing render artifacts, apply a preset
+to a throwaway layout and inspect it:
+
+```sh
+python3 scripts/bt.py layout new preset_sanity --layout /tmp/preset_sanity.layout.json
+python3 scripts/bt.py light preset golden_hour --layout /tmp/preset_sanity.layout.json
+python3 scripts/bt.py inspect /tmp/preset_sanity.layout.json
+```
