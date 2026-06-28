@@ -25,18 +25,20 @@ def validate_layout(layout: dict[str, Any]) -> None:
     errors: list[str] = []
     require_object(layout, "", errors)
     schema = layout.get("schema")
-    if schema not in (1, 2):
-        errors.append("/schema: expected 1 or 2")
+    if schema not in (1, 2, 3):
+        errors.append("/schema: expected 1, 2, or 3")
     require_string(layout, "/name", "name", errors)
     require_const(layout, "/space", "space", "threejs_yup", errors)
     require_array(layout, "/instances", "instances", errors)
     require_object_member(layout, "/camera", "camera", errors)
     if "render" in layout:
         validate_render(layout["render"], "/render", errors)
-    if schema == 2:
+    if schema in (2, 3):
         require_object_member(layout, "/lighting", "lighting", errors)
     if "lighting" in layout:
         validate_lighting(layout["lighting"], "/lighting", errors)
+    if "keyframes" in layout:
+        validate_keyframes(layout["keyframes"], "/keyframes", errors)
 
     for index, instance in enumerate(layout.get("instances", [])):
         validate_instance(instance, f"/instances/{index}", errors)
@@ -103,6 +105,73 @@ def validate_lighting(value: Any, pointer: str, errors: list[str]) -> None:
         if "rotation_deg" in world:
             require_number(world, f"{pointer}/world/rotation_deg", "rotation_deg", errors)
     require_number(value, f"{pointer}/exposure", "exposure", errors)
+
+
+def validate_keyframes(value: Any, pointer: str, errors: list[str]) -> None:
+    if not require_object(value, pointer, errors):
+        return
+    for pose_name in ("a", "b"):
+        if pose_name in value:
+            validate_pose(value[pose_name], f"{pointer}/{pose_name}", errors)
+
+
+def validate_pose(value: Any, pointer: str, errors: list[str]) -> None:
+    if not require_object(value, pointer, errors):
+        return
+    if "camera" in value:
+        validate_camera_override(value["camera"], f"{pointer}/camera", errors)
+    if "camera_move" in value:
+        validate_camera_move(value["camera_move"], f"{pointer}/camera_move", errors)
+    if "instances" in value:
+        if not require_object(value["instances"], f"{pointer}/instances", errors):
+            return
+        for instance_id, transform in value["instances"].items():
+            if not isinstance(instance_id, str) or not instance_id:
+                errors.append(f"{pointer}/instances: instance ids must be non-empty strings")
+                continue
+            validate_transform_override(transform, f"{pointer}/instances/{instance_id}", errors)
+
+
+def validate_camera_move(value: Any, pointer: str, errors: list[str]) -> None:
+    if not require_object(value, pointer, errors):
+        return
+    if value.get("preset") not in (
+        "push_in",
+        "pull_out",
+        "orbit_left",
+        "orbit_right",
+        "crane_up",
+        "dolly",
+        "whip",
+    ):
+        errors.append(f"{pointer}/preset: expected known camera move preset")
+    for key in ("amount", "degrees"):
+        if key in value:
+            require_number(value, f"{pointer}/{key}", key, errors)
+
+
+def validate_camera_override(value: Any, pointer: str, errors: list[str]) -> None:
+    if not require_object(value, pointer, errors):
+        return
+    if "position" in value:
+        require_vec(value, f"{pointer}/position", "position", 3, errors)
+    if "target" in value:
+        require_vec(value, f"{pointer}/target", "target", 3, errors)
+    if "up" in value:
+        require_vec(value, f"{pointer}/up", "up", 3, errors)
+    if "fov_deg" in value:
+        require_number(value, f"{pointer}/fov_deg", "fov_deg", errors, low=1, high=179)
+
+
+def validate_transform_override(value: Any, pointer: str, errors: list[str]) -> None:
+    if not require_object(value, pointer, errors):
+        return
+    if "position" in value:
+        require_vec(value, f"{pointer}/position", "position", 3, errors)
+    if "quaternion" in value:
+        require_vec(value, f"{pointer}/quaternion", "quaternion", 4, errors)
+    if "scale" in value:
+        require_vec(value, f"{pointer}/scale", "scale", 3, errors)
 
 
 def validate_asset(value: Any, pointer: str, errors: list[str]) -> None:
