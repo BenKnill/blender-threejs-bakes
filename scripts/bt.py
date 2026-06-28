@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from btlib.default_scale import default_drop_scale
 from btlib.inspect import inspect_layout
 from btlib.keyframes import layout_with_pose
 from btlib.layout import (
@@ -75,6 +76,7 @@ def cmd_assets(args: argparse.Namespace) -> int:
             "id": asset["id"],
             "name": asset["name"],
             "bbox": asset["bbox"],
+            "default_scale": default_drop_scale(asset),
             "source_blend": asset["source_blend"],
             "glb": asset["glb"],
         }
@@ -84,12 +86,13 @@ def cmd_assets(args: argparse.Namespace) -> int:
         print_json({"assets": assets})
         return 0
     print_table(
-        ["id", "name", "bbox", "source"],
+        ["id", "name", "bbox", "default", "source"],
         [
             [
                 asset["id"],
                 asset["name"],
                 vec_text(asset["bbox"]),
+                f"{asset['default_scale']:g}",
                 Path(asset["source_blend"]).name,
             ]
             for asset in assets
@@ -118,14 +121,15 @@ def cmd_place(args: argparse.Namespace) -> int:
     path = resolve_repo_path(args.layout)
     layout = load_layout(path)
     manifest = load_manifest(resolve_repo_path(args.manifest))
-    asset_by_id(manifest, args.asset_id)
+    asset = asset_by_id(manifest, args.asset_id)
     instance_id = args.id or unique_instance_id(layout, args.asset_id)
+    scale = scale_values(args.scale) if args.scale is not None else [default_drop_scale(asset)] * 3
     instance = {
         "instance_id": instance_id,
         "asset_id": args.asset_id,
         "position": args.at,
         "quaternion": [0, 0, 0, 1],
-        "scale": scale_values(args.scale),
+        "scale": scale,
     }
     layout["instances"].append(instance)
     write_layout(path, layout)
@@ -536,7 +540,7 @@ def build_parser() -> argparse.ArgumentParser:
     place.add_argument("--manifest", default=str(DEFAULT_MANIFEST))
     place.add_argument("asset_id")
     place.add_argument("--at", type=float, nargs=3, metavar=("X", "Y", "Z"), default=[0, 0, 0])
-    place.add_argument("--scale", type=float, nargs="+", default=[1])
+    place.add_argument("--scale", type=float, nargs="+")
     place.add_argument("--id")
     add_json_arg(place)
     place.set_defaults(func=cmd_place)

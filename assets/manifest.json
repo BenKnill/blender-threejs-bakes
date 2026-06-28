@@ -409,6 +409,7 @@
         117.2,
         22.5393
       ],
+      "default_scale": 0.055,
       "up_axis": "Z",
       "proxy": {
         "mode": "full",

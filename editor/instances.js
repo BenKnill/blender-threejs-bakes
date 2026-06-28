@@ -1,4 +1,5 @@
 import { objectToInstance } from "./layout-io.js";
+import { defaultDropScale } from "./default-scale.js";
 
 export function createInstanceStore({ scene, transform, assetMap, createProxyObject, onChange }) {
   const instances = new Map();
@@ -85,11 +86,4 @@ export function createInstanceStore({ scene, transform, assetMap, createProxyObj
     restore,
     selected: () => selected,
   };
-}
-
-function defaultDropScale(asset) {
-  const bbox = Array.isArray(asset.bbox) ? asset.bbox : [1, 1, 1];
-  const maxAxis = Math.max(...bbox.map((value) => Math.abs(value || 0)));
-  if (maxAxis <= 0) return 1;
-  return Math.min(30, Math.max(1, 1.5 / maxAxis));
 }

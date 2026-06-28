@@ -180,6 +180,8 @@ def validate_asset(value: Any, pointer: str, errors: list[str]) -> None:
     for key in ("id", "name", "glb", "source_blend", "collection"):
         require_string(value, f"{pointer}/{key}", key, errors)
     require_vec(value, f"{pointer}/bbox", "bbox", 3, errors)
+    if "default_scale" in value:
+        require_number(value, f"{pointer}/default_scale", "default_scale", errors, low=0.000001)
     if value.get("up_axis") not in ("Y", "Z"):
         errors.append(f"{pointer}/up_axis: expected Y or Z")
 

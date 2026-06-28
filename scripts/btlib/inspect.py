@@ -5,6 +5,7 @@ from __future__ import annotations
 from itertools import combinations
 from typing import Any
 
+from btlib.default_scale import default_drop_scale
 from btlib.geometry import (
     Vec3,
     aabb_overlap,
@@ -297,14 +298,6 @@ def summary_warnings(instances: list[dict], relationships: dict, lighting: dict)
     for overlap in relationships["overlaps"]:
         warnings.append(f"{overlap['a']} overlaps {overlap['b']}")
     return warnings
-
-
-def default_drop_scale(asset: dict[str, Any]) -> float:
-    bbox = asset.get("bbox") if isinstance(asset.get("bbox"), list) else [1, 1, 1]
-    max_axis = max(abs(float(value or 0)) for value in bbox)
-    if max_axis <= 0:
-        return 1.0
-    return min(30.0, max(1.0, 1.5 / max_axis))
 
 
 def three_bbox(asset: dict[str, Any]) -> Vec3:

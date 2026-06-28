@@ -149,6 +149,12 @@ def attribution_for(asset_id: str) -> dict | None:
     return None
 
 
+def default_scale_for(asset_id: str) -> float | None:
+    if asset_id == "spacex_starship_sn8":
+        return 0.055
+    return None
+
+
 def import_asset(asset_id: str, name: str, source_path: Path, args: argparse.Namespace) -> dict:
     reset_scene()
     import_source(source_path)
@@ -181,6 +187,9 @@ def import_asset(asset_id: str, name: str, source_path: Path, args: argparse.Nam
     attribution = attribution_for(asset_id)
     if attribution:
         asset["attribution"] = attribution
+    default_scale = default_scale_for(asset_id)
+    if default_scale:
+        asset["default_scale"] = default_scale
     return asset
 
 
