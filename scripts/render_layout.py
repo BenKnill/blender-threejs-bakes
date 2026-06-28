@@ -87,6 +87,8 @@ def reset_scene() -> None:
 
 def append_collection(asset: dict):
     blend_path = Path(asset["source_blend"])
+    if not blend_path.is_absolute():
+        blend_path = ROOT / blend_path
     collection_name = asset["collection"]
     if not blend_path.exists():
         raise FileNotFoundError(f"Missing source blend for {asset['id']}: {blend_path}")
