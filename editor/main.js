@@ -58,9 +58,10 @@ const cameraFields = {
 
 let savedCamera = null;
 let inspector = null;
+let manifestAssets = [];
 const assetMap = new Map();
 const editorScene = createEditorScene(viewport, renderInstances, () => inspector?.updateCamera());
-const proxyLoader = createProxyLoader();
+const proxyLoader = createProxyLoader({ onProxyStatus: updateAssetHealth });
 const store = createInstanceStore({
   scene: editorScene.scene,
   transform: editorScene.transform,
@@ -102,12 +103,35 @@ editorScene.animate();
 async function loadAssets() {
   try {
     const manifest = await loadManifest();
+    manifestAssets = manifest.assets;
     manifest.assets.forEach((asset) => assetMap.set(asset.id, asset));
     renderAssetPalette(assetPalette, manifest.assets, store.add);
-    manifestStatus.textContent = `${manifest.assets.length} assets ready`;
+    updateManifestStatus();
   } catch (error) {
     manifestStatus.textContent = error.message;
   }
+}
+
+function updateAssetHealth(assetId, patch) {
+  const asset = assetMap.get(assetId);
+  if (!asset) return;
+  asset.health = { ...(asset.health || {}), ...patch };
+  renderAssetPalette(assetPalette, manifestAssets, store.add);
+  renderInstances();
+  updateManifestStatus();
+}
+
+function updateManifestStatus() {
+  const total = manifestAssets.length;
+  const renderable = manifestAssets.filter((asset) => asset.health?.renderable).length;
+  const previewable = manifestAssets.filter((asset) => asset.health?.previewable).length;
+  const badPreviews = manifestAssets.filter(
+    (asset) => asset.health && !asset.health.previewable
+  ).length;
+  manifestStatus.textContent =
+    badPreviews > 0
+      ? `${renderable}/${total} renderable · ${previewable}/${total} previewable · ${badPreviews} proxy warnings`
+      : `${renderable}/${total} renderable · ${previewable}/${total} previewable`;
 }
 
 function wireControls() {

@@ -79,6 +79,9 @@ Validation errors use JSON-pointer-style paths such as
 `/instances/3/quaternion: expected 4 numbers`.
 The lighting preset check compares the browser editor presets against the CLI
 presets so calibration changes cannot silently drift.
+Manifest validation also checks that each `glb` proxy resolves under `assets/`;
+missing browser proxies are errors because the editor preview can otherwise
+diverge from Blender renders.
 
 ## Author from the CLI
 

@@ -3,10 +3,11 @@ export function renderAssetPalette(assetPalette, assets, onAdd) {
   for (const asset of assets) {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "assetButton";
+    button.className = `assetButton ${assetHealthClass(asset)}`;
     button.setAttribute("aria-label", `Add asset ${asset.name || asset.id}`);
     button.dataset.testid = `asset-row:${asset.id}`;
-    const proxyLabel = asset.glb ? asset.id : `${asset.id} · bbox proxy`;
+    const proxyLabel = assetProxyLabel(asset);
+    button.title = asset.health?.proxyMessage || proxyLabel;
     button.innerHTML = `<strong>${escapeHtml(asset.name || asset.id)}</strong><span>${escapeHtml(
       proxyLabel
     )}</span>`;
@@ -26,9 +27,10 @@ export function renderInstanceList(instanceList, instances, selected, assetMap, 
     button.setAttribute("aria-label", `Select instance ${id}`);
     button.setAttribute("aria-current", object === selected ? "true" : "false");
     button.dataset.testid = `instance-row:${id}`;
+    const previewStatus = asset ? assetPreviewText(asset) : "unknown asset";
     button.innerHTML = `<strong>${escapeHtml(id)}</strong><span>${escapeHtml(
       asset?.name || object.userData.assetId
-    )} · ${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)}</span>`;
+    )} · ${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)} · ${previewStatus}</span>`;
     button.addEventListener("click", () => onSelect(id));
     instanceList.appendChild(button);
   }
@@ -44,6 +46,28 @@ function setModeButton(selector, active) {
   const button = document.querySelector(selector);
   button.classList.toggle("active", active);
   button.setAttribute("aria-pressed", String(active));
+}
+
+function assetHealthClass(asset) {
+  if (asset.health?.previewable) return "previewReady";
+  return "previewWarning";
+}
+
+function assetProxyLabel(asset) {
+  return `${asset.id} · ${assetRenderableText(asset)} · ${assetPreviewText(asset)}`;
+}
+
+function assetRenderableText(asset) {
+  return asset.health?.renderable ? "renderable" : "not renderable";
+}
+
+function assetPreviewText(asset) {
+  const status = asset.health?.proxyStatus;
+  if (status === "ready") return "preview ready";
+  if (status === "missing") return "proxy missing";
+  if (status === "failed") return "proxy load failed";
+  if (status === "bbox") return "bbox preview";
+  return asset.glb ? "preview unknown" : "bbox preview";
 }
 
 function escapeHtml(value) {
