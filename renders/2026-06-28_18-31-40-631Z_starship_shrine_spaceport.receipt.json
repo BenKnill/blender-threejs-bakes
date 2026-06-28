@@ -1,0 +1,536 @@
+{
+  "layout": "layouts/2026-06-28_starship_shrine_spaceport.layout.json",
+  "manifest": "/private/tmp/blender-threejs-bakes-issue29/assets/manifest.json",
+  "output": "/private/tmp/blender-threejs-bakes-issue29/renders/2026-06-28_18-31-40-631Z_starship_shrine_spaceport.png",
+  "timestamp": "2026-06-28T18:31:54.875468+00:00",
+  "samples": 96,
+  "assets": [
+    "crystal_formation_yellow_red",
+    "lava_asteroid",
+    "mushroom",
+    "plant",
+    "procedural_portal",
+    "scan_rubble_ruins",
+    "spacex_starship_sn8"
+  ],
+  "lighting": {
+    "preset": "warm_spaceport_sunset",
+    "sun": {
+      "azimuth_deg": 128,
+      "elevation_deg": 34,
+      "color": [
+        1.0,
+        0.86,
+        0.68
+      ],
+      "strength": 0.9,
+      "angle_deg": 8.0
+    },
+    "world": {
+      "type": "color",
+      "strength": 0.55,
+      "color": [
+        0.12,
+        0.15,
+        0.2
+      ],
+      "rotation_deg": 0
+    },
+    "exposure": -0.08,
+    "sun_direction_blender": [
+      0.653291,
+      0.510406,
+      0.559193
+    ]
+  },
+  "placements": [
+    {
+      "instance_id": "spacex_starship_sn8_001",
+      "asset_id": "spacex_starship_sn8",
+      "empty_matrix_world": [
+        [
+          0.039,
+          0.0,
+          0.0,
+          0.1
+        ],
+        [
+          0.0,
+          0.0,
+          -0.039,
+          0.0
+        ],
+        [
+          0.0,
+          0.039,
+          0.0,
+          0.15
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "root_objects": [
+        {
+          "name": "starshipv21",
+          "matrix_world": [
+            [
+              0.039,
+              0.0,
+              0.0,
+              0.1
+            ],
+            [
+              0.0,
+              0.0,
+              -0.039,
+              0.0
+            ],
+            [
+              0.0,
+              0.039,
+              0.0,
+              0.15
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "instance_id": "procedural_portal_001",
+      "asset_id": "procedural_portal",
+      "empty_matrix_world": [
+        [
+          2.296522,
+          2.300298,
+          0.0,
+          2.7
+        ],
+        [
+          -2.300298,
+          2.296522,
+          0.0,
+          2.7
+        ],
+        [
+          0.0,
+          0.0,
+          3.25,
+          1.25
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "root_objects": [
+        {
+          "name": "Procedural Portal",
+          "matrix_world": [
+            [
+              3.393323,
+              3.398903,
+              0.0,
+              2.7
+            ],
+            [
+              -3.398903,
+              3.393323,
+              0.0,
+              2.7
+            ],
+            [
+              0.0,
+              0.0,
+              4.802176,
+              1.25
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "instance_id": "lava_asteroid_001",
+      "asset_id": "lava_asteroid",
+      "empty_matrix_world": [
+        [
+          0.46116,
+          -0.299537,
+          -0.001002,
+          -2.15
+        ],
+        [
+          0.274144,
+          0.422745,
+          -0.220271,
+          -1.55
+        ],
+        [
+          0.120751,
+          0.184195,
+          0.503915,
+          2.35
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "root_objects": [
+        {
+          "name": "Lava Asteroid",
+          "matrix_world": [
+            [
+              0.46116,
+              -0.299537,
+              -0.001002,
+              -2.15
+            ],
+            [
+              0.274144,
+              0.422745,
+              -0.220271,
+              -1.55
+            ],
+            [
+              0.120751,
+              0.184195,
+              0.503915,
+              2.35
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "instance_id": "mushroom_001",
+      "asset_id": "mushroom",
+      "empty_matrix_world": [
+        [
+          8.999996,
+          -15.588002,
+          0.0,
+          -3.05
+        ],
+        [
+          15.588002,
+          8.999996,
+          0.0,
+          -1.75
+        ],
+        [
+          0.0,
+          0.0,
+          18.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "root_objects": [
+        {
+          "name": "Mushroom",
+          "matrix_world": [
+            [
+              8.999996,
+              -15.588002,
+              0.0,
+              -3.05
+            ],
+            [
+              15.588002,
+              8.999996,
+              0.0,
+              -1.75
+            ],
+            [
+              0.0,
+              0.0,
+              18.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "instance_id": "mushroom_002",
+      "asset_id": "mushroom",
+      "empty_matrix_world": [
+        [
+          9.524219,
+          5.504268,
+          0.0,
+          -2.25
+        ],
+        [
+          -5.504268,
+          9.524219,
+          0.0,
+          -2.35
+        ],
+        [
+          0.0,
+          0.0,
+          11.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "root_objects": [
+        {
+          "name": "Mushroom.001",
+          "matrix_world": [
+            [
+              9.524219,
+              5.504268,
+              0.0,
+              -2.25
+            ],
+            [
+              -5.504268,
+              9.524219,
+              0.0,
+              -2.35
+            ],
+            [
+              0.0,
+              0.0,
+              11.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "instance_id": "crystal_formation_yellow_red_001",
+      "asset_id": "crystal_formation_yellow_red",
+      "empty_matrix_world": [
+        [
+          0.001087,
+          -3.598913,
+          0.0,
+          2.0
+        ],
+        [
+          3.598913,
+          0.001087,
+          0.0,
+          -1.55
+        ],
+        [
+          0.0,
+          0.0,
+          3.6,
+          0.02
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "root_objects": [
+        {
+          "name": "Crystal Formation Yellow Red",
+          "matrix_world": [
+            [
+              0.001087,
+              -3.598913,
+              0.0,
+              2.0
+            ],
+            [
+              3.598913,
+              0.001087,
+              0.0,
+              -1.55
+            ],
+            [
+              0.0,
+              0.0,
+              3.6,
+              0.02
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "instance_id": "plant_001",
+      "asset_id": "plant",
+      "empty_matrix_world": [
+        [
+          0.227249,
+          0.849969,
+          0.0,
+          2.9
+        ],
+        [
+          -0.849969,
+          0.227249,
+          0.0,
+          -0.65
+        ],
+        [
+          0.0,
+          0.0,
+          0.88,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "root_objects": [
+        {
+          "name": "Plant",
+          "matrix_world": [
+            [
+              0.227249,
+              0.849969,
+              0.0,
+              2.9
+            ],
+            [
+              -0.849969,
+              0.227249,
+              0.0,
+              -0.65
+            ],
+            [
+              0.0,
+              0.0,
+              0.88,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "instance_id": "scan_rubble_ruins_001",
+      "asset_id": "scan_rubble_ruins",
+      "empty_matrix_world": [
+        [
+          0.476211,
+          -0.275213,
+          0.0,
+          -0.35
+        ],
+        [
+          0.275213,
+          0.476211,
+          0.0,
+          -0.9
+        ],
+        [
+          0.0,
+          0.0,
+          0.55,
+          -0.08
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "root_objects": [
+        {
+          "name": "Scan Rubble ruins",
+          "matrix_world": [
+            [
+              0.476211,
+              -0.275213,
+              0.0,
+              -0.35
+            ],
+            [
+              0.275213,
+              0.476211,
+              0.0,
+              -0.9
+            ],
+            [
+              0.0,
+              0.0,
+              0.55,
+              -0.08
+            ],
+            [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}

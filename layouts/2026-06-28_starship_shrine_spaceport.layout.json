@@ -1,0 +1,90 @@
+{
+  "name": "starship_shrine_spaceport",
+  "schema": 2,
+  "space": "threejs_yup",
+  "instances": [
+    {
+      "instance_id": "spacex_starship_sn8_001",
+      "asset_id": "spacex_starship_sn8",
+      "position": [0.1, 0.15, 0.0],
+      "quaternion": [0.70710678, 0, 0, 0.70710678],
+      "scale": [0.039, 0.039, 0.039]
+    },
+    {
+      "instance_id": "procedural_portal_001",
+      "asset_id": "procedural_portal",
+      "position": [2.7, 1.25, -2.7],
+      "quaternion": [0, -0.383, 0, 0.924],
+      "scale": [3.25, 3.25, 3.25]
+    },
+    {
+      "instance_id": "lava_asteroid_001",
+      "asset_id": "lava_asteroid",
+      "position": [-2.15, 2.35, 1.55],
+      "quaternion": [0.196, 0.278, 0.059, 0.938],
+      "scale": [0.55, 0.55, 0.55]
+    },
+    {
+      "instance_id": "mushroom_001",
+      "asset_id": "mushroom",
+      "position": [-3.05, 0, 1.75],
+      "quaternion": [0, 0.5, 0, 0.866],
+      "scale": [18, 18, 18]
+    },
+    {
+      "instance_id": "mushroom_002",
+      "asset_id": "mushroom",
+      "position": [-2.25, 0, 2.35],
+      "quaternion": [0, -0.259, 0, 0.966],
+      "scale": [11, 11, 11]
+    },
+    {
+      "instance_id": "crystal_formation_yellow_red_001",
+      "asset_id": "crystal_formation_yellow_red",
+      "position": [2.0, 0.02, 1.55],
+      "quaternion": [0, 0.707, 0, 0.707],
+      "scale": [3.6, 3.6, 3.6]
+    },
+    {
+      "instance_id": "plant_001",
+      "asset_id": "plant",
+      "position": [2.9, 0, 0.65],
+      "quaternion": [0, -0.609, 0, 0.793],
+      "scale": [0.88, 0.88, 0.88]
+    },
+    {
+      "instance_id": "scan_rubble_ruins_001",
+      "asset_id": "scan_rubble_ruins",
+      "position": [-0.35, -0.08, 0.9],
+      "quaternion": [0, 0.259, 0, 0.966],
+      "scale": [0.55, 0.55, 0.55]
+    }
+  ],
+  "camera": {
+    "position": [7.4, 3.6, 7.8],
+    "target": [-0.05, 1.75, 0.0],
+    "fov_deg": 40,
+    "up": [0, 1, 0]
+  },
+  "render": {
+    "width": 1280,
+    "height": 720,
+    "samples": 96
+  },
+  "lighting": {
+    "preset": "warm_spaceport_sunset",
+    "sun": {
+      "azimuth_deg": 128,
+      "elevation_deg": 34,
+      "color": [1.0, 0.86, 0.68],
+      "strength": 0.9,
+      "angle_deg": 8.0
+    },
+    "world": {
+      "type": "color",
+      "strength": 0.55,
+      "color": [0.12, 0.15, 0.2]
+    },
+    "exposure": -0.08
+  }
+}

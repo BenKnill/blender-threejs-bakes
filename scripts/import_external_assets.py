@@ -20,6 +20,11 @@ MANIFEST_PATH = ROOT / "assets" / "manifest.json"
 
 DEFAULT_ASSETS = [
     (
+        "spacex_starship_sn8",
+        "SpaceX Starship SN8",
+        "/Users/boxer/asset-menagerie/extracted/spaceflight/spacex-starship-model/starshipv21.stl",
+    ),
+    (
         "nasa_sls_core_stage",
         "NASA SLS Core Stage",
         "/Users/boxer/asset-menagerie/extracted/spaceflight/nasa-space-launch-system-core-stage/source/NASA Space Launch System Core Stage.glb",
@@ -88,7 +93,27 @@ def import_source(path: Path) -> None:
     if suffix == ".fbx":
         bpy.ops.import_scene.fbx(filepath=str(path))
         return
+    if suffix == ".stl":
+        if "stl_import" in dir(bpy.ops.wm):
+            bpy.ops.wm.stl_import(filepath=str(path))
+        else:
+            bpy.ops.import_mesh.stl(filepath=str(path))
+        assign_stl_material(path)
+        return
     raise ValueError(f"Unsupported asset type: {path}")
+
+
+def assign_stl_material(path: Path) -> None:
+    material = bpy.data.materials.new(f"{path.stem}_material")
+    material.use_nodes = True
+    principled = material.node_tree.nodes.get("Principled BSDF")
+    if principled:
+        principled.inputs["Metallic"].default_value = 0.75
+        principled.inputs["Roughness"].default_value = 0.34
+        principled.inputs["Base Color"].default_value = (0.78, 0.74, 0.68, 1)
+    for obj in bpy.context.scene.objects:
+        if obj.type == "MESH":
+            obj.data.materials.append(material)
 
 
 def wrap_scene_collection(collection_name: str) -> str:
@@ -113,6 +138,17 @@ def upsert_asset(manifest: dict, asset: dict) -> None:
     manifest["assets"].sort(key=lambda item: item["name"])
 
 
+def attribution_for(asset_id: str) -> dict | None:
+    if asset_id == "spacex_starship_sn8":
+        return {
+            "creator": "Irelae",
+            "license": "Creative Commons Attribution-NonCommercial",
+            "source": "https://www.thingiverse.com/thing:4812163",
+            "notes": "Local archive path: /Users/boxer/asset-menagerie/archives/spaceflight/SpaceX Starship SN8 - 4812163.zip",
+        }
+    return None
+
+
 def import_asset(asset_id: str, name: str, source_path: Path, args: argparse.Namespace) -> dict:
     reset_scene()
     import_source(source_path)
@@ -121,6 +157,7 @@ def import_asset(asset_id: str, name: str, source_path: Path, args: argparse.Nam
 
     SOURCE_BLEND_DIR.mkdir(parents=True, exist_ok=True)
     source_blend = SOURCE_BLEND_DIR / f"{asset_id}.blend"
+    source_blend_manifest = source_blend.relative_to(ROOT)
     bpy.ops.wm.save_as_mainfile(filepath=str(source_blend))
 
     glb_path = export_proxies.GLB_DIR / f"{asset_id}.glb"
@@ -130,29 +167,41 @@ def import_asset(asset_id: str, name: str, source_path: Path, args: argparse.Nam
         max_tris=args.max_tris,
         max_mb=args.max_proxy_mb,
     )
-    return {
+    asset = {
         "id": asset_id,
         "name": name,
         "glb": f"glb/{glb_path.name}",
-        "source_blend": str(source_blend),
+        "source_blend": str(source_blend_manifest),
         "source_asset": str(source_path),
         "collection": collection,
         "bbox": bbox,
         "up_axis": "Z",
         "proxy": proxy,
     }
+    attribution = attribution_for(asset_id)
+    if attribution:
+        asset["attribution"] = attribution
+    return asset
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--max-tris", type=int, default=50000)
     parser.add_argument("--max-proxy-mb", type=float, default=50.0)
+    parser.add_argument(
+        "--only",
+        action="append",
+        default=[],
+        help="Import only the named default asset id. Can be passed more than once.",
+    )
     argv = sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else sys.argv[1:]
     args = parser.parse_args(argv)
 
     manifest = load_manifest()
     imported = []
     for asset_id, name, source in DEFAULT_ASSETS:
+        if args.only and asset_id not in args.only:
+            continue
         source_path = Path(source)
         if not source_path.exists():
             print(f"skip missing: {source_path}")
