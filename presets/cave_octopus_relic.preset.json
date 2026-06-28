@@ -1,0 +1,75 @@
+{
+  "id": "cave_octopus_relic",
+  "name": "Cave Octopus Relic",
+  "description": "A cave chamber with an alien octopus toy guarding warm crystals and a small bone relic.",
+  "thumbnail": null,
+  "required_assets": [
+    "cave2",
+    "terrified_alien_octopus_toy",
+    "crystal_formation_yellow_red",
+    "bone_broken"
+  ],
+  "layout": {
+    "name": "preset_cave_octopus_relic",
+    "schema": 2,
+    "space": "threejs_yup",
+    "instances": [
+      {
+        "instance_id": "cave2_001",
+        "asset_id": "cave2",
+        "position": [0, 0, 0],
+        "quaternion": [0, 0, 0, 1],
+        "scale": [0.26, 0.26, 0.26]
+      },
+      {
+        "instance_id": "terrified_alien_octopus_toy_001",
+        "asset_id": "terrified_alien_octopus_toy",
+        "position": [-0.55, 0.25, 0.15],
+        "quaternion": [0, 0.382683, 0, 0.92388],
+        "scale": [1.25, 1.25, 1.25]
+      },
+      {
+        "instance_id": "crystal_formation_yellow_red_001",
+        "asset_id": "crystal_formation_yellow_red",
+        "position": [0.85, 0.12, -0.6],
+        "quaternion": [0, -0.19509, 0, 0.980785],
+        "scale": [2.2, 2.2, 2.2]
+      },
+      {
+        "instance_id": "bone_broken_001",
+        "asset_id": "bone_broken",
+        "position": [0.1, 0.06, 0.85],
+        "quaternion": [0, 0.707107, 0, 0.707107],
+        "scale": [1.6, 1.6, 1.6]
+      }
+    ],
+    "camera": {
+      "position": [3.1, 2.2, 4.4],
+      "target": [0, 0.55, 0],
+      "fov_deg": 42,
+      "up": [0, 1, 0]
+    },
+    "render": {
+      "width": 1920,
+      "height": 1080,
+      "samples": 256
+    },
+    "lighting": {
+      "preset": "night_biolume",
+      "sun": {
+        "azimuth_deg": 225,
+        "elevation_deg": 13,
+        "color": [0.45, 0.58, 1],
+        "strength": 0.9,
+        "angle_deg": 3.5
+      },
+      "world": {
+        "type": "color",
+        "strength": 0.2,
+        "color": [0.012, 0.017, 0.032],
+        "rotation_deg": 0
+      },
+      "exposure": -0.15
+    }
+  }
+}

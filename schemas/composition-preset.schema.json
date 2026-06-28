@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/BenKnill/blender-threejs-bakes/schemas/composition-preset.schema.json",
+  "title": "Blender Three.js Bake Composition Preset",
+  "description": "Reusable creative bake recipe with metadata, required manifest assets, and an embedded layout skeleton.",
+  "type": "object",
+  "required": ["id", "name", "description", "thumbnail", "required_assets", "layout"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$" },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string", "minLength": 1 },
+    "thumbnail": {
+      "description": "Optional relative thumbnail path. Null means thumbnail generation is deferred.",
+      "type": ["string", "null"]
+    },
+    "required_assets": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "layout": { "$ref": "layout.schema.json#/$defs/schema2Layout" }
+  }
+}

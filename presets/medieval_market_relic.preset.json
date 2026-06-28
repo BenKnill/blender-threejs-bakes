@@ -1,0 +1,75 @@
+{
+  "id": "medieval_market_relic",
+  "name": "Medieval Market Relic",
+  "description": "A small medieval wagon market vignette centered on an oversized bronze oiler relic.",
+  "thumbnail": null,
+  "required_assets": [
+    "medieval_prop_wagon",
+    "medieval_prop_crate",
+    "medieval_prop_chimney",
+    "domestic_thumb_oiler_bronze"
+  ],
+  "layout": {
+    "name": "preset_medieval_market_relic",
+    "schema": 2,
+    "space": "threejs_yup",
+    "instances": [
+      {
+        "instance_id": "medieval_prop_wagon_001",
+        "asset_id": "medieval_prop_wagon",
+        "position": [-0.85, 0.55, 0.15],
+        "quaternion": [0, -0.258819, 0, 0.965926],
+        "scale": [1.15, 1.15, 1.15]
+      },
+      {
+        "instance_id": "medieval_prop_crate_001",
+        "asset_id": "medieval_prop_crate",
+        "position": [0.75, 0.55, -0.35],
+        "quaternion": [0, 0.173648, 0, 0.984808],
+        "scale": [0.95, 0.95, 0.95]
+      },
+      {
+        "instance_id": "medieval_prop_chimney_001",
+        "asset_id": "medieval_prop_chimney",
+        "position": [1.35, 1.35, 0.75],
+        "quaternion": [0, 0.5, 0, 0.866025],
+        "scale": [0.42, 0.42, 0.42]
+      },
+      {
+        "instance_id": "domestic_thumb_oiler_bronze_001",
+        "asset_id": "domestic_thumb_oiler_bronze",
+        "position": [0.05, 1.05, 0.05],
+        "quaternion": [0.090386, -0.430459, -0.176777, 0.88037],
+        "scale": [10, 10, 10]
+      }
+    ],
+    "camera": {
+      "position": [3.5, 2.6, 4.2],
+      "target": [0.2, 0.95, 0.05],
+      "fov_deg": 44,
+      "up": [0, 1, 0]
+    },
+    "render": {
+      "width": 1920,
+      "height": 1080,
+      "samples": 256
+    },
+    "lighting": {
+      "preset": "golden_hour",
+      "sun": {
+        "azimuth_deg": 130,
+        "elevation_deg": 12,
+        "color": [1, 0.78, 0.5],
+        "strength": 4.1,
+        "angle_deg": 1.8
+      },
+      "world": {
+        "type": "sky",
+        "strength": 0.8,
+        "color": [0.05, 0.055, 0.06],
+        "rotation_deg": 0
+      },
+      "exposure": 0.3
+    }
+  }
+}

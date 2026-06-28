@@ -1,0 +1,75 @@
+{
+  "id": "starship_shrine_spaceport",
+  "name": "Starship Shrine Spaceport",
+  "description": "A launch-pad composition that places Starship behind a shrine gate and procedural portal.",
+  "thumbnail": null,
+  "required_assets": [
+    "spacex_starship_sn8",
+    "japanese_zen_shrine_asian_temple",
+    "procedural_portal",
+    "lava_asteroid"
+  ],
+  "layout": {
+    "name": "preset_starship_shrine_spaceport",
+    "schema": 2,
+    "space": "threejs_yup",
+    "instances": [
+      {
+        "instance_id": "japanese_zen_shrine_asian_temple_001",
+        "asset_id": "japanese_zen_shrine_asian_temple",
+        "position": [0, 0.8, 0],
+        "quaternion": [0, 0, 0, 1],
+        "scale": [0.16, 0.16, 0.16]
+      },
+      {
+        "instance_id": "spacex_starship_sn8_001",
+        "asset_id": "spacex_starship_sn8",
+        "position": [-0.3, 3.2, -2.25],
+        "quaternion": [0, 0.087156, 0, 0.996195],
+        "scale": [0.18, 0.18, 0.18]
+      },
+      {
+        "instance_id": "procedural_portal_001",
+        "asset_id": "procedural_portal",
+        "position": [1.4, 1.2, -0.85],
+        "quaternion": [0, -0.5, 0, 0.866025],
+        "scale": [1.25, 1.25, 1.25]
+      },
+      {
+        "instance_id": "lava_asteroid_001",
+        "asset_id": "lava_asteroid",
+        "position": [1.95, 1.7, 0.45],
+        "quaternion": [0.191342, 0.331414, 0.46194, 0.800103],
+        "scale": [0.36, 0.36, 0.36]
+      }
+    ],
+    "camera": {
+      "position": [5.2, 3.1, 5.4],
+      "target": [0.25, 1.45, -0.5],
+      "fov_deg": 39,
+      "up": [0, 1, 0]
+    },
+    "render": {
+      "width": 1920,
+      "height": 1080,
+      "samples": 256
+    },
+    "lighting": {
+      "preset": "noon",
+      "sun": {
+        "azimuth_deg": 155,
+        "elevation_deg": 44,
+        "color": [1, 0.94, 0.84],
+        "strength": 3.4,
+        "angle_deg": 0.9
+      },
+      "world": {
+        "type": "sky",
+        "strength": 1,
+        "color": [0.08, 0.095, 0.12],
+        "rotation_deg": 0
+      },
+      "exposure": 0.05
+    }
+  }
+}

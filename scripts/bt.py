@@ -31,12 +31,22 @@ from btlib.layout import (
     write_layout,
 )
 from btlib.lighting import LIGHTING_PRESETS, merge_lighting, preset_lighting
+from btlib.presets import (
+    DEFAULT_PRESETS_DIR,
+    check_preset_assets,
+    find_preset,
+    list_presets,
+    preset_layout,
+    validate_preset,
+)
 from btlib.validate import ContractError, validate_layout, validate_manifest
 
 
 def validate_file(path: Path) -> None:
     data = load_json(path)
-    if path.name == "manifest.json" or "assets" in data:
+    if "layout" in data and "required_assets" in data:
+        validate_preset(data)
+    elif path.name == "manifest.json" or "assets" in data:
         validate_manifest(data)
     else:
         validate_layout(data)
@@ -248,6 +258,87 @@ def cmd_light_sun(args: argparse.Namespace) -> int:
     layout["lighting"] = lighting
     write_layout(path, layout)
     return print_result({"ok": True, "layout": relative(path), "lighting": lighting}, args.json)
+
+
+def cmd_preset_list(args: argparse.Namespace) -> int:
+    manifest = load_manifest(resolve_repo_path(args.manifest))
+    presets_dir = resolve_repo_path(args.presets_dir)
+    rows = []
+    for preset in list_presets(presets_dir):
+        missing_assets = check_preset_assets(preset, manifest)
+        rows.append(
+            {
+                "id": preset["id"],
+                "name": preset["name"],
+                "description": preset["description"],
+                "thumbnail": preset["thumbnail"],
+                "required_assets": preset["required_assets"],
+                "missing_assets": missing_assets,
+            }
+        )
+    if args.json:
+        print_json({"presets": rows})
+    else:
+        print_table(
+            ["id", "name", "assets", "thumbnail", "status"],
+            [
+                [
+                    row["id"],
+                    row["name"],
+                    str(len(row["required_assets"])),
+                    row["thumbnail"] or "(deferred)",
+                    "missing: " + ", ".join(row["missing_assets"])
+                    if row["missing_assets"]
+                    else "ok",
+                ]
+                for row in rows
+            ],
+        )
+    return 0
+
+
+def cmd_preset_show(args: argparse.Namespace) -> int:
+    path, preset = find_preset(args.preset, resolve_repo_path(args.presets_dir))
+    manifest = load_manifest(resolve_repo_path(args.manifest))
+    missing_assets = check_preset_assets(preset, manifest)
+    payload = {
+        "ok": not missing_assets,
+        "path": relative(path),
+        "preset": preset,
+        "missing_assets": missing_assets,
+    }
+    if args.json:
+        print_json(payload)
+    else:
+        print(json.dumps(payload, indent=2))
+    return 2 if missing_assets else 0
+
+
+def cmd_preset_copy(args: argparse.Namespace) -> int:
+    path, preset = find_preset(args.preset, resolve_repo_path(args.presets_dir))
+    manifest = load_manifest(resolve_repo_path(args.manifest))
+    missing_assets = check_preset_assets(preset, manifest)
+    if missing_assets:
+        raise ValueError(
+            f"preset {preset['id']} references assets missing from manifest: "
+            + ", ".join(missing_assets)
+        )
+    layout_path = resolve_repo_path(args.layout)
+    if layout_path.exists() and not args.force:
+        raise ValueError(f"layout exists; pass --force to overwrite: {layout_path}")
+    layout = preset_layout(preset)
+    write_layout(layout_path, layout)
+    return print_result(
+        {
+            "ok": True,
+            "preset": preset["id"],
+            "preset_path": relative(path),
+            "layout": relative(layout_path),
+            "required_assets": preset["required_assets"],
+            "thumbnail": preset["thumbnail"],
+        },
+        args.json,
+    )
 
 
 def cmd_inspect(args: argparse.Namespace) -> int:
@@ -612,6 +703,39 @@ def build_parser() -> argparse.ArgumentParser:
     light_sun.add_argument("--color", type=float, nargs=3, metavar=("R", "G", "B"))
     add_json_arg(light_sun)
     light_sun.set_defaults(func=cmd_light_sun)
+
+    preset = subcommands.add_parser("preset", help="list, show, or copy composition presets")
+    preset_subcommands = preset.add_subparsers(dest="preset_command", required=True)
+    preset_list = preset_subcommands.add_parser("list", help="list available composition presets")
+    preset_list.add_argument("--presets-dir", default=str(DEFAULT_PRESETS_DIR))
+    preset_list.add_argument("--manifest", default=str(DEFAULT_MANIFEST))
+    add_json_arg(preset_list)
+    preset_list.set_defaults(func=cmd_preset_list)
+    preset_show = preset_subcommands.add_parser("show", help="show a composition preset")
+    preset_show.add_argument("preset")
+    preset_show.add_argument("--presets-dir", default=str(DEFAULT_PRESETS_DIR))
+    preset_show.add_argument("--manifest", default=str(DEFAULT_MANIFEST))
+    add_json_arg(preset_show)
+    preset_show.set_defaults(func=cmd_preset_show)
+    preset_copy = preset_subcommands.add_parser("copy", help="copy a preset to a layout file")
+    preset_copy.add_argument("preset")
+    preset_copy.add_argument("--layout", "-l", required=True)
+    preset_copy.add_argument("--presets-dir", default=str(DEFAULT_PRESETS_DIR))
+    preset_copy.add_argument("--manifest", default=str(DEFAULT_MANIFEST))
+    preset_copy.add_argument("--force", action="store_true")
+    add_json_arg(preset_copy)
+    preset_copy.set_defaults(func=cmd_preset_copy)
+    preset_load = preset_subcommands.add_parser(
+        "load",
+        help="load a preset into a layout file; defaults to layouts/live.layout.json",
+    )
+    preset_load.add_argument("preset")
+    preset_load.add_argument("--layout", "-l", default=str(DEFAULT_LAYOUT))
+    preset_load.add_argument("--presets-dir", default=str(DEFAULT_PRESETS_DIR))
+    preset_load.add_argument("--manifest", default=str(DEFAULT_MANIFEST))
+    preset_load.add_argument("--force", action="store_true")
+    add_json_arg(preset_load)
+    preset_load.set_defaults(func=cmd_preset_copy)
 
     validate = subcommands.add_parser("validate", help="validate a layout or manifest JSON file")
     validate.add_argument("paths", type=Path, nargs="+")
