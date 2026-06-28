@@ -67,6 +67,25 @@ to replace the editor's live layout with a preset. Render outputs and thumbnails
 are intentionally not committed. Preset `thumbnail` fields are currently `null`;
 thumbnail generation is deferred to a later slice.
 
+## Render a shot package
+
+`bt render --shot <shot_id>` writes stable AI-video handoff frames under
+`renders/shots/<shot_id>/`. Plain layouts produce `first.png`; schema-v3 layouts
+with keyframes produce `first.png` from pose A and `last.png` from pose B.
+
+```sh
+python3 scripts/bt.py render layouts/starship_shrine_spaceport.layout.json \
+  --shot shrine_push_in --width 640 --height 360 --samples 32 \
+  --prompt "A slow push-in on a shrine-like starship launch pad" \
+  --negative "low quality, flicker" --duration-s 5 --model-hint seedance
+python3 scripts/bt.py validate renders/shots/shrine_push_in/shot.json
+```
+
+The package contract is versioned in `schemas/shot.schema.json`. `shot.json`
+contains prompt, negative prompt, duration, target FPS, model hint, optional
+subject/motion/seed fields, source layout paths, frame paths, and the Blender
+render receipts folded into `render_metadata`.
+
 ## Validate contracts
 
 ```sh
