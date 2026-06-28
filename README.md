@@ -54,3 +54,19 @@ python3 scripts/bt.py validate assets/manifest.json --json
 
 Validation errors use JSON-pointer-style paths such as
 `/instances/3/quaternion: expected 4 numbers`.
+
+## Author from the CLI
+
+`scripts/bt.py` can build and render a layout without the browser:
+
+```sh
+python3 scripts/bt.py layout new cli_demo --layout layouts/cli_demo.layout.json
+python3 scripts/bt.py assets
+python3 scripts/bt.py place bone_broken --layout layouts/cli_demo.layout.json --at 0 0 0 --scale 2
+python3 scripts/bt.py camera frame bone_broken_001 --layout layouts/cli_demo.layout.json
+python3 scripts/bt.py light preset studio --layout layouts/cli_demo.layout.json
+python3 scripts/bt.py validate layouts/cli_demo.layout.json
+python3 scripts/bt.py render layouts/cli_demo.layout.json --width 640 --height 360 --samples 32 --json
+```
+
+Most commands accept `--json`; contract errors exit 2 and render failures exit 3.

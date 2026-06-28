@@ -1,9 +1,9 @@
 # Agent Operating Guide
 
 This is the front door for coding agents working in this repo. It documents the
-current supported loop and the contracts that must stay stable. Broader
-non-interactive authoring, diagnostics, and computer-use surfaces are tracked
-below as pending work; do not assume they exist yet.
+current supported loop and the contracts that must stay stable. Diagnostics and
+the remaining computer-use surfaces are tracked below as pending work; do not
+assume they exist yet.
 
 ## Model
 
@@ -60,6 +60,21 @@ Validate a layout or manifest contract:
 python3 scripts/bt.py validate layouts/live.layout.json
 python3 scripts/bt.py validate assets/manifest.json --json
 ```
+
+Author and render a layout without the browser:
+
+```sh
+python3 scripts/bt.py layout new cli_demo --layout layouts/cli_demo.layout.json
+python3 scripts/bt.py assets --json
+python3 scripts/bt.py place bone_broken --layout layouts/cli_demo.layout.json --at 0 0 0
+python3 scripts/bt.py move bone_broken_001 --layout layouts/cli_demo.layout.json --by 0 1 0
+python3 scripts/bt.py camera frame bone_broken_001 --layout layouts/cli_demo.layout.json
+python3 scripts/bt.py light preset studio --layout layouts/cli_demo.layout.json
+python3 scripts/bt.py render layouts/cli_demo.layout.json --width 640 --height 360 --samples 32 --json
+```
+
+CLI exit codes: 0 means success, 2 means invalid input or contract failure, and
+3 means Blender render failure.
 
 ## Architecture Invariants
 
@@ -129,7 +144,7 @@ The local server is `scripts/editor_server.py`, normally reached through
 Static files are also served from the repo root, including `/editor/`,
 `/assets/...`, and `/renders/...`.
 
-There is no stable `/api/screenshot` or full authoring CLI API yet.
+There is no stable `/api/screenshot` yet.
 
 ## Driving The Editor As An Agent
 
@@ -161,14 +176,24 @@ It exits 0 on success and 2 for contract errors. `--json` emits structured
 results, and text errors use JSON-pointer-style paths such as
 `/instances/3/quaternion: expected 4 numbers`.
 
-## Pending: Broader `bt` CLI
+## Current: `bt` CLI
 
-Pending issue: #7, "bt CLI: a non-interactive control surface for the whole
-loop".
+`python3 scripts/bt.py` is the non-interactive control surface for layout
+authoring and baking. It supports these stable commands:
 
-Only `bt validate` exists today. Do not document or depend on `bt assets`,
-`bt place`, `bt render`, or other authoring commands until #7 lands. For now,
-use the shell commands above and the local HTTP endpoints.
+- `bt assets`
+- `bt layout new <name>` and `bt layout show`
+- `bt place <asset_id>`
+- `bt move|rotate|scale <instance_id>`
+- `bt remove <instance_id>`
+- `bt camera set` and `bt camera frame <instance_id>`
+- `bt light preset <name>` and `bt light sun`
+- `bt validate`
+- `bt render`
+
+Use `--json` when machine-readable output matters. The CLI edits schema-valid
+Three.js Y-up layouts only; Blender conversion remains confined to
+`scripts/render_layout.py`.
 
 ## Pending: Inspect Diagnostics
 
