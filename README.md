@@ -45,6 +45,28 @@ This writes `assets/glb/*.glb` and refreshes `assets/manifest.json`.
 
 Output lands in `renders/<layout-name>.png` with a matching receipt JSON.
 
+## Bake a composition preset
+
+Composition presets live in `presets/*.preset.json`. Each preset is a reusable
+creative recipe with metadata, a required asset list, and an embedded schema-v2
+layout skeleton. The CLI checks those required assets against
+`assets/manifest.json` before writing a layout.
+
+```sh
+python3 scripts/bt.py preset list
+python3 scripts/bt.py preset show starship_shrine_spaceport
+python3 scripts/bt.py preset copy starship_shrine_spaceport \
+  --layout layouts/starship_shrine_spaceport.layout.json
+python3 scripts/bt.py validate layouts/starship_shrine_spaceport.layout.json
+python3 scripts/bt.py render layouts/starship_shrine_spaceport.layout.json \
+  --width 1280 --height 720 --samples 64
+```
+
+Use `preset load <id> --layout layouts/live.layout.json --force` when you want
+to replace the editor's live layout with a preset. Render outputs and thumbnails
+are intentionally not committed. Preset `thumbnail` fields are currently `null`;
+thumbnail generation is deferred to a later slice.
+
 ## Validate contracts
 
 ```sh
@@ -68,6 +90,8 @@ python3 scripts/bt.py assets
 python3 scripts/bt.py place bone_broken --layout layouts/cli_demo.layout.json --at 0 0 0
 python3 scripts/bt.py camera frame bone_broken_001 --layout layouts/cli_demo.layout.json
 python3 scripts/bt.py light preset studio --layout layouts/cli_demo.layout.json
+python3 scripts/bt.py preset list
+python3 scripts/bt.py preset copy cave_octopus_relic --layout layouts/cave_octopus_relic.layout.json
 python3 scripts/bt.py validate layouts/cli_demo.layout.json
 python3 scripts/bt.py inspect layouts/cli_demo.layout.json --json
 python3 scripts/bt.py render layouts/cli_demo.layout.json --width 640 --height 360 --samples 32 --json
