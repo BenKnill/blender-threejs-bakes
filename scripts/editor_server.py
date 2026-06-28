@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import urlparse
 
 from btlib.validate import ContractError, validate_layout
 
@@ -26,11 +27,15 @@ class EditorHandler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=ROOT, **kwargs)
 
     def do_GET(self) -> None:
-        if self.path == "/api/health":
+        path = urlparse(self.path).path
+        if path == "/api/health":
             self.send_json({"ok": True, "service": "editor_server"})
             return
-        if self.path == "/api/renders":
+        if path == "/api/renders":
             self.send_json({"renders": list_renders()})
+            return
+        if path == "/api/state":
+            self.state()
             return
         super().do_GET()
 
@@ -119,6 +124,31 @@ class EditorHandler(SimpleHTTPRequestHandler):
         self.send_json(
             {"ok": True, "stdout": proc.stdout[-4000:], "renders": renders, "new": new_renders}
         )
+
+    def state(self) -> None:
+        if not LIVE_LAYOUT.exists():
+            self.send_json(
+                {
+                    "ok": False,
+                    "error": "live layout not found",
+                    "layout": str(LIVE_LAYOUT.relative_to(ROOT)),
+                },
+                HTTPStatus.NOT_FOUND,
+            )
+            return
+        try:
+            layout = json.loads(LIVE_LAYOUT.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            self.send_json(
+                {
+                    "ok": False,
+                    "error": f"live layout is invalid JSON: {exc}",
+                    "layout": str(LIVE_LAYOUT.relative_to(ROOT)),
+                },
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+            return
+        self.send_json(layout)
 
     def read_json(self) -> dict:
         length = int(self.headers.get("Content-Length", "0"))

@@ -4,6 +4,8 @@ export function renderAssetPalette(assetPalette, assets, onAdd) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "assetButton";
+    button.setAttribute("aria-label", `Add asset ${asset.name || asset.id}`);
+    button.dataset.testid = `asset-row:${asset.id}`;
     const proxyLabel = asset.glb ? asset.id : `${asset.id} · bbox proxy`;
     button.innerHTML = `<strong>${escapeHtml(asset.name || asset.id)}</strong><span>${escapeHtml(
       proxyLabel
@@ -21,6 +23,9 @@ export function renderInstanceList(instanceList, instances, selected, assetMap, 
     const button = document.createElement("button");
     button.type = "button";
     button.className = `instanceButton${object === selected ? " selected" : ""}`;
+    button.setAttribute("aria-label", `Select instance ${id}`);
+    button.setAttribute("aria-current", object === selected ? "true" : "false");
+    button.dataset.testid = `instance-row:${id}`;
     button.innerHTML = `<strong>${escapeHtml(id)}</strong><span>${escapeHtml(
       asset?.name || object.userData.assetId
     )} · ${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)}</span>`;
@@ -30,9 +35,15 @@ export function renderInstanceList(instanceList, instances, selected, assetMap, 
 }
 
 export function setModeButtons(mode) {
-  document.querySelector("#modeTranslate").classList.toggle("active", mode === "translate");
-  document.querySelector("#modeRotate").classList.toggle("active", mode === "rotate");
-  document.querySelector("#modeScale").classList.toggle("active", mode === "scale");
+  setModeButton("#modeTranslate", mode === "translate");
+  setModeButton("#modeRotate", mode === "rotate");
+  setModeButton("#modeScale", mode === "scale");
+}
+
+function setModeButton(selector, active) {
+  const button = document.querySelector(selector);
+  button.classList.toggle("active", active);
+  button.setAttribute("aria-pressed", String(active));
 }
 
 function escapeHtml(value) {

@@ -116,6 +116,9 @@ The local server is `scripts/editor_server.py`, normally reached through
 - `GET /api/health` returns `{ "ok": true, "service": "editor_server" }`.
 - `GET /api/renders` returns `{ "renders": [...] }` for PNG files under
   `renders/`.
+- `GET /api/state` returns the current `layouts/live.layout.json` layout object.
+  If no live layout has been saved, it returns HTTP 404 with
+  `{ "ok": false, "error": "live layout not found", "layout": "layouts/live.layout.json" }`.
 - `POST /api/save-layout` accepts a layout JSON body, validates schema 1 or 2,
   writes a timestamped `layouts/*.layout.json`, updates
   `layouts/live.layout.json`, and returns paths.
@@ -126,7 +129,30 @@ The local server is `scripts/editor_server.py`, normally reached through
 Static files are also served from the repo root, including `/editor/`,
 `/assets/...`, and `/renders/...`.
 
-There is no stable `/api/state`, `/api/screenshot`, or full authoring CLI API yet.
+There is no stable `/api/screenshot` or full authoring CLI API yet.
+
+## Driving The Editor As An Agent
+
+The editor exposes stable `data-testid` hooks for control targeting. Use these
+selectors rather than button text or visual position.
+
+- Transform modes: `mode-translate`, `mode-rotate`, `mode-scale`. The active
+  mode also has `aria-pressed="true"`.
+- Layout controls: `layout-name`, `save-camera`, `export-layout`,
+  `save-for-bake`, `bake-layout`, `load-layout`.
+- Render fields: `render-width`, `render-height`, `render-samples`,
+  `refresh-renders`, `render-status`.
+- Lighting fields: `lighting-preset`, `sun-azimuth`, `sun-elevation`,
+  `sun-color`, `sun-strength`, `sun-angle`, `world-type`, `world-strength`,
+  `world-color`, `exposure`.
+- Lists: `asset-palette`, `asset-row:<asset_id>`, `instance-list`,
+  `instance-row:<instance_id>`, `render-gallery`, `render-tile:<filename>`.
+- Status/HUD: `manifest-status`, `viewport`, `viewport-hud`, `hud-mode`,
+  `hud-selection`.
+
+Basic verify loop: target controls by `data-testid`, use `POST /api/save-layout`
+or the `save-for-bake` control to update `layouts/live.layout.json`, then poll
+`GET /api/state` and compare the returned layout fields.
 
 ## Current: Contract Validation
 
@@ -157,6 +183,5 @@ metadata as the current machine-readable evidence.
 Pending issue: #11, "Computer-use harness: legible/driveable GUI + live state &
 screenshot endpoints".
 
-The editor does not yet promise stable `data-testid` selectors or live state and
-screenshot endpoints. Computer-use agents may operate the current UI, but should
-not treat selectors or pixel behavior as a stable contract until #11 lands.
+This guide now documents the first stable selector and live-state slice. The HUD,
+`/api/screenshot`, and committed Playwright example are still pending.

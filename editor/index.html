@@ -16,54 +16,119 @@
   </head>
   <body>
     <main id="app">
-      <section id="viewport" aria-label="3D layout viewport">
-        <div id="viewportHud" class="viewportHud" aria-hidden="true">
-          <span id="hudMode" class="hudMode">Move</span>
-          <span id="hudSelection" class="hudSelection">nothing selected</span>
+      <section id="viewport" aria-label="3D layout viewport" data-testid="viewport">
+        <div id="viewportHud" class="viewportHud" aria-hidden="true" data-testid="viewport-hud">
+          <span id="hudMode" class="hudMode" data-testid="hud-mode">Move</span>
+          <span id="hudSelection" class="hudSelection" data-testid="hud-selection">
+            nothing selected
+          </span>
           <span class="hudKeys">click to select · G move · R rotate · S scale</span>
         </div>
       </section>
 
-      <aside id="sidebar" aria-label="Layout controls">
+      <aside id="sidebar" aria-label="Layout controls" data-testid="sidebar">
         <header class="topbar">
           <div>
             <h1>Bake Layout</h1>
-            <p id="manifestStatus">Loading manifest...</p>
+            <p id="manifestStatus" data-testid="manifest-status">Loading manifest...</p>
           </div>
-          <button id="saveCamera" type="button" title="Save current view as render camera">
+          <button
+            id="saveCamera"
+            type="button"
+            title="Save current view as render camera"
+            aria-label="Save current view as render camera"
+            data-testid="save-camera"
+          >
             Save Camera
           </button>
         </header>
 
         <label class="field">
           <span>Layout name</span>
-          <input id="layoutName" type="text" value="first_composition" autocomplete="off" />
+          <input
+            id="layoutName"
+            type="text"
+            value="first_composition"
+            autocomplete="off"
+            data-testid="layout-name"
+          />
         </label>
 
-        <div class="toolrow" aria-label="Transform mode">
-          <button id="modeTranslate" type="button" title="Move (G)">Move</button>
-          <button id="modeRotate" type="button" title="Rotate (R)">Rotate</button>
-          <button id="modeScale" type="button" title="Scale (S)">Scale</button>
+        <div class="toolrow" role="group" aria-label="Transform mode" data-testid="mode-controls">
+          <button
+            id="modeTranslate"
+            type="button"
+            title="Move (G)"
+            aria-label="Move selected instance"
+            aria-pressed="false"
+            data-testid="mode-translate"
+          >
+            Move
+          </button>
+          <button
+            id="modeRotate"
+            type="button"
+            title="Rotate (R)"
+            aria-label="Rotate selected instance"
+            aria-pressed="false"
+            data-testid="mode-rotate"
+          >
+            Rotate
+          </button>
+          <button
+            id="modeScale"
+            type="button"
+            title="Scale (S)"
+            aria-label="Scale selected instance"
+            aria-pressed="false"
+            data-testid="mode-scale"
+          >
+            Scale
+          </button>
         </div>
 
         <section class="panel">
           <h2>Assets</h2>
-          <div id="assetPalette" class="list"></div>
+          <div
+            id="assetPalette"
+            class="list"
+            role="group"
+            aria-label="Available assets"
+            data-testid="asset-palette"
+          ></div>
         </section>
 
         <section class="panel">
           <div class="panelHeader">
             <h2>Instances</h2>
             <div class="minirow">
-              <button id="duplicateInstance" type="button" title="Duplicate selected instance">
+              <button
+                id="duplicateInstance"
+                type="button"
+                title="Duplicate selected instance"
+                aria-label="Duplicate selected instance"
+                data-testid="duplicate-instance"
+              >
                 Duplicate
               </button>
-              <button id="deleteInstance" type="button" title="Delete selected instance">
+              <button
+                id="deleteInstance"
+                type="button"
+                title="Delete selected instance"
+                aria-label="Delete selected instance"
+                data-testid="delete-instance"
+              >
                 Delete
               </button>
             </div>
           </div>
-          <div id="instanceList" class="list"></div>
+          <div
+            id="instanceList"
+            class="list"
+            role="group"
+            aria-label="Layout instances"
+            data-testid="instance-list"
+          ></div>
         </section>
 
         <section class="panel">
@@ -71,15 +136,36 @@
           <div class="gridFields">
             <label class="field">
               <span>Width</span>
-              <input id="renderWidth" type="number" min="64" step="1" value="1920" />
+              <input
+                id="renderWidth"
+                type="number"
+                min="64"
+                step="1"
+                value="1920"
+                data-testid="render-width"
+              />
             </label>
             <label class="field">
               <span>Height</span>
-              <input id="renderHeight" type="number" min="64" step="1" value="1080" />
+              <input
+                id="renderHeight"
+                type="number"
+                min="64"
+                step="1"
+                value="1080"
+                data-testid="render-height"
+              />
             </label>
             <label class="field">
               <span>Samples</span>
-              <input id="renderSamples" type="number" min="1" step="1" value="256" />
+              <input
+                id="renderSamples"
+                type="number"
+                min="1"
+                step="1"
+                value="256"
+                data-testid="render-samples"
+              />
             </label>
           </div>
         </section>
@@ -88,47 +174,74 @@
           <h2>Lighting</h2>
           <label class="field">
             <span>Preset</span>
-            <select id="lightingPreset"></select>
+            <select id="lightingPreset" data-testid="lighting-preset"></select>
           </label>
           <div class="gridFields lightingFields">
             <label class="field">
               <span>Azimuth</span>
-              <input id="sunAzimuth" type="number" min="0" max="360" step="1" />
+              <input
+                id="sunAzimuth"
+                type="number"
+                min="0"
+                max="360"
+                step="1"
+                data-testid="sun-azimuth"
+              />
             </label>
             <label class="field">
               <span>Elevation</span>
-              <input id="sunElevation" type="number" min="-10" max="90" step="1" />
+              <input
+                id="sunElevation"
+                type="number"
+                min="-10"
+                max="90"
+                step="1"
+                data-testid="sun-elevation"
+              />
             </label>
             <label class="field">
               <span>Sun</span>
-              <input id="sunColor" type="color" />
+              <input id="sunColor" type="color" data-testid="sun-color" />
             </label>
             <label class="field">
               <span>Strength</span>
-              <input id="sunStrength" type="number" min="0" step="0.1" />
+              <input id="sunStrength" type="number" min="0" step="0.1" data-testid="sun-strength" />
             </label>
             <label class="field">
               <span>Softness</span>
-              <input id="sunAngle" type="number" min="0.1" max="20" step="0.1" />
+              <input
+                id="sunAngle"
+                type="number"
+                min="0.1"
+                max="20"
+                step="0.1"
+                data-testid="sun-angle"
+              />
             </label>
             <label class="field">
               <span>World</span>
-              <select id="worldType">
+              <select id="worldType" data-testid="world-type">
                 <option value="sky">Sky</option>
                 <option value="color">Color</option>
               </select>
             </label>
             <label class="field">
               <span>Ambient</span>
-              <input id="worldStrength" type="number" min="0" step="0.05" />
+              <input
+                id="worldStrength"
+                type="number"
+                min="0"
+                step="0.05"
+                data-testid="world-strength"
+              />
             </label>
             <label class="field">
               <span>World color</span>
-              <input id="worldColor" type="color" />
+              <input id="worldColor" type="color" data-testid="world-color" />
             </label>
             <label class="field">
               <span>Exposure</span>
-              <input id="exposure" type="number" step="0.05" />
+              <input id="exposure" type="number" step="0.05" data-testid="exposure" />
             </label>
           </div>
         </section>
@@ -136,21 +249,39 @@
         <section class="panel">
           <div class="panelHeader">
             <h2>Renders</h2>
-            <button id="refreshRenders" type="button" title="Refresh render thumbnails">
+            <button
+              id="refreshRenders"
+              type="button"
+              title="Refresh render thumbnails"
+              aria-label="Refresh render thumbnails"
+              data-testid="refresh-renders"
+            >
               Refresh
             </button>
           </div>
-          <p id="renderStatus" class="statusLine"></p>
-          <div id="renderGallery" class="renderGallery"></div>
+          <p id="renderStatus" class="statusLine" data-testid="render-status"></p>
+          <div
+            id="renderGallery"
+            class="renderGallery"
+            role="group"
+            aria-label="Recent renders"
+            data-testid="render-gallery"
+          ></div>
         </section>
 
         <footer class="actions">
-          <button id="exportLayout" type="button">Export Layout</button>
-          <button id="saveForBake" type="button">Send Layout</button>
-          <button id="bakeLayout" type="button">Bake</button>
-          <label class="loadButton">
+          <button id="exportLayout" type="button" data-testid="export-layout">Export Layout</button>
+          <button id="saveForBake" type="button" data-testid="save-for-bake">Send Layout</button>
+          <button id="bakeLayout" type="button" data-testid="bake-layout">Bake</button>
+          <label class="loadButton" data-testid="load-layout-control">
             Load Layout
-            <input id="loadLayout" type="file" accept=".json,.layout.json,application/json" />
+            <input
+              id="loadLayout"
+              type="file"
+              accept=".json,.layout.json,application/json"
+              aria-label="Load layout JSON"
+              data-testid="load-layout"
+            />
           </label>
         </footer>
       </aside>

@@ -196,6 +196,7 @@ function renderRenderGallery(renders) {
   if (!renders.length) {
     const empty = document.createElement("p");
     empty.textContent = "No renders yet";
+    empty.dataset.testid = "render-empty";
     renderGallery.appendChild(empty);
     return;
   }
@@ -205,6 +206,8 @@ function renderRenderGallery(renders) {
     link.href = render.url;
     link.target = "_blank";
     link.rel = "noreferrer";
+    link.setAttribute("aria-label", `Open render ${render.name}`);
+    link.dataset.testid = `render-tile:${render.name}`;
     link.innerHTML = `<img src="${render.url}?v=${render.mtime}" alt="${render.name}" loading="lazy" /><span>${render.name}</span>`;
     renderGallery.appendChild(link);
   }
