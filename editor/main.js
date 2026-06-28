@@ -1,4 +1,9 @@
 import { createEditorScene } from "./scene.js";
+import {
+  frameObjectsWithCamera,
+  renderAspectFromInputs,
+  updateSafeFrameOverlay,
+} from "./framing.js";
 import { createInstanceStore } from "./instances.js";
 import { createInspector } from "./inspector.js";
 import { applyLightingToControls, createLightingControls, currentLighting } from "./lighting.js";
@@ -11,6 +16,7 @@ import { renderAssetPalette, renderInstanceList, setModeButtons } from "./ui.js"
 const MODE_LABELS = { translate: "Move", rotate: "Rotate", scale: "Scale" };
 
 const viewport = document.querySelector("#viewport");
+const safeFrame = document.querySelector("#safeFrame");
 const assetPalette = document.querySelector("#assetPalette");
 const instanceList = document.querySelector("#instanceList");
 const renderGallery = document.querySelector("#renderGallery");
@@ -139,6 +145,9 @@ function wireControls() {
   document.querySelector("#modeRotate").addEventListener("click", () => setMode("rotate"));
   document.querySelector("#modeScale").addEventListener("click", () => setMode("scale"));
   document.querySelector("#saveCamera").addEventListener("click", saveCamera);
+  document.querySelector("#frameSelected").addEventListener("click", frameSelected);
+  document.querySelector("#frameAll").addEventListener("click", frameAll);
+  for (const input of Object.values(renderInputs)) input.addEventListener("input", updateSafeFrame);
   document.querySelector("#duplicateInstance").addEventListener("click", store.duplicateSelected);
   document.querySelector("#deleteInstance").addEventListener("click", store.deleteSelected);
   document.querySelector("#exportLayout").addEventListener("click", exportLayout);
@@ -166,7 +175,10 @@ function wireControls() {
     if (event.key === "Delete" || event.key === "Backspace") store.deleteSelected();
   });
 
+  window.addEventListener("resize", updateSafeFrame);
+
   setMode("translate");
+  updateSafeFrame();
 }
 
 function setMode(mode) {
@@ -186,11 +198,41 @@ function renderInstances() {
 
 function saveCamera() {
   savedCamera = cameraSnapshot(editorScene.camera, editorScene.orbit);
+  inspector?.updateCamera();
   const button = document.querySelector("#saveCamera");
   button.textContent = "Camera Saved";
   window.setTimeout(() => {
     button.textContent = "Save Camera";
   }, 1200);
+}
+
+function frameSelected() {
+  const selected = store.selected();
+  if (!selected) {
+    flashButton("#frameSelected", "No Selection");
+    return;
+  }
+  frameCamera([selected], "#frameSelected", "Framed");
+}
+
+function frameAll() {
+  const objects = [...store.instances.values()];
+  if (!objects.length) {
+    flashButton("#frameAll", "No Instances");
+    return;
+  }
+  frameCamera(objects, "#frameAll", "Framed");
+}
+
+function frameCamera(objects, selector, label) {
+  const framed = frameObjectsWithCamera(objects, {
+    camera: editorScene.camera,
+    orbit: editorScene.orbit,
+    renderAspect: renderAspectFromInputs(renderInputs),
+  });
+  if (!framed) return;
+  saveCamera();
+  flashButton(selector, label);
 }
 
 function exportLayout() {
@@ -247,6 +289,10 @@ async function refreshRenders() {
   if (!response.ok) throw new Error(result.error || "Render list failed");
   renderRenderGallery(result.renders || []);
   setRenderStatus(result.renders?.length ? `${result.renders.length} renders` : "No renders yet");
+}
+
+function updateSafeFrame() {
+  updateSafeFrameOverlay({ viewport, safeFrame, renderInputs });
 }
 
 function renderRenderGallery(renders) {
@@ -316,6 +362,7 @@ async function loadLayoutFromFile(event) {
     camera: editorScene.camera,
     orbit: editorScene.orbit,
   });
+  updateSafeFrame();
   savedCamera = layout.camera || null;
   await store.restore(layout);
   inspector.update();
