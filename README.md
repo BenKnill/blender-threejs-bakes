@@ -65,7 +65,7 @@ presets so calibration changes cannot silently drift.
 ```sh
 python3 scripts/bt.py layout new cli_demo --layout layouts/cli_demo.layout.json
 python3 scripts/bt.py assets
-python3 scripts/bt.py place bone_broken --layout layouts/cli_demo.layout.json --at 0 0 0 --scale 2
+python3 scripts/bt.py place bone_broken --layout layouts/cli_demo.layout.json --at 0 0 0
 python3 scripts/bt.py camera frame bone_broken_001 --layout layouts/cli_demo.layout.json
 python3 scripts/bt.py light preset studio --layout layouts/cli_demo.layout.json
 python3 scripts/bt.py validate layouts/cli_demo.layout.json
@@ -74,6 +74,9 @@ python3 scripts/bt.py render layouts/cli_demo.layout.json --width 640 --height 3
 ```
 
 Most commands accept `--json`; contract errors exit 2 and render failures exit 3.
+
+`bt place` uses the manifest/default drop scale when `--scale` is omitted; pass
+`--scale` to override it.
 
 For a small preset sanity pass without writing render artifacts, apply a preset
 to a throwaway layout and inspect it:

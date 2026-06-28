@@ -235,10 +235,10 @@ Blender --background --python scripts/render_layout.py -- layouts/foo.layout.jso
    keep lighting purely Blender-side via a named rig?
 3. **Append vs link** for the bake. Default append (self-contained). Revisit only
    if scenes get heavy.
-4. **Asset scale normalization.** BlenderKit assets have wildly different real
-   scales. Do we trust source scale, or normalize each proxy to a unit bbox in
-   the editor and carry a per-asset scale factor? (Leaning: keep true scale,
-   surface a bbox readout so mismatches are visible.)
+4. **Asset starter scale.** Layouts keep true Three.js Y-up coordinates and
+   explicit instance scales, but placement can use `default_scale` metadata for
+   oversized assets. Without metadata, the helper only downscales very large
+   bounding boxes so normal assets keep their source scale.
 
 ## Build milestones (when code is greenlit)
 

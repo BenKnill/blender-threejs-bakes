@@ -210,8 +210,8 @@ Three.js Y-up layouts only; Blender conversion remains confined to
 
 `python3 scripts/bt.py inspect [layout]` emits a Blender-free geometry report for
 agents that cannot see the scene. It reports per-instance Three.js and Blender
-positions, bbox times scale size, scale sanity against the editor's default drop
-scale, approximate camera framing/clip edges/coverage/distance, sun direction
+positions, bbox times scale size, scale sanity against the shared manifest/default
+drop scale, approximate camera framing/clip edges/coverage/distance, sun direction
 relative to the camera, rough bbox overlaps, and grounded/floating/sunken state.
 Use `--json` for stable machine-readable diagnostics.
 

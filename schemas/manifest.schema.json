@@ -23,6 +23,7 @@
         "source_blend": { "type": "string", "minLength": 1 },
         "collection": { "type": "string", "minLength": 1 },
         "bbox": { "$ref": "#/$defs/vec3" },
+        "default_scale": { "type": "number", "exclusiveMinimum": 0 },
         "up_axis": { "enum": ["Y", "Z"] },
         "proxy": { "type": "object" }
       }
