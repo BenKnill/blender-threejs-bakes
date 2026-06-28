@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/BenKnill/blender-threejs-bakes/schemas/manifest.schema.json",
+  "title": "Blender Three.js Bake Asset Manifest",
+  "description": "Generated asset manifest consumed by the editor and Blender renderer.",
+  "type": "object",
+  "required": ["generated", "assets"],
+  "properties": {
+    "generated": { "type": "string", "minLength": 1 },
+    "assets": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/asset" }
+    }
+  },
+  "$defs": {
+    "asset": {
+      "type": "object",
+      "required": ["id", "name", "glb", "source_blend", "collection", "bbox", "up_axis"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "glb": { "type": "string", "minLength": 1 },
+        "source_blend": { "type": "string", "minLength": 1 },
+        "collection": { "type": "string", "minLength": 1 },
+        "bbox": { "$ref": "#/$defs/vec3" },
+        "up_axis": { "enum": ["Y", "Z"] },
+        "proxy": { "type": "object" }
+      }
+    },
+    "vec3": {
+      "type": "array",
+      "prefixItems": [{ "type": "number" }, { "type": "number" }, { "type": "number" }],
+      "minItems": 3,
+      "maxItems": 3
+    }
+  }
+}

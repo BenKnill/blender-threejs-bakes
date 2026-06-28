@@ -32,3 +32,6 @@ pre-commit:
     ruff-check:
       glob: "scripts/*.py"
       run: sh -c 'command -v ruff >/dev/null 2>&1 && ruff check "$@" || uvx ruff check "$@"' _ {staged_files}
+    contracts:
+      glob: "{layouts/*.json,assets/manifest.json}"
+      run: python3 scripts/bt.py validate {staged_files}

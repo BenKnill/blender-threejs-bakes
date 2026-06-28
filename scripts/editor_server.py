@@ -11,6 +11,8 @@ from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from btlib.validate import ContractError, validate_layout
+
 ROOT = Path(__file__).resolve().parents[1]
 LIVE_LAYOUT = ROOT / "layouts" / "live.layout.json"
 MANIFEST = ROOT / "assets" / "manifest.json"
@@ -41,7 +43,7 @@ class EditorHandler(SimpleHTTPRequestHandler):
                 self.render_layout()
                 return
             self.send_json({"error": "unknown endpoint"}, HTTPStatus.NOT_FOUND)
-        except (ValueError, json.JSONDecodeError) as exc:
+        except (ContractError, ValueError, json.JSONDecodeError) as exc:
             self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
 
     def save_layout(self) -> None:
@@ -130,19 +132,6 @@ class EditorHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)
-
-
-def validate_layout(layout: dict) -> None:
-    if layout.get("schema") not in (1, 2):
-        raise ValueError("layout schema must be 1 or 2")
-    if layout.get("space") != "threejs_yup":
-        raise ValueError("layout space must be threejs_yup")
-    if not isinstance(layout.get("instances"), list):
-        raise ValueError("layout instances must be a list")
-    if not isinstance(layout.get("camera"), dict):
-        raise ValueError("layout camera must be an object")
-    if not isinstance(layout.get("name"), str) or not layout["name"].strip():
-        raise ValueError("layout name must be a non-empty string")
 
 
 def timestamp_prefix() -> str:

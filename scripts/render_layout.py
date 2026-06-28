@@ -18,6 +18,7 @@ from mathutils import Matrix, Vector
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
+from btlib.validate import validate_layout  # noqa: E402 -- Blender --python omits script dir.
 from lighting_model import (  # noqa: E402 -- Blender --python omits the script dir from sys.path.
     color_tuple,
     default_lighting,
@@ -278,6 +279,7 @@ def configure_render(layout: dict, out_path: Path) -> None:
 
 def render_layout(layout_path: Path, manifest_path: Path, render_dir: Path) -> dict:
     layout = json.loads(layout_path.read_text(encoding="utf-8"))
+    validate_layout(layout)
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     assets = {asset["id"]: asset for asset in manifest["assets"]}
 

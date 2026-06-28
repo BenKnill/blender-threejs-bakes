@@ -26,7 +26,8 @@ elsewhere, extract it to a shared module — do not copy the matrix.
   remain accepted by `render_layout.py` and use legacy lighting defaults.
 - `asset_id` is the stable join key across GLB proxy ⇄ manifest ⇄ source `.blend`.
   Never reuse or rename an id casually.
-- Schemas are documented in `DESIGN.md`. Update it in the same change that alters them.
+- Schemas are documented in `DESIGN.md` and `schemas/`. Update both in the same
+  change that alters them.
 
 ## 2. File size
 

@@ -34,3 +34,7 @@ smoke:
 # Render a layout in Blender: `just render layouts/live.layout.json`
 render layout:
     ./scripts/blender.sh --background --python scripts/render_layout.py -- {{layout}}
+
+# Non-interactive control surface: `just bt validate layouts/live.layout.json`
+bt *args:
+    python3 scripts/bt.py {{args}}
