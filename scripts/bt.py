@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from btlib.asset_metadata import agent_asset_metadata
 from btlib.default_scale import default_drop_scale
 from btlib.inspect import inspect_layout
 from btlib.keyframes import layout_with_pose
@@ -88,6 +89,7 @@ def cmd_assets(args: argparse.Namespace) -> int:
             "name": asset["name"],
             "bbox": asset["bbox"],
             "default_scale": default_drop_scale(asset),
+            **agent_asset_metadata(asset),
             "source_blend": asset["source_blend"],
             "glb": asset["glb"],
         }
@@ -97,11 +99,14 @@ def cmd_assets(args: argparse.Namespace) -> int:
         print_json({"assets": assets})
         return 0
     print_table(
-        ["id", "name", "bbox", "default", "source"],
+        ["id", "name", "category", "size", "health", "bbox", "default", "source"],
         [
             [
                 asset["id"],
                 asset["name"],
+                asset["category"],
+                asset["size_class"],
+                ", ".join(asset["health_labels"]),
                 vec_text(asset["bbox"]),
                 f"{asset['default_scale']:g}",
                 Path(asset["source_blend"]).name,

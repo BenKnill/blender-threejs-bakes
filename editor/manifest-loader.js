@@ -1,3 +1,5 @@
+import { withAgentMetadata } from "./asset-metadata.js";
+
 export async function loadManifest() {
   const response = await fetch("../assets/manifest.json", { cache: "no-store" });
   if (!response.ok) {
@@ -7,7 +9,9 @@ export async function loadManifest() {
   if (!Array.isArray(manifest.assets)) {
     throw new Error("Manifest must contain an assets array");
   }
-  manifest.assets = await Promise.all(manifest.assets.map(withAssetHealth));
+  manifest.assets = await Promise.all(
+    manifest.assets.map((asset) => withAssetHealth(withAgentMetadata(asset)))
+  );
   return manifest;
 }
 

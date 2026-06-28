@@ -101,6 +101,10 @@ python3 scripts/bt.py render layouts/cli_demo.layout.json --width 640 --height 3
 ```
 
 Most commands accept `--json`; contract errors exit 2 and render failures exit 3.
+`bt assets --json` includes agent-readable `category`, `size_class`,
+`starter_scale`, and `health_labels` fields derived from manifest metadata when
+explicit labels are absent. The editor exposes the same labels in asset rows and
+stable `data-asset-*` attributes for automation.
 
 `bt place` uses the manifest/default drop scale when `--scale` is omitted; pass
 `--scale` to override it.
