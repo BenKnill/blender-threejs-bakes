@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from btlib.inspect import inspect_layout
+from btlib.keyframes import layout_with_pose
 from btlib.layout import (
     BLENDER,
     DEFAULT_LAYOUT,
@@ -258,14 +259,84 @@ def cmd_inspect(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_keyframes_camera_move(args: argparse.Namespace) -> int:
+    path = resolve_repo_path(args.layout)
+    layout = load_layout(path)
+    layout["schema"] = 3
+    keyframes = layout.setdefault("keyframes", {})
+    pose = keyframes.setdefault(args.pose, {})
+    move = {"preset": args.preset}
+    if args.amount is not None:
+        move["amount"] = args.amount
+    if args.degrees is not None:
+        move["degrees"] = args.degrees
+    pose["camera_move"] = move
+    write_layout(path, layout)
+    posed = layout_with_pose(layout, args.pose)
+    return print_result(
+        {
+            "ok": True,
+            "layout": relative(path),
+            "pose": args.pose,
+            "camera_move": move,
+            "camera": posed["camera"],
+        },
+        args.json,
+    )
+
+
+def cmd_keyframes_clear(args: argparse.Namespace) -> int:
+    path = resolve_repo_path(args.layout)
+    layout = load_layout(path)
+    layout.pop("keyframes", None)
+    if layout.get("schema") == 3:
+        layout["schema"] = 2
+    write_layout(path, layout)
+    return print_result({"ok": True, "layout": relative(path), "keyframes": None}, args.json)
+
+
 def cmd_render(args: argparse.Namespace) -> int:
     layout = resolve_repo_path(args.layout)
     if not layout.exists():
         raise ValueError(f"layout does not exist: {layout}")
-    render_layout = prepare_render_layout(layout, args)
     output_dir = resolve_repo_path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     before = {path.name for path in output_dir.glob("*.png")} if output_dir.exists() else set()
+    poses = ["a", "b"] if args.pose == "both" else [args.pose]
+    render_layout = prepare_render_layout(layout, args)
+    rendered = []
+    for pose in poses:
+        result = run_render(render_layout, args, output_dir, pose)
+        if result["returncode"] != 0:
+            payload = {
+                "ok": False,
+                "pose": pose,
+                "returncode": result["returncode"],
+                "stdout": result["stdout"][-4000:],
+                "stderr": result["stderr"][-4000:],
+            }
+            if args.json:
+                print_json(payload)
+            else:
+                print(f"Blender render failed for pose {pose}", file=sys.stderr)
+                print(result["stderr"][-4000:], file=sys.stderr)
+            return 3
+        rendered.append({"pose": pose, "stdout": result["stdout"][-4000:]})
+    renders = sorted(output_dir.glob("*.png"), key=lambda path: path.stat().st_mtime, reverse=True)
+    new = [render for render in renders if render.name not in before]
+    payload = {
+        "ok": True,
+        "layout": relative(layout),
+        "poses": rendered,
+        "new": [render_metadata(path) for path in new],
+        "renders": [render_metadata(path) for path in renders],
+    }
+    return print_result(payload, args.json)
+
+
+def run_render(
+    render_layout: Path, args: argparse.Namespace, output_dir: Path, pose: str
+) -> dict[str, Any]:
     cmd = [
         str(BLENDER),
         "--background",
@@ -277,30 +348,11 @@ def cmd_render(args: argparse.Namespace) -> int:
         str(resolve_repo_path(args.manifest)),
         "--output-dir",
         str(output_dir),
+        "--pose",
+        "base" if pose == "base" else pose,
     ]
     proc = subprocess.run(cmd, cwd=resolve_repo_path("."), capture_output=True, text=True)
-    if proc.returncode != 0:
-        payload = {
-            "ok": False,
-            "returncode": proc.returncode,
-            "stdout": proc.stdout[-4000:],
-            "stderr": proc.stderr[-4000:],
-        }
-        if args.json:
-            print_json(payload)
-        else:
-            print("Blender render failed", file=sys.stderr)
-            print(proc.stderr[-4000:], file=sys.stderr)
-        return 3
-    renders = sorted(output_dir.glob("*.png"), key=lambda path: path.stat().st_mtime, reverse=True)
-    new = [render for render in renders if render.name not in before]
-    payload = {
-        "ok": True,
-        "layout": relative(layout),
-        "new": [render_metadata(path) for path in new],
-        "renders": [render_metadata(path) for path in renders],
-    }
-    return print_result(payload, args.json)
+    return {"returncode": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr}
 
 
 def prepare_render_layout(layout_path: Path, args: argparse.Namespace) -> Path:
@@ -568,6 +620,32 @@ def build_parser() -> argparse.ArgumentParser:
     add_json_arg(inspect)
     inspect.set_defaults(func=cmd_inspect)
 
+    keyframes = subcommands.add_parser("keyframes", help="edit A/B keyframe poses")
+    keyframe_subcommands = keyframes.add_subparsers(dest="keyframe_command", required=True)
+    camera_move = keyframe_subcommands.add_parser("camera-move", help="set a pose camera move")
+    add_layout_arg(camera_move)
+    camera_move.add_argument(
+        "preset",
+        choices=[
+            "push_in",
+            "pull_out",
+            "orbit_left",
+            "orbit_right",
+            "crane_up",
+            "dolly",
+            "whip",
+        ],
+    )
+    camera_move.add_argument("--pose", choices=("a", "b"), default="b")
+    camera_move.add_argument("--amount", type=float)
+    camera_move.add_argument("--degrees", type=float)
+    add_json_arg(camera_move)
+    camera_move.set_defaults(func=cmd_keyframes_camera_move)
+    clear = keyframe_subcommands.add_parser("clear", help="remove keyframes from a layout")
+    add_layout_arg(clear)
+    add_json_arg(clear)
+    clear.set_defaults(func=cmd_keyframes_clear)
+
     render = subcommands.add_parser("render", help="render a layout through Blender")
     render.add_argument("layout", nargs="?", default=str(DEFAULT_LAYOUT))
     render.add_argument("--manifest", default=str(DEFAULT_MANIFEST))
@@ -575,6 +653,7 @@ def build_parser() -> argparse.ArgumentParser:
     render.add_argument("--width", type=int)
     render.add_argument("--height", type=int)
     render.add_argument("--samples", type=int)
+    render.add_argument("--pose", choices=("base", "a", "b", "both"), default="base")
     add_json_arg(render)
     render.set_defaults(func=cmd_render)
     return parser

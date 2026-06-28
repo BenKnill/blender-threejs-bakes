@@ -18,6 +18,7 @@ from mathutils import Matrix, Vector
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
+from btlib.keyframes import layout_with_pose  # noqa: E402 -- Blender --python omits script dir.
 from btlib.validate import validate_layout  # noqa: E402 -- Blender --python omits script dir.
 from lighting_model import (  # noqa: E402 -- Blender --python omits the script dir from sys.path.
     color_tuple,
@@ -279,8 +280,12 @@ def configure_render(layout: dict, out_path: Path) -> None:
     scene.render.filepath = str(out_path)
 
 
-def render_layout(layout_path: Path, manifest_path: Path, render_dir: Path) -> dict:
+def render_layout(
+    layout_path: Path, manifest_path: Path, render_dir: Path, pose: str = "base"
+) -> dict:
     layout = json.loads(layout_path.read_text(encoding="utf-8"))
+    validate_layout(layout)
+    layout = layout_with_pose(layout, pose)
     validate_layout(layout)
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     assets = {asset["id"]: asset for asset in manifest["assets"]}
@@ -301,6 +306,7 @@ def render_layout(layout_path: Path, manifest_path: Path, render_dir: Path) -> d
 
     receipt = {
         "layout": str(layout_path),
+        "pose": pose,
         "manifest": str(manifest_path),
         "output": str(out_path),
         "timestamp": datetime.now(UTC).isoformat(),
@@ -321,9 +327,10 @@ def main() -> None:
     parser.add_argument("layout", type=Path)
     parser.add_argument("--manifest", type=Path, default=MANIFEST_PATH)
     parser.add_argument("--output-dir", type=Path, default=RENDER_DIR)
+    parser.add_argument("--pose", choices=("base", "a", "b"), default="base")
     argv = sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else sys.argv[1:]
     args = parser.parse_args(argv)
-    render_layout(args.layout, args.manifest, args.output_dir)
+    render_layout(args.layout, args.manifest, args.output_dir, args.pose)
 
 
 if __name__ == "__main__":
