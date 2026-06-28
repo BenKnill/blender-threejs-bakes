@@ -98,7 +98,10 @@ def preset_lighting(name: str = DEFAULT_PRESET) -> dict:
 
 def merge_lighting(lighting: dict | None) -> dict:
     preset = (lighting or {}).get("preset", DEFAULT_PRESET)
-    base = preset_lighting(preset)
+    if preset in LIGHTING_PRESETS:
+        base = preset_lighting(preset)
+    else:
+        base = {"preset": preset, **deepcopy(LIGHTING_PRESETS[DEFAULT_PRESET])}
     if not lighting:
         return base
     return {
