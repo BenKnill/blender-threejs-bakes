@@ -42,3 +42,13 @@ This writes `assets/glb/*.glb` and refreshes `assets/manifest.json`.
 ```
 
 Output lands in `renders/<layout-name>.png` with a matching receipt JSON.
+
+## Validate contracts
+
+```sh
+python3 scripts/bt.py validate layouts/live.layout.json
+python3 scripts/bt.py validate assets/manifest.json --json
+```
+
+Validation errors use JSON-pointer-style paths such as
+`/instances/3/quaternion: expected 4 numbers`.

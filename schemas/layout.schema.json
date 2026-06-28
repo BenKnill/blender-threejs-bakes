@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/BenKnill/blender-threejs-bakes/schemas/layout.schema.json",
+  "title": "Blender Three.js Bake Layout",
+  "description": "Browser-to-Blender layout contract. Coordinates are always Three.js Y-up.",
+  "oneOf": [
+    { "$ref": "#/$defs/schema1Layout" },
+    { "$ref": "#/$defs/schema2Layout" }
+  ],
+  "$defs": {
+    "schema1Layout": {
+      "type": "object",
+      "required": ["name", "schema", "space", "instances", "camera"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "schema": { "const": 1 },
+        "space": { "const": "threejs_yup" },
+        "instances": { "type": "array", "items": { "$ref": "#/$defs/instance" } },
+        "camera": { "$ref": "#/$defs/camera" },
+        "render": { "$ref": "#/$defs/render" }
+      }
+    },
+    "schema2Layout": {
+      "type": "object",
+      "required": ["name", "schema", "space", "instances", "camera", "render", "lighting"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "schema": { "const": 2 },
+        "space": { "const": "threejs_yup" },
+        "instances": { "type": "array", "items": { "$ref": "#/$defs/instance" } },
+        "camera": { "$ref": "#/$defs/camera" },
+        "render": { "$ref": "#/$defs/render" },
+        "lighting": { "$ref": "#/$defs/lighting" }
+      }
+    },
+    "instance": {
+      "type": "object",
+      "required": ["instance_id", "asset_id", "position", "quaternion", "scale"],
+      "properties": {
+        "instance_id": { "type": "string", "minLength": 1 },
+        "asset_id": { "type": "string", "minLength": 1 },
+        "position": { "$ref": "#/$defs/vec3" },
+        "quaternion": { "$ref": "#/$defs/quaternion" },
+        "scale": { "$ref": "#/$defs/vec3" }
+      }
+    },
+    "camera": {
+      "type": "object",
+      "required": ["position", "target", "fov_deg"],
+      "properties": {
+        "position": { "$ref": "#/$defs/vec3" },
+        "target": { "$ref": "#/$defs/vec3" },
+        "fov_deg": { "type": "number", "minimum": 1, "maximum": 179 },
+        "up": { "$ref": "#/$defs/vec3" }
+      }
+    },
+    "render": {
+      "type": "object",
+      "properties": {
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
+        "samples": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "lighting": {
+      "type": "object",
+      "required": ["preset", "sun", "world", "exposure"],
+      "properties": {
+        "preset": { "type": "string", "minLength": 1 },
+        "sun": {
+          "type": "object",
+          "required": ["azimuth_deg", "elevation_deg", "color", "strength", "angle_deg"],
+          "properties": {
+            "azimuth_deg": { "type": "number" },
+            "elevation_deg": { "type": "number" },
+            "color": { "$ref": "#/$defs/rgb" },
+            "strength": { "type": "number", "minimum": 0 },
+            "angle_deg": { "type": "number", "exclusiveMinimum": 0 }
+          }
+        },
+        "world": {
+          "type": "object",
+          "required": ["type", "strength", "color"],
+          "properties": {
+            "type": { "enum": ["color", "sky", "hdri"] },
+            "strength": { "type": "number", "minimum": 0 },
+            "color": { "$ref": "#/$defs/rgb" },
+            "hdri": { "type": "string" },
+            "rotation_deg": { "type": "number" }
+          }
+        },
+        "exposure": { "type": "number" }
+      }
+    },
+    "vec3": {
+      "type": "array",
+      "prefixItems": [{ "type": "number" }, { "type": "number" }, { "type": "number" }],
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "quaternion": {
+      "type": "array",
+      "prefixItems": [
+        { "type": "number" },
+        { "type": "number" },
+        { "type": "number" },
+        { "type": "number" }
+      ],
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "rgb": {
+      "type": "array",
+      "prefixItems": [
+        { "type": "number", "minimum": 0, "maximum": 1 },
+        { "type": "number", "minimum": 0, "maximum": 1 },
+        { "type": "number", "minimum": 0, "maximum": 1 }
+      ],
+      "minItems": 3,
+      "maxItems": 3
+    }
+  }
+}

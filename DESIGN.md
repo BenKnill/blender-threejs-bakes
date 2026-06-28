@@ -69,6 +69,10 @@ blender-threejs-bakes/
 
 ## Data contracts
 
+The machine-readable JSON Schemas live in `schemas/`. Run
+`python3 scripts/bt.py validate <path>` to validate a layout or manifest with
+JSON-pointer-style errors.
+
 ### `assets/manifest.json` — produced by stage 1, consumed by the editor
 
 ```json
