@@ -70,6 +70,7 @@ python3 scripts/bt.py place bone_broken --layout layouts/cli_demo.layout.json --
 python3 scripts/bt.py move bone_broken_001 --layout layouts/cli_demo.layout.json --by 0 1 0
 python3 scripts/bt.py camera frame bone_broken_001 --layout layouts/cli_demo.layout.json
 python3 scripts/bt.py light preset studio --layout layouts/cli_demo.layout.json
+python3 scripts/bt.py inspect layouts/cli_demo.layout.json --json
 python3 scripts/bt.py render layouts/cli_demo.layout.json --width 640 --height 360 --samples 32 --json
 ```
 
@@ -189,19 +190,21 @@ authoring and baking. It supports these stable commands:
 - `bt camera set` and `bt camera frame <instance_id>`
 - `bt light preset <name>` and `bt light sun`
 - `bt validate`
+- `bt inspect`
 - `bt render`
 
 Use `--json` when machine-readable output matters. The CLI edits schema-valid
 Three.js Y-up layouts only; Blender conversion remains confined to
 `scripts/render_layout.py`.
 
-## Pending: Inspect Diagnostics
+## Current: Inspect Diagnostics
 
-Pending issue: #9, "bt inspect: text scene diagnostics for agents that can't
-see".
-
-There is no text scene-inspection command yet. Use layouts, receipts, and render
-metadata as the current machine-readable evidence.
+`python3 scripts/bt.py inspect [layout]` emits a Blender-free geometry report for
+agents that cannot see the scene. It reports per-instance Three.js and Blender
+positions, bbox times scale size, scale sanity against the editor's default drop
+scale, approximate camera framing/clip edges/coverage/distance, sun direction
+relative to the camera, rough bbox overlaps, and grounded/floating/sunken state.
+Use `--json` for stable machine-readable diagnostics.
 
 ## Pending: Computer-Use Harness
 

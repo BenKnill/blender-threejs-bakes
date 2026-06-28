@@ -66,6 +66,7 @@ python3 scripts/bt.py place bone_broken --layout layouts/cli_demo.layout.json --
 python3 scripts/bt.py camera frame bone_broken_001 --layout layouts/cli_demo.layout.json
 python3 scripts/bt.py light preset studio --layout layouts/cli_demo.layout.json
 python3 scripts/bt.py validate layouts/cli_demo.layout.json
+python3 scripts/bt.py inspect layouts/cli_demo.layout.json --json
 python3 scripts/bt.py render layouts/cli_demo.layout.json --width 640 --height 360 --samples 32 --json
 ```
 
