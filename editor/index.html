@@ -131,6 +131,170 @@
           ></div>
         </section>
 
+        <section class="panel inspectorPanel" data-testid="instance-inspector">
+          <h2>Selected Instance</h2>
+          <div class="gridFields">
+            <label class="field">
+              <span>Pos X</span>
+              <input
+                id="instancePositionX"
+                type="number"
+                step="0.01"
+                data-testid="instance-position-x"
+              />
+            </label>
+            <label class="field">
+              <span>Pos Y</span>
+              <input
+                id="instancePositionY"
+                type="number"
+                step="0.01"
+                data-testid="instance-position-y"
+              />
+            </label>
+            <label class="field">
+              <span>Pos Z</span>
+              <input
+                id="instancePositionZ"
+                type="number"
+                step="0.01"
+                data-testid="instance-position-z"
+              />
+            </label>
+          </div>
+          <div class="gridFields">
+            <label class="field">
+              <span>Rot X</span>
+              <input
+                id="instanceRotationX"
+                type="number"
+                step="1"
+                data-testid="instance-rotation-x"
+              />
+            </label>
+            <label class="field">
+              <span>Rot Y</span>
+              <input
+                id="instanceRotationY"
+                type="number"
+                step="1"
+                data-testid="instance-rotation-y"
+              />
+            </label>
+            <label class="field">
+              <span>Rot Z</span>
+              <input
+                id="instanceRotationZ"
+                type="number"
+                step="1"
+                data-testid="instance-rotation-z"
+              />
+            </label>
+          </div>
+          <div class="gridFields scaleFields">
+            <label class="field">
+              <span>Uniform</span>
+              <input
+                id="instanceUniformScale"
+                type="number"
+                min="0.0005"
+                step="0.01"
+                data-testid="instance-uniform-scale"
+              />
+            </label>
+            <label class="field">
+              <span>Scale X</span>
+              <input
+                id="instanceScaleX"
+                type="number"
+                min="0.0005"
+                step="0.01"
+                data-testid="instance-scale-x"
+              />
+            </label>
+            <label class="field">
+              <span>Scale Y</span>
+              <input
+                id="instanceScaleY"
+                type="number"
+                min="0.0005"
+                step="0.01"
+                data-testid="instance-scale-y"
+              />
+            </label>
+            <label class="field">
+              <span>Scale Z</span>
+              <input
+                id="instanceScaleZ"
+                type="number"
+                min="0.0005"
+                step="0.01"
+                data-testid="instance-scale-z"
+              />
+            </label>
+          </div>
+        </section>
+
+        <section class="panel inspectorPanel" data-testid="camera-inspector">
+          <div class="panelHeader">
+            <h2>Camera</h2>
+          </div>
+          <div class="gridFields">
+            <label class="field">
+              <span>Pos X</span>
+              <input
+                id="cameraPositionX"
+                type="number"
+                step="0.01"
+                data-testid="camera-position-x"
+              />
+            </label>
+            <label class="field">
+              <span>Pos Y</span>
+              <input
+                id="cameraPositionY"
+                type="number"
+                step="0.01"
+                data-testid="camera-position-y"
+              />
+            </label>
+            <label class="field">
+              <span>Pos Z</span>
+              <input
+                id="cameraPositionZ"
+                type="number"
+                step="0.01"
+                data-testid="camera-position-z"
+              />
+            </label>
+          </div>
+          <div class="gridFields">
+            <label class="field">
+              <span>Target X</span>
+              <input id="cameraTargetX" type="number" step="0.01" data-testid="camera-target-x" />
+            </label>
+            <label class="field">
+              <span>Target Y</span>
+              <input id="cameraTargetY" type="number" step="0.01" data-testid="camera-target-y" />
+            </label>
+            <label class="field">
+              <span>Target Z</span>
+              <input id="cameraTargetZ" type="number" step="0.01" data-testid="camera-target-z" />
+            </label>
+          </div>
+          <label class="field cameraFovField">
+            <span>FOV</span>
+            <input
+              id="cameraFov"
+              type="number"
+              min="1"
+              max="160"
+              step="1"
+              data-testid="camera-fov"
+            />
+          </label>
+        </section>
+
         <section class="panel">
           <h2>Render</h2>
           <div class="gridFields">
