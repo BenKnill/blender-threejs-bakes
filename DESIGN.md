@@ -73,6 +73,10 @@ The machine-readable JSON Schemas live in `schemas/`. Run
 `python3 scripts/bt.py validate <path>` to validate a layout or manifest with
 JSON-pointer-style errors.
 
+`python3 scripts/bt.py` is also the text control surface for layout authoring
+and baking. It writes the same schema-v2 Three.js Y-up layout contract as the
+browser editor.
+
 ### `assets/manifest.json` — produced by stage 1, consumed by the editor
 
 ```json
