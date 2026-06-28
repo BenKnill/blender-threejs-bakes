@@ -13,6 +13,15 @@ from pathlib import Path
 import bpy
 from mathutils import Vector
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPT_DIR))
+
+from asset_texture_report import inspect_current_file  # noqa: E402 -- Blender --python path setup.
+from btlib.texture_paths import (  # noqa: E402 -- Blender --python path setup.
+    default_texture_roots,
+    index_texture_basenames,
+)
+
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = ROOT / "assets" / "manifest.json"
 GLB_DIR = ROOT / "assets" / "glb"
@@ -145,6 +154,8 @@ def main() -> None:
         parser.error("one of --source-dir or --asset is required")
 
     GLB_DIR.mkdir(parents=True, exist_ok=True)
+    texture_roots = default_texture_roots(ROOT)
+    texture_index = index_texture_basenames(texture_roots)
     blend_paths = [path.expanduser().resolve() for path in args.asset]
     if args.source_dir:
         blend_paths.extend(sorted(args.source_dir.glob("*.blend"))[: args.limit])
@@ -154,6 +165,7 @@ def main() -> None:
         asset_id = slugify(blend_path)
         reset_scene()
         collection_name = append_first_collection(blend_path)
+        texture_report = inspect_current_file(texture_index, relink=True)
         bbox = bounds_xyz()
         glb_path = GLB_DIR / f"{asset_id}.glb"
         proxy = export_proxy(glb_path, max_tris=args.max_tris, max_mb=args.max_proxy_mb)
@@ -166,6 +178,10 @@ def main() -> None:
             "bbox": bbox,
             "up_axis": "Z",
             "proxy": proxy,
+            "texture_warnings": {
+                "missing_count": texture_report["missing_count"],
+                "relinked_count": texture_report["relinked_count"],
+            },
         }
         assets.append(asset)
 
@@ -180,6 +196,7 @@ def main() -> None:
         "limit": args.limit,
         "blender_version": bpy.app.version_string,
         "manifest": str(MANIFEST_PATH),
+        "texture_roots": [str(path) for path in texture_roots],
         "assets": [
             {
                 "id": asset["id"],
@@ -189,9 +206,13 @@ def main() -> None:
                 "collection": asset["collection"],
                 "bbox": asset["bbox"],
                 "proxy": asset["proxy"],
+                "texture_warnings": asset["texture_warnings"],
             }
             for asset in assets
         ],
+        "missing_texture_warning_count": sum(
+            asset["texture_warnings"]["missing_count"] for asset in assets
+        ),
     }
     (MANIFEST_PATH.parent / "manifest.receipt.json").write_text(
         json.dumps(receipt, indent=2) + "\n",

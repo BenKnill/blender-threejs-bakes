@@ -110,3 +110,20 @@ python3 scripts/bt.py layout new preset_sanity --layout /tmp/preset_sanity.layou
 python3 scripts/bt.py light preset golden_hour --layout /tmp/preset_sanity.layout.json
 python3 scripts/bt.py inspect /tmp/preset_sanity.layout.json
 ```
+
+## Diagnose missing source textures
+
+Material image links live inside the source `.blend` files, so texture diagnostics
+run through Blender:
+
+```sh
+python3 scripts/bt.py textures --asset medieval_prop_crate --json
+python3 scripts/bt.py textures --asset medieval_prop_crate --relink --json
+```
+
+By default the relink search uses existing repo texture folders and
+`~/asset-menagerie` when present. Add `--texture-root /path/to/textures` or set
+`BT_TEXTURE_ROOTS` with path-separated roots for other source packs. `--relink`
+rewrites missing image paths in memory for diagnostics/export/render; add
+`--save` only when you intentionally want to update the source `.blend` files.
+Proxy export and render receipts include missing/relinked texture counts.

@@ -18,7 +18,12 @@ from mathutils import Matrix, Vector
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
+from asset_texture_report import inspect_current_file  # noqa: E402 -- Blender --python path setup.
 from btlib.keyframes import layout_with_pose  # noqa: E402 -- Blender --python omits script dir.
+from btlib.texture_paths import (  # noqa: E402 -- Blender --python path setup.
+    default_texture_roots,
+    index_texture_basenames,
+)
 from btlib.validate import validate_layout  # noqa: E402 -- Blender --python omits script dir.
 from lighting_model import (  # noqa: E402 -- Blender --python omits the script dir from sys.path.
     color_tuple,
@@ -123,8 +128,14 @@ def matrix_rows(matrix: Matrix) -> list[list[float]]:
     return [[round(value, 6) for value in row] for row in matrix]
 
 
-def place_instance(instance: dict, asset: dict) -> dict:
+def place_instance(instance: dict, asset: dict, texture_index: dict[str, list[Path]]) -> dict:
+    before_images = set(bpy.data.images)
     objects = append_collection(asset)
+    texture_report = inspect_current_file(
+        texture_index,
+        relink=True,
+        images_to_check=set(bpy.data.images) - before_images,
+    )
     empty = bpy.data.objects.new(instance["instance_id"], None)
     bpy.context.scene.collection.objects.link(empty)
     empty.matrix_world = three_matrix_to_blender(instance)
@@ -149,6 +160,18 @@ def place_instance(instance: dict, asset: dict) -> dict:
             }
             for obj in root_objects
         ],
+        "texture_warnings": {
+            "missing_count": texture_report["missing_count"],
+            "relinked_count": texture_report["relinked_count"],
+            "missing": [
+                {
+                    "basename": item["basename"],
+                    "path": item["path"],
+                    "candidate_count": item.get("candidate_count", 0),
+                }
+                for item in texture_report["missing"]
+            ],
+        },
     }
 
 
@@ -292,8 +315,10 @@ def render_layout(
 
     reset_scene()
     placements = []
+    texture_roots = default_texture_roots(ROOT)
+    texture_index = index_texture_basenames(texture_roots)
     for instance in layout.get("instances", []):
-        placements.append(place_instance(instance, assets[instance["asset_id"]]))
+        placements.append(place_instance(instance, assets[instance["asset_id"]], texture_index))
     setup_camera(layout)
     lighting = setup_lighting(layout)
 
@@ -314,6 +339,13 @@ def render_layout(
         "assets": sorted({item["asset_id"] for item in layout.get("instances", [])}),
         "lighting": lighting,
         "placements": placements,
+        "texture_roots": [str(path) for path in texture_roots],
+        "missing_texture_warning_count": sum(
+            placement["texture_warnings"]["missing_count"] for placement in placements
+        ),
+        "relinked_texture_count": sum(
+            placement["texture_warnings"]["relinked_count"] for placement in placements
+        ),
     }
     (render_dir / f"{output_stem}.receipt.json").write_text(
         json.dumps(receipt, indent=2) + "\n",

@@ -20,6 +20,7 @@ from btlib.layout import (
     DEFAULT_MANIFEST,
     DEFAULT_RENDERS,
     RENDER_SCRIPT,
+    TEXTURE_REPORT_SCRIPT,
     asset_by_id,
     instance_by_id,
     load_json,
@@ -450,6 +451,77 @@ def run_render(
     return {"returncode": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr}
 
 
+def cmd_textures(args: argparse.Namespace) -> int:
+    cmd = [
+        str(BLENDER),
+        "--background",
+        "--python",
+        str(TEXTURE_REPORT_SCRIPT),
+        "--",
+        "--manifest",
+        str(resolve_repo_path(args.manifest)),
+    ]
+    for asset_id in args.asset or []:
+        cmd.extend(["--asset", asset_id])
+    for source_blend in args.source_blend or []:
+        cmd.extend(["--source-blend", str(resolve_repo_path(source_blend))])
+    for texture_root in args.texture_root or []:
+        cmd.extend(["--texture-root", str(resolve_repo_path(texture_root))])
+    if args.relink:
+        cmd.append("--relink")
+    if args.save:
+        cmd.append("--save")
+    if args.json:
+        cmd.append("--json")
+    proc = subprocess.run(cmd, cwd=resolve_repo_path("."), capture_output=True, text=True)
+    if proc.returncode != 0:
+        payload = {
+            "ok": False,
+            "returncode": proc.returncode,
+            "stdout": proc.stdout[-4000:],
+            "stderr": proc.stderr[-4000:],
+        }
+        if args.json:
+            print_json(payload)
+        else:
+            print("Blender texture diagnostic failed", file=sys.stderr)
+            print(proc.stderr[-4000:], file=sys.stderr)
+        return 3
+    if args.json:
+        print_json(extract_first_json_object(proc.stdout))
+    else:
+        print(proc.stdout, end="")
+    return 0
+
+
+def extract_first_json_object(text: str) -> Any:
+    start = text.find("{")
+    if start < 0:
+        raise ValueError("Blender output did not contain a JSON object")
+    depth = 0
+    in_string = False
+    escaped = False
+    for index, char in enumerate(text[start:], start=start):
+        if escaped:
+            escaped = False
+            continue
+        if char == "\\":
+            escaped = True
+            continue
+        if char == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return json.loads(text[start : index + 1])
+    raise ValueError("Blender output contained incomplete JSON")
+
+
 def prepare_render_layout(layout_path: Path, args: argparse.Namespace) -> Path:
     layout = load_layout(layout_path)
     if args.width is None and args.height is None and args.samples is None:
@@ -784,6 +856,19 @@ def build_parser() -> argparse.ArgumentParser:
     render.add_argument("--pose", choices=("base", "a", "b", "both"), default="base")
     add_json_arg(render)
     render.set_defaults(func=cmd_render)
+
+    textures = subcommands.add_parser(
+        "textures",
+        help="diagnose source blend material image links through Blender",
+    )
+    textures.add_argument("--manifest", default=str(DEFAULT_MANIFEST))
+    textures.add_argument("--asset", action="append", help="manifest asset id to inspect")
+    textures.add_argument("--source-blend", type=Path, action="append", default=[])
+    textures.add_argument("--texture-root", type=Path, action="append", default=[])
+    textures.add_argument("--relink", action="store_true", help="relink missing images in memory")
+    textures.add_argument("--save", action="store_true", help="save relinked source blends")
+    add_json_arg(textures)
+    textures.set_defaults(func=cmd_textures)
     return parser
 
 

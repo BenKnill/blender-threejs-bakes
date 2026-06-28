@@ -15,6 +15,7 @@ DEFAULT_MANIFEST = ROOT / "assets" / "manifest.json"
 DEFAULT_RENDERS = ROOT / "renders"
 BLENDER = ROOT / "scripts" / "blender.sh"
 RENDER_SCRIPT = ROOT / "scripts" / "render_layout.py"
+TEXTURE_REPORT_SCRIPT = ROOT / "scripts" / "asset_texture_report.py"
 
 
 def resolve_repo_path(path: str | Path) -> Path:
