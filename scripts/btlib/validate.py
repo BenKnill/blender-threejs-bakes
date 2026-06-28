@@ -46,7 +46,11 @@ def validate_layout(layout: dict[str, Any]) -> None:
     raise_if_errors(errors)
 
 
-def validate_manifest(manifest: dict[str, Any]) -> None:
+def validate_manifest(
+    manifest: dict[str, Any],
+    manifest_path: Path | None = None,
+    check_proxy_files: bool = False,
+) -> None:
     load_schema("manifest")
     errors: list[str] = []
     require_object(manifest, "", errors)
@@ -54,6 +58,8 @@ def validate_manifest(manifest: dict[str, Any]) -> None:
     require_array(manifest, "/assets", "assets", errors)
     for index, asset in enumerate(manifest.get("assets", [])):
         validate_asset(asset, f"/assets/{index}", errors)
+        if check_proxy_files:
+            validate_asset_proxy(asset, f"/assets/{index}", errors, manifest_path)
     raise_if_errors(errors)
 
 
@@ -184,6 +190,26 @@ def validate_asset(value: Any, pointer: str, errors: list[str]) -> None:
         require_number(value, f"{pointer}/default_scale", "default_scale", errors, low=0.000001)
     if value.get("up_axis") not in ("Y", "Z"):
         errors.append(f"{pointer}/up_axis: expected Y or Z")
+
+
+def validate_asset_proxy(
+    value: Any,
+    pointer: str,
+    errors: list[str],
+    manifest_path: Path | None,
+) -> None:
+    if not isinstance(value, dict) or manifest_path is None:
+        return
+    glb = value.get("glb")
+    if not isinstance(glb, str) or not glb:
+        return
+    if Path(glb).is_absolute() or ".." in Path(glb).parts:
+        errors.append(f"{pointer}/glb: expected repo-relative path under assets/")
+        return
+    assets_dir = manifest_path.resolve().parent
+    proxy_path = assets_dir / glb
+    if not proxy_path.is_file():
+        errors.append(f"{pointer}/glb: missing proxy file assets/{glb}")
 
 
 def require_object(value: Any, pointer: str, errors: list[str]) -> bool:

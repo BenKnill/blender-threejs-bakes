@@ -48,7 +48,7 @@ def validate_file(path: Path) -> None:
     if "layout" in data and "required_assets" in data:
         validate_preset(data)
     elif path.name == "manifest.json" or "assets" in data:
-        validate_manifest(data)
+        validate_manifest(data, path, check_proxy_files=True)
     else:
         validate_layout(data)
 

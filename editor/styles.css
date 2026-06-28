@@ -220,6 +220,19 @@ h2 {
   font-size: 12px;
 }
 
+.assetButton.previewReady {
+  border-color: #516757;
+}
+
+.assetButton.previewWarning {
+  border-color: #8d683d;
+  background: #2a2118;
+}
+
+.assetButton.previewWarning span {
+  color: #e3b46d;
+}
+
 .instanceButton.selected {
   border-color: #c8b46c;
   background: #2d3026;

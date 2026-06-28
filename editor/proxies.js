@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
-export function createProxyLoader() {
+export function createProxyLoader({ onProxyStatus } = {}) {
   const gltfLoader = new GLTFLoader();
   const proxyCache = new Map();
 
@@ -26,9 +26,23 @@ export function createProxyLoader() {
     const loadPromise = new Promise((resolve) => {
       gltfLoader.load(
         `../assets/${asset.glb}`,
-        (gltf) => resolve(prepareProxy(gltf.scene, asset)),
+        (gltf) => {
+          onProxyStatus?.(asset.id, {
+            previewable: true,
+            proxyStatus: "ready",
+            proxyMessage: "Browser proxy ready",
+          });
+          resolve(prepareProxy(gltf.scene, asset));
+        },
         undefined,
-        () => resolve(makePlaceholder(asset))
+        () => {
+          onProxyStatus?.(asset.id, {
+            previewable: false,
+            proxyStatus: "failed",
+            proxyMessage: `Proxy load failed: assets/${asset.glb}`,
+          });
+          resolve(makePlaceholder(asset));
+        }
       );
     });
 
