@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from btlib.inspect import inspect_layout
 from btlib.layout import (
     BLENDER,
     DEFAULT_LAYOUT,
@@ -244,6 +245,19 @@ def cmd_light_sun(args: argparse.Namespace) -> int:
     return print_result({"ok": True, "layout": relative(path), "lighting": lighting}, args.json)
 
 
+def cmd_inspect(args: argparse.Namespace) -> int:
+    layout_path = resolve_repo_path(args.layout)
+    layout = load_layout(layout_path)
+    manifest = load_manifest(resolve_repo_path(args.manifest))
+    report = inspect_layout(layout, manifest)
+    report["layout"]["path"] = relative(layout_path)
+    if args.json:
+        print_json(report)
+    else:
+        print_inspect(report)
+    return 0
+
+
 def cmd_render(args: argparse.Namespace) -> int:
     layout = resolve_repo_path(args.layout)
     if not layout.exists():
@@ -383,6 +397,63 @@ def print_table(headers: list[str], rows: list[list[str]]) -> None:
         print("  ".join(str(value).ljust(widths[index]) for index, value in enumerate(row)))
 
 
+def print_inspect(report: dict[str, Any]) -> None:
+    layout = report["layout"]
+    camera = report["camera"]
+    print(
+        f"Layout {layout['name']} ({layout['path']}): "
+        f"{layout['instance_count']} instance(s), schema {layout['schema']}"
+    )
+    print(
+        "Camera: "
+        f"pos {vec_text(camera['position'])}, target {vec_text(camera['target'])}, "
+        f"fov {camera['fov_deg']:g}, aspect {camera['aspect']:g}"
+    )
+    lighting = report["lighting"]
+    print(f"Lighting: {lighting['description']}")
+    print()
+    for instance in report["instances"]:
+        cam = instance["camera"]
+        ground = instance["ground"]
+        print(f"{instance['instance_id']} ({instance['asset_id']})")
+        print(
+            f"  position three.js {vec_text(instance['positions']['threejs_yup'])}; "
+            f"Blender {vec_text(instance['positions']['blender_zup'])}"
+        )
+        print(
+            f"  size three.js {vec_text(instance['size']['threejs_yup'])}; "
+            f"Blender {vec_text(instance['size']['blender_zup'])}"
+        )
+        clip = f"; clipped {', '.join(cam['clip_edges'])}" if cam["clip_edges"] else ""
+        print(
+            f"  camera {cam['status']}{clip}; "
+            f"coverage {cam['screen_coverage']['width']:.0%}w x "
+            f"{cam['screen_coverage']['height']:.0%}h; distance {cam['distance']:g}"
+        )
+        print(f"  ground {ground['status']}: {ground['note']}")
+        for warning in instance["warnings"]:
+            print(f"  warning: {warning}")
+    overlaps = report["relationships"]["overlaps"]
+    if overlaps:
+        print()
+        print("Relationships:")
+        for overlap in overlaps:
+            print(
+                f"  {overlap['a']} overlaps {overlap['b']} by {vec_text(overlap['overlap_size'])}"
+            )
+    warnings = report["summary"]["warnings"]
+    print()
+    print(
+        "Summary: "
+        f"{report['summary']['in_frame']} in-frame, "
+        f"{report['summary']['partially_clipped']} partially clipped, "
+        f"{report['summary']['off_screen']} off-screen, "
+        f"{len(warnings)} warning(s)"
+    )
+    for warning in warnings:
+        print(f"  warning: {warning}")
+
+
 def vec_text(values: list[float]) -> str:
     return ", ".join(f"{value:g}" for value in values)
 
@@ -490,6 +561,12 @@ def build_parser() -> argparse.ArgumentParser:
     validate.add_argument("paths", type=Path, nargs="+")
     validate.add_argument("--json", action="store_true")
     validate.set_defaults(func=cmd_validate)
+
+    inspect = subcommands.add_parser("inspect", help="describe layout geometry for agents")
+    inspect.add_argument("layout", nargs="?", default=str(DEFAULT_LAYOUT))
+    inspect.add_argument("--manifest", default=str(DEFAULT_MANIFEST))
+    add_json_arg(inspect)
+    inspect.set_defaults(func=cmd_inspect)
 
     render = subcommands.add_parser("render", help="render a layout through Blender")
     render.add_argument("layout", nargs="?", default=str(DEFAULT_LAYOUT))
