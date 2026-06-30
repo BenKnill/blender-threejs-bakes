@@ -92,6 +92,7 @@ def validate_shot(shot: dict[str, Any]) -> None:
         require_string(render_metadata, "/render_metadata/shot_dir", "shot_dir", errors)
         require_string(render_metadata, "/render_metadata/manifest", "manifest", errors)
         require_array(render_metadata, "/render_metadata/renders", "renders", errors)
+    validate_shot_paths(shot, errors)
     raise_if_errors(errors)
 
 
@@ -106,6 +107,45 @@ def validate_shot_frame(value: Any, pointer: str, errors: list[str], *, required
     if value.get("pose") not in ("base", "a", "b"):
         errors.append(f"{pointer}/pose: expected base, a, or b")
     require_int(value, f"{pointer}/bytes", "bytes", errors, low=0)
+
+
+def validate_shot_paths(shot: dict[str, Any], errors: list[str]) -> None:
+    source_layouts = shot.get("source_layouts", [])
+    if isinstance(source_layouts, list):
+        for index, source in enumerate(source_layouts):
+            require_existing_path(source, f"/source_layouts/{index}", errors)
+    frames = shot.get("frames")
+    if isinstance(frames, dict):
+        for name, frame in frames.items():
+            if isinstance(frame, dict):
+                require_existing_path(frame.get("path"), f"/frames/{name}/path", errors)
+
+    render_metadata = shot.get("render_metadata")
+    if not isinstance(render_metadata, dict):
+        return
+    require_existing_path(render_metadata.get("shot_dir"), "/render_metadata/shot_dir", errors)
+    require_existing_path(render_metadata.get("manifest"), "/render_metadata/manifest", errors)
+    renders = render_metadata.get("renders", [])
+    if isinstance(renders, list):
+        for index, receipt in enumerate(renders):
+            if not isinstance(receipt, dict):
+                continue
+            for key in ("layout", "manifest", "output"):
+                require_existing_path(
+                    receipt.get(key),
+                    f"/render_metadata/renders/{index}/{key}",
+                    errors,
+                )
+
+
+def require_existing_path(value: Any, pointer: str, errors: list[str]) -> None:
+    if not isinstance(value, str) or not value:
+        return
+    path = Path(value)
+    if not path.is_absolute():
+        path = ROOT / path
+    if not path.exists():
+        errors.append(f"{pointer}: path does not exist: {value}")
 
 
 def validate_instance(value: Any, pointer: str, errors: list[str]) -> None:

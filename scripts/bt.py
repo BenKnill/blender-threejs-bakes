@@ -486,7 +486,7 @@ def cmd_render_shot(args: argparse.Namespace, layout_path: Path) -> int:
             source_png = result["png"]
             target_png = shot_dir / f"{frame_name}.png"
             shutil.copy2(source_png, target_png)
-            receipt = result.get("receipt") or {}
+            receipt = shot_render_receipt(result.get("receipt") or {}, target_png)
             render_receipts.append(receipt)
             rendered_frames[frame_name] = {
                 "path": relative(target_png),
@@ -547,6 +547,10 @@ def render_one_frame(
     receipt_path = png.with_suffix(".receipt.json")
     receipt = load_json(receipt_path) if receipt_path.exists() else {}
     return {**result, "png": png, "receipt": receipt}
+
+
+def shot_render_receipt(receipt: dict[str, Any], output: Path) -> dict[str, Any]:
+    return {**receipt, "output": relative(output)}
 
 
 def build_shot_package(
