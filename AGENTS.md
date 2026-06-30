@@ -1,9 +1,9 @@
 # Agent Operating Guide
 
 This is the front door for coding agents working in this repo. It documents the
-current supported loop and the contracts that must stay stable. Diagnostics and
-the remaining computer-use surfaces are tracked below as pending work; do not
-assume they exist yet.
+current supported loop and the contracts that must stay stable. Treat only the
+surfaces documented here as stable; do not assume unlisted editor APIs or browser
+automation hooks exist.
 
 ## Model
 
@@ -119,8 +119,8 @@ its proxy and source bake asset, for example:
 }
 ```
 
-`layouts/*.layout.json` currently accepts schema 1 or 2. The editor writes schema
-2 layouts with:
+`layouts/*.layout.json` currently accepts schemas 1, 2, and 3. The editor writes
+schema 2 layouts with:
 
 - `name`
 - `schema`
@@ -129,6 +129,13 @@ its proxy and source bake asset, for example:
 - `camera`
 - `render`
 - `lighting`
+
+Schema 3 adds a `keyframes` block with A/B pose overrides. The `bt keyframes`
+commands create and clear schema-3 keyframe data for shot packages.
+
+`renders/shots/<shot_id>/shot.json` uses shot schema 1. It records prompt/video
+handoff fields, source layouts, stable `frames.first`/`frames.last` paths, and
+the Blender render receipts folded into `render_metadata`.
 
 See `schemas/layout.schema.json`, `schemas/manifest.schema.json`, `DESIGN.md`,
 and `CONVENTIONS.md` for the fuller contract.
@@ -144,7 +151,7 @@ The local server is `scripts/editor_server.py`, normally reached through
 - `GET /api/state` returns the current `layouts/live.layout.json` layout object.
   If no live layout has been saved, it returns HTTP 404 with
   `{ "ok": false, "error": "live layout not found", "layout": "layouts/live.layout.json" }`.
-- `POST /api/save-layout` accepts a layout JSON body, validates schema 1 or 2,
+- `POST /api/save-layout` accepts a layout JSON body, validates schema 1, 2, or 3,
   writes a timestamped `layouts/*.layout.json`, updates
   `layouts/live.layout.json`, and returns paths.
 - `POST /api/render-layout` accepts `{ "layout": "layouts/name.layout.json" }`
@@ -153,8 +160,6 @@ The local server is `scripts/editor_server.py`, normally reached through
 
 Static files are also served from the repo root, including `/editor/`,
 `/assets/...`, and `/renders/...`.
-
-There is no stable `/api/screenshot` yet.
 
 ## Driving The Editor As An Agent
 
@@ -179,12 +184,18 @@ Basic verify loop: target controls by `data-testid`, use `POST /api/save-layout`
 or the `save-for-bake` control to update `layouts/live.layout.json`, then poll
 `GET /api/state` and compare the returned layout fields.
 
+Issue #11 is closed; do not treat it as pending work. The stable selector and
+live-state readback slice described above landed from that line of work. There
+is still no stable `/api/screenshot` endpoint in `scripts/editor_server.py`; if
+an agent needs screenshot automation, open or follow a focused current issue for
+that endpoint instead of citing closed #11.
+
 ## Current: Contract Validation
 
-`python3 scripts/bt.py validate <path> [...]` validates layouts and manifests.
-It exits 0 on success and 2 for contract errors. `--json` emits structured
-results, and text errors use JSON-pointer-style paths such as
-`/instances/3/quaternion: expected 4 numbers`.
+`python3 scripts/bt.py validate <path> [...]` validates layouts, manifests,
+presets, and shot packages. It exits 0 on success and 2 for contract errors.
+`--json` emits structured results, and text errors use JSON-pointer-style paths
+such as `/instances/3/quaternion: expected 4 numbers`.
 
 ## Current: `bt` CLI
 
@@ -198,9 +209,12 @@ authoring and baking. It supports these stable commands:
 - `bt remove <instance_id>`
 - `bt camera set` and `bt camera frame <instance_id>`
 - `bt light preset <name>` and `bt light sun`
+- `bt preset list|show|copy|load`
 - `bt validate`
 - `bt inspect`
-- `bt render`
+- `bt keyframes camera-move|clear`
+- `bt render` and `bt render --shot <shot_id>`
+- `bt textures`
 
 Use `--json` when machine-readable output matters. The CLI edits schema-valid
 Three.js Y-up layouts only; Blender conversion remains confined to
@@ -215,10 +229,8 @@ drop scale, approximate camera framing/clip edges/coverage/distance, sun directi
 relative to the camera, rough bbox overlaps, and grounded/floating/sunken state.
 Use `--json` for stable machine-readable diagnostics.
 
-## Pending: Computer-Use Harness
+## Unsupported: Screenshot Endpoint
 
-Pending issue: #11, "Computer-use harness: legible/driveable GUI + live state &
-screenshot endpoints".
-
-This guide now documents the first stable selector and live-state slice. The HUD,
-`/api/screenshot`, and committed Playwright example are still pending.
+`GET /api/screenshot` is not implemented. Use the in-browser automation surface,
+browser screenshots, or Blender render outputs for visual receipts until a
+focused screenshot-endpoint issue lands.
