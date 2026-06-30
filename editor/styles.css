@@ -255,6 +255,16 @@ h2 {
   color: #e3b46d;
 }
 
+.effectButton {
+  border-color: #7c5635;
+  background: #241f1a;
+}
+
+.effectButton:hover {
+  border-color: #f0a85b;
+  background: #32251b;
+}
+
 .instanceButton.selected {
   border-color: #c8b46c;
   background: #2d3026;

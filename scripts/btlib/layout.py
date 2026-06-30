@@ -16,6 +16,38 @@ DEFAULT_RENDERS = ROOT / "renders"
 BLENDER = ROOT / "scripts" / "blender.sh"
 RENDER_SCRIPT = ROOT / "scripts" / "render_layout.py"
 TEXTURE_REPORT_SCRIPT = ROOT / "scripts" / "asset_texture_report.py"
+COMPUTE_EFFECTS = {
+    "cuda_flame": {
+        "id": "cuda_flame",
+        "name": "CUDA Flame",
+        "bbox": [1, 1, 1],
+        "default_scale": [3.5, 0.75, 0.75],
+    },
+    "cuda_blue_plume": {
+        "id": "cuda_blue_plume",
+        "name": "CUDA Blue Plume",
+        "bbox": [1, 1, 1],
+        "default_scale": [3.2, 0.55, 0.55],
+    },
+    "cuda_cloud_billow": {
+        "id": "cuda_cloud_billow",
+        "name": "CUDA Cloud Billow",
+        "bbox": [1, 1, 1],
+        "default_scale": [2.4, 1.3, 1.0],
+    },
+    "cuda_chromosphere_lace": {
+        "id": "cuda_chromosphere_lace",
+        "name": "CUDA Chromosphere Lace",
+        "bbox": [1, 1, 1],
+        "default_scale": [3.0, 1.8, 0.35],
+    },
+    "cuda_spark_shower": {
+        "id": "cuda_spark_shower",
+        "name": "CUDA Spark Shower",
+        "bbox": [1, 1, 1],
+        "default_scale": [2.2, 0.75, 0.45],
+    },
+}
 
 
 def resolve_repo_path(path: str | Path) -> Path:
@@ -71,6 +103,12 @@ def asset_by_id(manifest: dict[str, Any], asset_id: str) -> dict[str, Any]:
     raise ValueError(f"unknown asset_id: {asset_id}")
 
 
+def effect_by_id(effect_id: str) -> dict[str, Any]:
+    if effect_id not in COMPUTE_EFFECTS:
+        raise ValueError(f"unknown effect_id: {effect_id}")
+    return COMPUTE_EFFECTS[effect_id]
+
+
 def instance_by_id(layout: dict[str, Any], instance_id: str) -> dict[str, Any]:
     for instance in layout["instances"]:
         if instance["instance_id"] == instance_id:
@@ -78,11 +116,11 @@ def instance_by_id(layout: dict[str, Any], instance_id: str) -> dict[str, Any]:
     raise ValueError(f"unknown instance_id: {instance_id}")
 
 
-def unique_instance_id(layout: dict[str, Any], asset_id: str) -> str:
+def unique_instance_id(layout: dict[str, Any], base_id: str) -> str:
     used = {instance["instance_id"] for instance in layout["instances"]}
     index = 1
     while True:
-        candidate = f"{asset_id}_{index:03d}"
+        candidate = f"{base_id}_{index:03d}"
         if candidate not in used:
             return candidate
         index += 1

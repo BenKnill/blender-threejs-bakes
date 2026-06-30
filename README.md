@@ -45,6 +45,40 @@ This writes `assets/glb/*.glb` and refreshes `assets/manifest.json`.
 
 Output lands in `renders/<layout-name>.png` with a matching receipt JSON.
 
+## Place compute effect cards
+
+The repo includes portable compute-effect placeholders for final Blender renders.
+They are ordinary layout instances with `effect_id` instead of `asset_id`, so the
+browser editor and CLI can move, rotate, scale, save, inspect, and validate them
+without depending on a Windows-only CUDA shader source tree. Blender renders them
+as transparent card geometry, so they still participate in scene depth instead of
+being pasted on top of the final image.
+
+```sh
+python3 scripts/bt.py effects
+python3 scripts/bt.py layout new cuda_demo --layout layouts/cuda_demo.layout.json
+python3 scripts/bt.py place-effect cuda_flame \
+  --layout layouts/cuda_demo.layout.json --at 0 0 1 --scale 2 2 2
+python3 scripts/bt.py render layouts/cuda_demo.layout.json \
+  --width 1280 --height 720 --samples 64
+```
+
+Use `bt animate-effects` when a layout contains animated effect cards. It renders
+numbered PNG frames, writes per-frame receipts, encodes a high-quality
+`preview.mp4` with ffmpeg/libx264, and also writes a small `preview.gif` for
+quick inline checks when ImageMagick is available.
+
+```sh
+python3 scripts/bt.py animate-effects \
+  layouts/starship_cuda_three_nozzle_flames.layout.json \
+  --animation-id starship-plume-demo --frames 24 --fps 12 \
+  --width 1280 --height 720 --samples 64 --json
+```
+
+`preview.mp4` is the preferred review artifact; use `--video-crf` and
+`--video-preset` to tune ffmpeg quality/speed. The GIF is only a convenience
+preview because GIF quantization throws away color and motion detail.
+
 ## Bake a composition preset
 
 Composition presets live in `presets/*.preset.json`. Each preset is a reusable

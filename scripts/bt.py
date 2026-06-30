@@ -20,12 +20,14 @@ from btlib.inspect import inspect_layout
 from btlib.keyframes import layout_with_pose
 from btlib.layout import (
     BLENDER,
+    COMPUTE_EFFECTS,
     DEFAULT_LAYOUT,
     DEFAULT_MANIFEST,
     DEFAULT_RENDERS,
     RENDER_SCRIPT,
     TEXTURE_REPORT_SCRIPT,
     asset_by_id,
+    effect_by_id,
     instance_by_id,
     load_json,
     load_layout,
@@ -122,6 +124,26 @@ def cmd_assets(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_effects(args: argparse.Namespace) -> int:
+    effects = list(COMPUTE_EFFECTS.values())
+    if args.json:
+        print_json({"effects": effects})
+        return 0
+    print_table(
+        ["id", "name", "bbox", "default"],
+        [
+            [
+                effect["id"],
+                effect["name"],
+                vec_text(effect["bbox"]),
+                vec_text(effect["default_scale"]),
+            ]
+            for effect in effects
+        ],
+    )
+    return 0
+
+
 def cmd_layout_new(args: argparse.Namespace) -> int:
     layout = new_layout(args.name)
     path = resolve_repo_path(args.layout)
@@ -151,6 +173,23 @@ def cmd_place(args: argparse.Namespace) -> int:
         "position": args.at,
         "quaternion": [0, 0, 0, 1],
         "scale": scale,
+    }
+    layout["instances"].append(instance)
+    write_layout(path, layout)
+    return print_result({"ok": True, "layout": relative(path), "instance": instance}, args.json)
+
+
+def cmd_place_effect(args: argparse.Namespace) -> int:
+    path = resolve_repo_path(args.layout)
+    layout = load_layout(path)
+    effect = effect_by_id(args.effect_id)
+    instance_id = args.id or unique_instance_id(layout, args.effect_id)
+    instance = {
+        "instance_id": instance_id,
+        "effect_id": args.effect_id,
+        "position": args.at,
+        "quaternion": args.quat if args.quat else [0, 0, 0, 1],
+        "scale": scale_values(args.scale or effect["default_scale"]),
     }
     layout["instances"].append(instance)
     write_layout(path, layout)
@@ -224,7 +263,11 @@ def cmd_camera_frame(args: argparse.Namespace) -> int:
     layout = load_layout(path)
     manifest = load_manifest(resolve_repo_path(args.manifest))
     instance = instance_by_id(layout, args.instance_id)
-    asset = asset_by_id(manifest, instance["asset_id"])
+    asset = (
+        effect_by_id(instance["effect_id"])
+        if instance.get("effect_id")
+        else asset_by_id(manifest, instance["asset_id"])
+    )
     camera = layout["camera"]
     target = instance["position"][:]
     radius = instance_radius(asset["bbox"], instance["scale"])
@@ -526,10 +569,14 @@ def cmd_render_shot(args: argparse.Namespace, layout_path: Path) -> int:
 
 
 def render_one_frame(
-    render_layout: Path, args: argparse.Namespace, output_dir: Path, pose: str
+    render_layout: Path,
+    args: argparse.Namespace,
+    output_dir: Path,
+    pose: str,
+    effect_frame: int = 0,
 ) -> dict[str, Any]:
     before = {path.name for path in output_dir.glob("*.png")}
-    result = run_render(render_layout, args, output_dir, pose)
+    result = run_render(render_layout, args, output_dir, pose, effect_frame)
     if result["returncode"] != 0:
         return result
     new_pngs = [
@@ -639,6 +686,165 @@ def camera_move_summary(layout: dict[str, Any]) -> Any:
     return None
 
 
+def cmd_animate_effects(args: argparse.Namespace) -> int:
+    layout_path = resolve_repo_path(args.layout)
+    layout = load_layout(layout_path)
+    frame_count = int(args.frames)
+    if frame_count < 2:
+        raise ValueError("--frames must be at least 2")
+    fps = int(args.fps)
+    if fps < 1:
+        raise ValueError("--fps must be at least 1")
+
+    animation_id = args.animation_id or f"{layout['name']}_{timestamp_id()}"
+    animation_id = normalize_shot_id(animation_id)
+    animation_dir = resolve_repo_path(args.output_dir) / "animations" / animation_id
+    if animation_dir.exists() and any(animation_dir.iterdir()):
+        raise ValueError(f"animation directory already exists and is not empty: {animation_dir}")
+    animation_dir.mkdir(parents=True, exist_ok=True)
+
+    render_layout_path = prepare_animation_layout(layout_path, args, animation_dir)
+    frames = []
+    receipts = []
+    for frame_index in range(frame_count):
+        result = render_one_frame(render_layout_path, args, animation_dir, "base", frame_index)
+        if result["returncode"] != 0:
+            payload = {
+                "ok": False,
+                "animation": animation_id,
+                "frame": frame_index,
+                "returncode": result["returncode"],
+                "stdout": result["stdout"][-4000:],
+                "stderr": result["stderr"][-4000:],
+            }
+            return print_result(payload, args.json) if args.json else 3
+        frame_png = animation_dir / f"frame_{frame_index:03d}.png"
+        frame_receipt = animation_dir / f"frame_{frame_index:03d}.receipt.json"
+        shutil.move(str(result["png"]), frame_png)
+        source_receipt = result["png"].with_suffix(".receipt.json")
+        if source_receipt.exists():
+            shutil.move(str(source_receipt), frame_receipt)
+            receipt = load_json(frame_receipt)
+            receipt["output"] = relative(frame_png)
+            receipt["effect_frame"] = frame_index
+            frame_receipt.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
+        else:
+            receipt = result.get("receipt") or {}
+        receipts.append({"path": relative(frame_receipt), "receipt": receipt})
+        frames.append(render_metadata(frame_png))
+
+    mp4_path = animation_dir / "preview.mp4"
+    mp4_status = build_animation_mp4(
+        animation_dir, frame_count, fps, mp4_path, args.video_crf, args.video_preset
+    )
+    gif_path = animation_dir / "preview.gif"
+    gif_status = build_animation_gif(animation_dir, frame_count, fps, gif_path)
+    manifest = {
+        "schema": 1,
+        "animation_id": animation_id,
+        "layout": relative(layout_path),
+        "render_layout": relative(render_layout_path),
+        "frame_count": frame_count,
+        "fps": fps,
+        "frames": frames,
+        "preview_mp4": relative(mp4_path) if mp4_path.exists() else None,
+        "mp4_status": mp4_status,
+        "preview_gif": relative(gif_path) if gif_path.exists() else None,
+        "gif_status": gif_status,
+        "receipts": [item["path"] for item in receipts],
+        "generated_at": datetime.now(UTC).isoformat(),
+    }
+    manifest_path = animation_dir / "animation.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    payload = {"ok": True, "animation": animation_id, "directory": relative(animation_dir), **manifest}
+    return print_result(payload, args.json)
+
+
+def prepare_animation_layout(layout_path: Path, args: argparse.Namespace, animation_dir: Path) -> Path:
+    layout = load_layout(layout_path)
+    render = layout.setdefault("render", {})
+    if args.width is not None:
+        render["width"] = args.width
+    if args.height is not None:
+        render["height"] = args.height
+    if args.samples is not None:
+        render["samples"] = args.samples
+    animation_layout = animation_dir / ".bt-animation.layout.json"
+    write_layout(animation_layout, layout)
+    return animation_layout
+
+
+def build_animation_mp4(
+    animation_dir: Path,
+    frame_count: int,
+    fps: int,
+    mp4_path: Path,
+    crf: int,
+    preset: str,
+) -> dict[str, Any]:
+    ffmpeg_bin = shutil.which("ffmpeg")
+    if not ffmpeg_bin:
+        return {"ok": False, "reason": "ffmpeg not found"}
+    if not 0 <= crf <= 51:
+        raise ValueError("--video-crf must be between 0 and 51")
+    frame_pattern = animation_dir / "frame_%03d.png"
+    cmd = [
+        ffmpeg_bin,
+        "-y",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-framerate",
+        str(fps),
+        "-start_number",
+        "0",
+        "-i",
+        str(frame_pattern),
+        "-frames:v",
+        str(frame_count),
+        "-c:v",
+        "libx264",
+        "-crf",
+        str(crf),
+        "-preset",
+        preset,
+        "-pix_fmt",
+        "yuv420p",
+        "-movflags",
+        "+faststart",
+        str(mp4_path),
+    ]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    return {
+        "ok": proc.returncode == 0,
+        "returncode": proc.returncode,
+        "stdout": proc.stdout[-1000:],
+        "stderr": proc.stderr[-1000:],
+    }
+
+
+def build_animation_gif(
+    animation_dir: Path, frame_count: int, fps: int, gif_path: Path
+) -> dict[str, Any]:
+    convert_bin = shutil.which("magick") or shutil.which("convert")
+    if not convert_bin:
+        return {"ok": False, "reason": "ImageMagick convert/magick not found"}
+    delay = max(1, round(100 / fps))
+    frames = [animation_dir / f"frame_{index:03d}.png" for index in range(frame_count)]
+    cmd = [convert_bin, "-delay", str(delay), "-loop", "0", *map(str, frames), str(gif_path)]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    return {
+        "ok": proc.returncode == 0,
+        "returncode": proc.returncode,
+        "stdout": proc.stdout[-1000:],
+        "stderr": proc.stderr[-1000:],
+    }
+
+
+def timestamp_id() -> str:
+    return datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+
+
 def normalize_shot_id(value: str) -> str:
     cleaned = value.strip()
     if not cleaned:
@@ -652,7 +858,11 @@ def normalize_shot_id(value: str) -> str:
 
 
 def run_render(
-    render_layout: Path, args: argparse.Namespace, output_dir: Path, pose: str
+    render_layout: Path,
+    args: argparse.Namespace,
+    output_dir: Path,
+    pose: str,
+    effect_frame: int = 0,
 ) -> dict[str, Any]:
     cmd = [
         str(BLENDER),
@@ -667,6 +877,8 @@ def run_render(
         str(output_dir),
         "--pose",
         "base" if pose == "base" else pose,
+        "--effect-frame",
+        str(effect_frame),
     ]
     proc = subprocess.run(cmd, cwd=resolve_repo_path("."), capture_output=True, text=True)
     return {"returncode": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr}
@@ -855,7 +1067,8 @@ def print_inspect(report: dict[str, Any]) -> None:
     for instance in report["instances"]:
         cam = instance["camera"]
         ground = instance["ground"]
-        print(f"{instance['instance_id']} ({instance['asset_id']})")
+        target_id = instance.get("asset_id") or instance.get("effect_id")
+        print(f"{instance['instance_id']} ({target_id})")
         print(
             f"  position three.js {vec_text(instance['positions']['threejs_yup'])}; "
             f"Blender {vec_text(instance['positions']['blender_zup'])}"
@@ -907,6 +1120,10 @@ def build_parser() -> argparse.ArgumentParser:
     assets.add_argument("--json", action="store_true")
     assets.set_defaults(func=cmd_assets)
 
+    effects = subcommands.add_parser("effects", help="list compute shader effects")
+    effects.add_argument("--json", action="store_true")
+    effects.set_defaults(func=cmd_effects)
+
     layout = subcommands.add_parser("layout", help="create or print layouts")
     layout_subcommands = layout.add_subparsers(dest="layout_command", required=True)
     layout_new = layout_subcommands.add_parser("new", help="create an empty schema-v2 layout")
@@ -928,6 +1145,16 @@ def build_parser() -> argparse.ArgumentParser:
     place.add_argument("--id")
     add_json_arg(place)
     place.set_defaults(func=cmd_place)
+
+    place_effect = subcommands.add_parser("place-effect", help="add a compute effect placeholder")
+    add_layout_arg(place_effect)
+    place_effect.add_argument("effect_id", choices=sorted(COMPUTE_EFFECTS))
+    place_effect.add_argument("--at", type=float, nargs=3, metavar=("X", "Y", "Z"), default=[0, 0, 0])
+    place_effect.add_argument("--scale", type=float, nargs="+")
+    place_effect.add_argument("--quat", type=float, nargs=4, metavar=("X", "Y", "Z", "W"))
+    place_effect.add_argument("--id")
+    add_json_arg(place_effect)
+    place_effect.set_defaults(func=cmd_place_effect)
 
     move = subcommands.add_parser("move", help="set or offset an instance position")
     add_layout_arg(move)
@@ -1066,6 +1293,23 @@ def build_parser() -> argparse.ArgumentParser:
     add_layout_arg(clear)
     add_json_arg(clear)
     clear.set_defaults(func=cmd_keyframes_clear)
+
+    animate = subcommands.add_parser(
+        "animate-effects", help="render an animated compute-effect frame sequence"
+    )
+    animate.add_argument("layout")
+    animate.add_argument("--manifest", default=str(DEFAULT_MANIFEST))
+    animate.add_argument("--output-dir", default=str(DEFAULT_RENDERS))
+    animate.add_argument("--animation-id")
+    animate.add_argument("--frames", type=int, default=8)
+    animate.add_argument("--fps", type=int, default=8)
+    animate.add_argument("--width", type=int)
+    animate.add_argument("--height", type=int)
+    animate.add_argument("--samples", type=int)
+    animate.add_argument("--video-crf", type=int, default=18)
+    animate.add_argument("--video-preset", default="medium")
+    add_json_arg(animate)
+    animate.set_defaults(func=cmd_animate_effects)
 
     render = subcommands.add_parser("render", help="render a layout through Blender")
     render.add_argument("layout", nargs="?", default=str(DEFAULT_LAYOUT))

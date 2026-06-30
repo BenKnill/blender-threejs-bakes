@@ -1,0 +1,84 @@
+{
+  "name": "cuda_effect_palette",
+  "schema": 2,
+  "space": "threejs_yup",
+  "instances": [
+    {
+      "instance_id": "spacex_starship_sn8_001",
+      "asset_id": "spacex_starship_sn8",
+      "position": [0, 0, 0],
+      "quaternion": [0, 0, 0, 1],
+      "scale": [0.04, 0.04, 0.04]
+    },
+    {
+      "instance_id": "cuda_blue_plume_left_001",
+      "effect_id": "cuda_blue_plume",
+      "position": [-1.021, -0.055, 3.48],
+      "quaternion": [0, 0.7071067812, 0, 0.7071067812],
+      "scale": [2.32, 0.22, 0.22]
+    },
+    {
+      "instance_id": "cuda_blue_plume_center_001",
+      "effect_id": "cuda_blue_plume",
+      "position": [-0.909, 0.156, 3.48],
+      "quaternion": [0, 0.7071067812, 0, 0.7071067812],
+      "scale": [2.32, 0.22, 0.22]
+    },
+    {
+      "instance_id": "cuda_blue_plume_right_001",
+      "effect_id": "cuda_blue_plume",
+      "position": [-0.794, -0.056, 3.48],
+      "quaternion": [0, 0.7071067812, 0, 0.7071067812],
+      "scale": [2.32, 0.22, 0.22]
+    },
+    {
+      "instance_id": "cuda_cloud_billow_001",
+      "effect_id": "cuda_cloud_billow",
+      "position": [-0.92, -0.08, 4.55],
+      "quaternion": [0, 0.7071067812, 0, 0.7071067812],
+      "scale": [1.3, 0.82, 0.62]
+    },
+    {
+      "instance_id": "cuda_chromosphere_lace_001",
+      "effect_id": "cuda_chromosphere_lace",
+      "position": [1.25, 0.25, 1.85],
+      "quaternion": [0, 0.2588190451, 0, 0.9659258263],
+      "scale": [2.25, 1.45, 0.24]
+    },
+    {
+      "instance_id": "cuda_spark_shower_001",
+      "effect_id": "cuda_spark_shower",
+      "position": [0.1, 0.85, 2.65],
+      "quaternion": [0, 0.5, 0, 0.8660254038],
+      "scale": [1.3, 0.52, 0.28]
+    }
+  ],
+  "camera": {
+    "position": [4.35, 2.65, 7.1],
+    "target": [-0.15, 0.2, 1.75],
+    "fov_deg": 39,
+    "up": [0, 1, 0]
+  },
+  "render": {
+    "width": 1280,
+    "height": 720,
+    "samples": 96
+  },
+  "lighting": {
+    "preset": "studio",
+    "sun": {
+      "azimuth_deg": 35,
+      "elevation_deg": 38,
+      "color": [1, 0.95, 0.86],
+      "strength": 2.4,
+      "angle_deg": 5
+    },
+    "world": {
+      "type": "color",
+      "strength": 0.55,
+      "color": [0.08, 0.09, 0.1],
+      "rotation_deg": 0
+    },
+    "exposure": 0
+  }
+}

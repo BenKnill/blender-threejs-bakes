@@ -1,0 +1,63 @@
+{
+  "name": "starship_cuda_three_nozzle_flames",
+  "schema": 2,
+  "space": "threejs_yup",
+  "instances": [
+    {
+      "instance_id": "spacex_starship_sn8_001",
+      "asset_id": "spacex_starship_sn8",
+      "position": [0, 0, 0],
+      "quaternion": [0, 0, 0, 1],
+      "scale": [0.04, 0.04, 0.04]
+    },
+    {
+      "instance_id": "cuda_flame_nozzle_left_001",
+      "effect_id": "cuda_flame",
+      "position": [-1.021, -0.055, 3.52],
+      "quaternion": [0, 0.7071067812, 0, 0.7071067812],
+      "scale": [2.4, 0.28, 0.28]
+    },
+    {
+      "instance_id": "cuda_flame_nozzle_center_001",
+      "effect_id": "cuda_flame",
+      "position": [-0.909, 0.156, 3.52],
+      "quaternion": [0, 0.7071067812, 0, 0.7071067812],
+      "scale": [2.4, 0.28, 0.28]
+    },
+    {
+      "instance_id": "cuda_flame_nozzle_right_001",
+      "effect_id": "cuda_flame",
+      "position": [-0.794, -0.056, 3.52],
+      "quaternion": [0, 0.7071067812, 0, 0.7071067812],
+      "scale": [2.4, 0.28, 0.28]
+    }
+  ],
+  "camera": {
+    "position": [5.5187620650661255, 3.035319135786369, 8.27814309759919],
+    "target": [0, 0, 0],
+    "fov_deg": 45,
+    "up": [0, 1, 0]
+  },
+  "render": {
+    "width": 1280,
+    "height": 720,
+    "samples": 96
+  },
+  "lighting": {
+    "preset": "studio",
+    "sun": {
+      "azimuth_deg": 35,
+      "elevation_deg": 38,
+      "color": [1, 0.95, 0.86],
+      "strength": 2.4,
+      "angle_deg": 5
+    },
+    "world": {
+      "type": "color",
+      "strength": 0.65,
+      "color": [0.12, 0.12, 0.12],
+      "rotation_deg": 0
+    },
+    "exposure": 0
+  }
+}

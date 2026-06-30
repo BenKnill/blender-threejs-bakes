@@ -23,13 +23,19 @@ export function currentLayout({
 }
 
 export function objectToInstance(object) {
-  return {
+  const instance = {
     instance_id: object.userData.instanceId,
-    asset_id: object.userData.assetId,
     position: object.position.toArray(),
     quaternion: object.quaternion.toArray(),
     scale: object.scale.toArray(),
   };
+  if (object.userData.kind === "effect") {
+    instance.effect_id = object.userData.effectId;
+    if (object.userData.effectParams) instance.effect_params = object.userData.effectParams;
+  } else {
+    instance.asset_id = object.userData.assetId;
+  }
+  return instance;
 }
 
 export function cameraSnapshot(camera, orbit) {

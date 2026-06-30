@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -15,6 +16,13 @@ if str(ROOT / "scripts") not in sys.path:
     sys.path.insert(0, str(ROOT / "scripts"))
 
 from btlib.lighting import LIGHTING_PRESETS  # noqa: E402
+
+
+def node_bin() -> str:
+    local_node = Path.home() / ".local" / "bin" / "node"
+    if local_node.is_file() and os.access(local_node, os.X_OK):
+        return str(local_node)
+    return "node"
 
 
 def main() -> int:
@@ -55,7 +63,7 @@ def load_browser_presets() -> dict[str, Any]:
         });
     """
     result = subprocess.run(
-        ["node", "--input-type=module", "-e", script],
+        [node_bin(), "--input-type=module", "-e", script],
         cwd=ROOT,
         check=True,
         capture_output=True,

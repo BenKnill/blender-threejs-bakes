@@ -50,10 +50,21 @@
     },
     "instance": {
       "type": "object",
-      "required": ["instance_id", "asset_id", "position", "quaternion", "scale"],
+      "required": ["instance_id", "position", "quaternion", "scale"],
+      "oneOf": [{ "required": ["asset_id"] }, { "required": ["effect_id"] }],
       "properties": {
         "instance_id": { "type": "string", "minLength": 1 },
         "asset_id": { "type": "string", "minLength": 1 },
+        "effect_id": {
+          "enum": [
+            "cuda_flame",
+            "cuda_blue_plume",
+            "cuda_cloud_billow",
+            "cuda_chromosphere_lace",
+            "cuda_spark_shower"
+          ]
+        },
+        "effect_params": { "type": "object" },
         "position": { "$ref": "#/$defs/vec3" },
         "quaternion": { "$ref": "#/$defs/quaternion" },
         "scale": { "$ref": "#/$defs/vec3" }

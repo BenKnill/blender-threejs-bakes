@@ -1,4 +1,5 @@
 import { createEditorScene } from "./scene.js";
+import { COMPUTE_EFFECTS, computeEffectMap } from "./effects.js";
 import {
   frameObjectsWithCamera,
   renderAspectFromInputs,
@@ -9,7 +10,7 @@ import { createInspector } from "./inspector.js";
 import { applyLightingToControls, createLightingControls, currentLighting } from "./lighting.js";
 import { applyLayoutFields, cameraSnapshot, currentLayout, downloadLayout } from "./layout-io.js";
 import { loadManifest } from "./manifest-loader.js";
-import { createProxyLoader } from "./proxies.js";
+import { createEffectProxyObject, createProxyLoader } from "./proxies.js";
 import { createSelection } from "./selection.js";
 import { renderAssetPalette, renderInstanceList, setModeButtons } from "./ui.js";
 
@@ -72,7 +73,9 @@ const store = createInstanceStore({
   scene: editorScene.scene,
   transform: editorScene.transform,
   assetMap,
+  effectMap: computeEffectMap,
   createProxyObject: proxyLoader.createProxyObject,
+  createEffectObject: createEffectProxyObject,
   onChange: renderInstances,
 });
 inspector = createInspector({
@@ -112,7 +115,7 @@ async function loadAssets() {
     const manifest = await loadManifest();
     manifestAssets = manifest.assets;
     manifest.assets.forEach((asset) => assetMap.set(asset.id, asset));
-    renderAssetPalette(assetPalette, manifest.assets, store.add);
+    renderAssetPalette(assetPalette, manifest.assets, COMPUTE_EFFECTS, store.add, store.addEffect);
     updateManifestStatus();
   } catch (error) {
     manifestStatus.textContent = error.message;
@@ -123,7 +126,7 @@ function updateAssetHealth(assetId, patch) {
   const asset = assetMap.get(assetId);
   if (!asset) return;
   asset.health = { ...(asset.health || {}), ...patch };
-  renderAssetPalette(assetPalette, manifestAssets, store.add);
+  renderAssetPalette(assetPalette, manifestAssets, COMPUTE_EFFECTS, store.add, store.addEffect);
   renderInstances();
   updateManifestStatus();
 }
@@ -138,7 +141,7 @@ function updateManifestStatus() {
   manifestStatus.textContent =
     badPreviews > 0
       ? `${renderable}/${total} renderable · ${previewable}/${total} previewable · ${badPreviews} proxy warnings`
-      : `${renderable}/${total} renderable · ${previewable}/${total} previewable`;
+      : `${renderable}/${total} renderable · ${previewable}/${total} previewable · ${COMPUTE_EFFECTS.length} effects`;
 }
 
 function wireControls() {
@@ -189,7 +192,14 @@ function setMode(mode) {
 }
 
 function renderInstances() {
-  renderInstanceList(instanceList, store.instances, store.selected(), assetMap, store.select);
+  renderInstanceList(
+    instanceList,
+    store.instances,
+    store.selected(),
+    assetMap,
+    computeEffectMap,
+    store.select
+  );
   const selected = store.selected();
   document.querySelector("#hudSelection").textContent = selected
     ? selected.userData.instanceId
