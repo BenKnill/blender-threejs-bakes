@@ -1,4 +1,4 @@
-export function renderAssetPalette(assetPalette, assets, onAdd) {
+export function renderAssetPalette(assetPalette, assets, effects, onAddAsset, onAddEffect) {
   assetPalette.replaceChildren();
   for (const asset of assets) {
     const button = document.createElement("button");
@@ -20,15 +20,37 @@ export function renderAssetPalette(assetPalette, assets, onAdd) {
     button.innerHTML = `<strong>${escapeHtml(asset.name || asset.id)}</strong><span>${escapeHtml(
       metadataLabel
     )}</span><span class="assetMetaDetail">${escapeHtml(proxyLabel)}</span>`;
-    button.addEventListener("click", () => onAdd(asset.id));
+    button.addEventListener("click", () => onAddAsset(asset.id));
+    assetPalette.appendChild(button);
+  }
+  for (const effect of effects) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "assetButton effectButton";
+    button.setAttribute("aria-label", `Add compute effect ${effect.name || effect.id}`);
+    button.dataset.testid = `effect-row:${effect.id}`;
+    button.innerHTML = `<strong>${escapeHtml(effect.name || effect.id)}</strong><span>${escapeHtml(
+      effect.description || "compute effect placeholder"
+    )}</span><span class="assetMetaDetail">${escapeHtml(effect.id)} · z-aware bake effect</span>`;
+    button.addEventListener("click", () => onAddEffect(effect.id));
     assetPalette.appendChild(button);
   }
 }
 
-export function renderInstanceList(instanceList, instances, selected, assetMap, onSelect) {
+export function renderInstanceList(
+  instanceList,
+  instances,
+  selected,
+  assetMap,
+  effectMap,
+  onSelect
+) {
   instanceList.replaceChildren();
   for (const [id, object] of instances) {
-    const asset = assetMap.get(object.userData.assetId);
+    const isEffect = object.userData.kind === "effect";
+    const item = isEffect
+      ? effectMap.get(object.userData.effectId)
+      : assetMap.get(object.userData.assetId);
     const pos = object.position;
     const button = document.createElement("button");
     button.type = "button";
@@ -36,9 +58,13 @@ export function renderInstanceList(instanceList, instances, selected, assetMap, 
     button.setAttribute("aria-label", `Select instance ${id}`);
     button.setAttribute("aria-current", object === selected ? "true" : "false");
     button.dataset.testid = `instance-row:${id}`;
-    const previewStatus = asset ? assetPreviewText(asset) : "unknown asset";
+    const previewStatus = isEffect
+      ? "effect placeholder"
+      : item
+        ? assetPreviewText(item)
+        : "unknown asset";
     button.innerHTML = `<strong>${escapeHtml(id)}</strong><span>${escapeHtml(
-      asset?.name || object.userData.assetId
+      item?.name || object.userData.effectId || object.userData.assetId
     )} · ${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)} · ${previewStatus}</span>`;
     button.addEventListener("click", () => onSelect(id));
     instanceList.appendChild(button);

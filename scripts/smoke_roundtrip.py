@@ -74,6 +74,13 @@ def main() -> None:
                             "position": [2, 0, 0],
                             "quaternion": [0, 0, 0, 1],
                             "scale": [1, 1, 1],
+                        },
+                        {
+                            "instance_id": "cuda_flame_001",
+                            "effect_id": "cuda_flame",
+                            "position": [1, 0.5, 0],
+                            "quaternion": [0, 0, 0.3826834324, 0.9238795325],
+                            "scale": [1.4, 0.3, 0.3],
                         }
                     ],
                     "camera": {
@@ -119,6 +126,21 @@ def main() -> None:
             raise AssertionError(
                 "Blender sun direction did not match the schema-v2 layout: "
                 f"{lighting_direction} != {expected_direction}"
+            )
+        effects = receipt["effects"]
+        if len(effects) != 1 or effects[0]["effect_id"] != "cuda_flame":
+            raise AssertionError(f"Compute effect was not inserted into bake: {effects}")
+        effect_matrix = effects[0]["matrix_world"]
+        off_diagonal = [
+            abs(effect_matrix[row][col])
+            for row in range(3)
+            for col in range(3)
+            if row != col
+        ]
+        if max(off_diagonal) < 0.1:
+            raise AssertionError(
+                "Compute effect orientation was not preserved in the bake matrix: "
+                f"{effect_matrix}"
             )
         print(f"roundtrip ok: root object location {actual}, render {receipt['output']}")
 

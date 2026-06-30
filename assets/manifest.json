@@ -401,8 +401,8 @@
       "id": "spacex_starship_sn8",
       "name": "SpaceX Starship SN8",
       "glb": "glb/spacex_starship_sn8.glb",
-      "source_blend": "assets/source_blends/spacex_starship_sn8.blend",
-      "source_asset": "/Users/boxer/asset-menagerie/extracted/spaceflight/spacex-starship-model/starshipv21.stl",
+      "source_blend": "assets/source_blends/spacex_starship_sn8_local.blend",
+      "source_asset": "assets/glb/spacex_starship_sn8.glb",
       "collection": "spacex_starship_sn8",
       "bbox": [
         42.6,
@@ -421,7 +421,7 @@
         "creator": "Irelae",
         "license": "Creative Commons Attribution-NonCommercial",
         "source": "https://www.thingiverse.com/thing:4812163",
-        "notes": "Local archive path: /Users/boxer/asset-menagerie/archives/spaceflight/SpaceX Starship SN8 - 4812163.zip"
+        "notes": "Local archive path: /Users/boxer/asset-menagerie/archives/spaceflight/SpaceX Starship SN8 - 4812163.zip WSL source_blend regenerated from bundled GLB for Blender 4.4.3 compatibility."
       }
     },
     {

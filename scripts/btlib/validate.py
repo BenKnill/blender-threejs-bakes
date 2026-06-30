@@ -152,7 +152,24 @@ def validate_instance(value: Any, pointer: str, errors: list[str]) -> None:
     if not require_object(value, pointer, errors):
         return
     require_string(value, f"{pointer}/instance_id", "instance_id", errors)
-    require_string(value, f"{pointer}/asset_id", "asset_id", errors)
+    has_asset = "asset_id" in value
+    has_effect = "effect_id" in value
+    if has_asset == has_effect:
+        errors.append(f"{pointer}: expected exactly one of asset_id or effect_id")
+    if has_asset:
+        require_string(value, f"{pointer}/asset_id", "asset_id", errors)
+    if has_effect:
+        require_string(value, f"{pointer}/effect_id", "effect_id", errors)
+        if value.get("effect_id") not in (
+            "cuda_flame",
+            "cuda_blue_plume",
+            "cuda_cloud_billow",
+            "cuda_chromosphere_lace",
+            "cuda_spark_shower",
+        ):
+            errors.append(f"{pointer}/effect_id: expected known CUDA effect id")
+        if "effect_params" in value and not isinstance(value["effect_params"], dict):
+            errors.append(f"{pointer}/effect_params: expected object")
     require_vec(value, f"{pointer}/position", "position", 3, errors)
     require_vec(value, f"{pointer}/quaternion", "quaternion", 4, errors)
     require_vec(value, f"{pointer}/scale", "scale", 3, errors)

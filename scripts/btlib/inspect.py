@@ -22,7 +22,7 @@ from btlib.geometry import (
     sun_direction,
     three_point_to_blender,
 )
-from btlib.layout import asset_by_id
+from btlib.layout import asset_by_id, effect_by_id
 from btlib.lighting import merge_lighting
 
 GROUND_EPSILON = 0.05
@@ -33,7 +33,7 @@ def inspect_layout(layout: dict[str, Any], manifest: dict[str, Any]) -> dict[str
     """Return stable JSON diagnostics for a validated layout and manifest."""
 
     instance_reports = [
-        inspect_instance(instance, asset_by_id(manifest, instance["asset_id"]), layout)
+        inspect_instance(instance, instance_target(instance, manifest), layout)
         for instance in layout["instances"]
     ]
     lighting_report = inspect_lighting(layout)
@@ -62,6 +62,12 @@ def inspect_layout(layout: dict[str, Any], manifest: dict[str, Any]) -> dict[str
     }
 
 
+def instance_target(instance: dict[str, Any], manifest: dict[str, Any]) -> dict[str, Any]:
+    if instance.get("effect_id"):
+        return effect_by_id(instance["effect_id"])
+    return asset_by_id(manifest, instance["asset_id"])
+
+
 def inspect_instance(
     instance: dict[str, Any], asset: dict[str, Any], layout: dict[str, Any]
 ) -> dict:
@@ -76,8 +82,10 @@ def inspect_instance(
     triangles = asset.get("proxy", {}).get("triangles_before")
     return {
         "instance_id": instance["instance_id"],
-        "asset_id": instance["asset_id"],
+        "asset_id": instance.get("asset_id"),
+        "effect_id": instance.get("effect_id"),
         "asset_name": asset["name"],
+        "kind": "effect" if instance.get("effect_id") else "asset",
         "positions": {
             "threejs_yup": rounded(instance["position"]),
             "blender_zup": rounded(three_point_to_blender(instance["position"])),

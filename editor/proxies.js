@@ -53,6 +53,31 @@ export function createProxyLoader({ onProxyStatus } = {}) {
   return { createProxyObject };
 }
 
+export function createEffectProxyObject(effect) {
+  const bbox = Array.isArray(effect.bbox) ? effect.bbox : [3.5, 0.75, 0.75];
+  const geometry = new THREE.BoxGeometry(
+    Math.max(0.05, bbox[0] || 1),
+    Math.max(0.05, bbox[1] || 1),
+    Math.max(0.05, bbox[2] || 1)
+  );
+  const material = new THREE.MeshStandardMaterial({
+    color: 0xff7a2a,
+    transparent: true,
+    opacity: 0.32,
+    roughness: 0.7,
+    metalness: 0.0,
+    emissive: 0x401000,
+    emissiveIntensity: 0.8,
+  });
+  const box = new THREE.Mesh(geometry, material);
+  box.name = `${effect.id} placeholder box`;
+
+  const arrow = makeDirectionArrow(bbox[0]);
+  const group = new THREE.Group();
+  group.add(box, arrow);
+  return group;
+}
+
 function prepareProxy(root, asset) {
   const group = new THREE.Group();
   group.add(root);
@@ -101,4 +126,25 @@ function colorFromId(id) {
   for (let i = 0; i < id.length; i += 1) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
   const hue = (hash % 360) / 360;
   return new THREE.Color().setHSL(hue, 0.38, 0.58);
+}
+
+function makeDirectionArrow(length) {
+  const group = new THREE.Group();
+  const shaftLength = Math.max(0.2, length * 0.42);
+  const material = new THREE.MeshStandardMaterial({
+    color: 0xffd27a,
+    emissive: 0x7a2c00,
+    emissiveIntensity: 0.7,
+    roughness: 0.55,
+  });
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, shaftLength, 16), material);
+  shaft.rotation.z = Math.PI / 2;
+  shaft.position.x = -length * 0.22;
+
+  const tip = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.22, 24), material.clone());
+  tip.rotation.z = Math.PI / 2;
+  tip.position.x = -length * 0.46;
+
+  group.add(shaft, tip);
+  return group;
 }
