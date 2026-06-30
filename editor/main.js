@@ -103,6 +103,7 @@ createSelection({
 
 wireControls();
 await loadAssets();
+await loadLiveLayout();
 await refreshRenders();
 editorScene.animate();
 
@@ -291,6 +292,13 @@ async function refreshRenders() {
   setRenderStatus(result.renders?.length ? `${result.renders.length} renders` : "No renders yet");
 }
 
+async function loadLiveLayout() {
+  try {
+    const response = await fetch("/api/state", { cache: "no-store" });
+    if (response.ok) await applyLayout(await response.json());
+  } catch {}
+}
+
 function updateSafeFrame() {
   updateSafeFrameOverlay({ viewport, safeFrame, renderInputs });
 }
@@ -349,7 +357,11 @@ function setRenderStatus(message) {
 async function loadLayoutFromFile(event) {
   const file = event.target.files?.[0];
   if (!file) return;
-  const layout = JSON.parse(await file.text());
+  await applyLayout(JSON.parse(await file.text()));
+  event.target.value = "";
+}
+
+async function applyLayout(layout) {
   applyLayoutFields(layout, {
     nameInput: layoutNameInput,
     renderInputs,
@@ -366,5 +378,4 @@ async function loadLayoutFromFile(event) {
   savedCamera = layout.camera || null;
   await store.restore(layout);
   inspector.update();
-  event.target.value = "";
 }
