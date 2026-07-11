@@ -398,6 +398,26 @@
       }
     },
     {
+      "id": "seedthree_white_oak_1737",
+      "name": "SeedThree White Oak 1737",
+      "glb": "glb/seedthree_white_oak_1737.glb",
+      "source_blend": "/Users/boxer/blender-threejs-bakes/assets/source_blends/seedthree_white_oak_1737.blend",
+      "source_asset": "/Users/boxer/blender-threejs-bakes/assets/glb/seedthree_white_oak_1737.glb",
+      "collection": "seedthree_white_oak_1737",
+      "bbox": [
+        15.181498,
+        16.018868,
+        17.003059
+      ],
+      "up_axis": "Z",
+      "proxy": {
+        "mode": "full",
+        "triangles_before": 0,
+        "triangles_target": null,
+        "size_mb": 0.55
+      }
+    },
+    {
       "id": "spacex_starship_sn8",
       "name": "SpaceX Starship SN8",
       "glb": "glb/spacex_starship_sn8.glb",
