@@ -9,3 +9,8 @@ node_modules/
 .run/
 physics/build/
 physics/outputs/
+tmp/
+coverage/
+.env
+.env.*
+!.env.example

@@ -60,6 +60,10 @@ Run the dependency-light Box3D scene/physics compiler contracts:
 just test
 ```
 
+The local `just lint` and `just test` commands are the source of truth for
+editor lint/format and Python/compiler checks. See [the integration handoff](docs/INTEGRATION_HANDOFF.md)
+for the stable boundary and deliberate non-claims.
+
 Run the complete native Box3D → Blender proof (requires a local Box3D checkout
 and Blender):
 

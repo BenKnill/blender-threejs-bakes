@@ -4,6 +4,8 @@ Static Three.js blocking editor plus Blender scripts for final Cycles renders fr
 original `.blend` assets.
 
 For agent-facing operating notes, see [AGENTS.md](AGENTS.md).
+For the stable physics/render boundary and deliberate non-claims, see
+[the integration handoff](docs/INTEGRATION_HANDOFF.md).
 
 ## Run the editor
 
@@ -60,6 +62,14 @@ This produces a crate-drop MP4, a Blender render receipt, a sampled
 `motion-clip/1`, and a native event receipt under gitignored `renders/` and
 `physics/outputs/`. See [the Box3D animation guide](docs/BOX3D_ANIMATION.md)
 for the exact boundary and deliberate first-pass limits.
+
+Before opening a change, run the local review gate:
+
+```sh
+just lint
+just test
+git diff --check
+```
 
 ## Place compute effect cards
 
