@@ -1,0 +1,49 @@
+{
+  "schema": "hair-hero-cut-batch/1",
+  "generated_shelf": "physics/outputs/hair_hero_cuts_20260711T1710Z",
+  "tracked_scenario_manifest": "docs/receipts/hair_hero_cut_scenarios.json",
+  "scenario_count": 8,
+  "mechanical_guides_per_scenario": 768,
+  "simulated_particles_per_scenario": 9984,
+  "visible_fiber_range": [11520, 16128],
+  "individual_video": {
+    "codec": "h264",
+    "width": 1280,
+    "height": 720,
+    "duration_seconds": 7,
+    "frames": 168,
+    "fps": 24
+  },
+  "comparison_video": {
+    "path": "physics/outputs/hair_hero_cuts_20260711T1710Z/hair_hero_cut_contact_sheet.mp4",
+    "width": 1536,
+    "height": 432,
+    "duration_seconds": 7,
+    "frames": 168,
+    "fps": 24
+  },
+  "observed_terminal_ranges": {
+    "cut_guides": [688, 768],
+    "persistent_clump_bonds": [7901, 11547],
+    "crowd_pressure_corrections": [1, 108],
+    "solver_ms": [13.06, 23.39],
+    "displayed_fps_during_capture": [38, 66],
+    "max_stretch_percent": [1.31, 6.8]
+  },
+  "workbench": {
+    "backend": "orbstack-criu",
+    "profile": "light",
+    "restore_seconds": 0.0,
+    "warm_attempt_seconds": 0.4,
+    "theorems_observed": 6,
+    "new_theorem": "HAIR_DIAGONAL_CUT_FRACTION_BOUNDS",
+    "cold_audit": "launched detached; completion not claimed"
+  },
+  "claim_boundary": {
+    "qualitative_browser_observation": true,
+    "calibrated_haircut_prediction": false,
+    "pixel_deterministic": false,
+    "displayed_fps_includes_capture_overhead": true,
+    "large_media_tracked_by_git": false
+  }
+}

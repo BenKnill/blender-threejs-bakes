@@ -49,3 +49,13 @@ let HAIR_CROWD_PRESSURE_PRESERVES_PAIR_SUM = prove
       (position_a - correction) + (position_b + correction) =
       position_a + position_b`,
   REAL_ARITH_TAC);;
+
+(** The hero-film diagonal director maps normalized horizontal root position to
+    the cut fraction 0.78 - 0.38 x.  Before integer segment rounding, every cut
+    therefore remains between 40% and 78% of the strand length. *)
+let HAIR_DIAGONAL_CUT_FRACTION_BOUNDS = prove
+ (`!x:real.
+      &0 <= x /\ x <= &1
+      ==> &2 / &5 <= &39 / &50 - (&19 / &50) * x /\
+          &39 / &50 - (&19 / &50) * x <= &39 / &50`,
+  REAL_ARITH_TAC);;

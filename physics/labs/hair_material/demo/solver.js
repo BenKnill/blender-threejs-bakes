@@ -216,13 +216,20 @@ function restPoint(frame, material, segment, segments) {
 }
 
 export class HairSolver {
-  constructor({ guideCount = 512, segments = 12, preset = "wavy", iterations = 5 } = {}) {
+  constructor({
+    guideCount = 512,
+    segments = 12,
+    preset = "wavy",
+    iterations = 5,
+    renderFibersPerGuide = 9,
+  } = {}) {
     if (!(preset in MATERIAL_PRESETS)) throw new Error(`unknown material preset: ${preset}`);
     if (guideCount < 8 || segments < 4) throw new Error("hair solver resolution is too small");
     this.guideCount = guideCount;
     this.segments = segments;
     this.particlesPerGuide = segments + 1;
     this.iterations = iterations;
+    this.renderFibersPerGuide = Math.max(1, Math.floor(renderFibersPerGuide));
     this.preset = preset;
     this.material = { ...MATERIAL_PRESETS[preset] };
     this.particleCount = guideCount * this.particlesPerGuide;
@@ -660,7 +667,7 @@ export class HairSolver {
     return {
       schema: "hair-material-bench/1",
       guide_count: this.guideCount,
-      render_fiber_count: this.guideCount * 9,
+      render_fiber_count: this.guideCount * this.renderFibersPerGuide,
       segments_per_guide: this.segments,
       active_segments: Array.from(this.activeSegments).reduce((sum, value) => sum + value, 0),
       preset: this.preset,

@@ -108,6 +108,11 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
 }
 
 {
+  const solver = new HairSolver({ guideCount: 16, segments: 6, renderFibersPerGuide: 17 });
+  assert.equal(solver.receipt().render_fiber_count, 272);
+}
+
+{
   const spans = {};
   for (const preset of Object.keys(MATERIAL_PRESETS)) {
     const solver = new HairSolver({ guideCount: 8, segments: 12, preset });
