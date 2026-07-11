@@ -50,6 +50,28 @@ function applyDiagonalCut(solver, config, elapsed, state) {
   }
 }
 
+function applyCombPass(solver, config, state) {
+  const comb = config.comb;
+  if (!comb || state.step > comb.endStep) {
+    solver.disableComb();
+    return;
+  }
+  if (state.step < comb.startStep) {
+    solver.prepareMeasurementWindow("comb_settling");
+    solver.disableComb();
+    return;
+  }
+  if (state.step === comb.startStep) solver.beginMeasurementWindow("comb_pass");
+  const span = Math.max(1, comb.endStep - comb.startStep);
+  const progress = Math.min(1, Math.max(0, (state.step - comb.startStep) / span));
+  const priorProgress = Math.min(1, Math.max(0, (state.step - 1 - comb.startStep) / span));
+  const startX = comb.startX ?? -1.35;
+  const endX = comb.endX ?? 1.35;
+  const currentX = startX + (endX - startX) * progress;
+  const previousX = startX + (endX - startX) * priorProgress;
+  solver.setCombPose(previousX, currentX, comb.envelope);
+}
+
 export function advanceHairReplay(solver, config, state, targetStep) {
   if (!Number.isInteger(targetStep) || targetStep < state.step) {
     throw new Error("replay target step must be an integer at or after the current step");
@@ -60,6 +82,7 @@ export function advanceHairReplay(solver, config, state, targetStep) {
     const gustWave = 0.5 + 0.5 * Math.sin(elapsed * 2.4 - Math.PI * 0.5);
     solver.wind = (config.baseWind ?? 0.18) + (config.gust ?? 0) * gustWave;
     if (config.cut === "diagonal") applyDiagonalCut(solver, config, elapsed, state);
+    applyCombPass(solver, config, state);
     solver.step(dt);
     state.step += 1;
   }

@@ -8,6 +8,7 @@ import {
   HairSolver,
   MATERIAL_PRESETS,
   projectCohesionPair,
+  projectCombSweep,
   projectPair,
   projectPressurePair,
   updateClumpBond,
@@ -21,6 +22,14 @@ import {
 
 function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} != ${expected}`);
+}
+
+{
+  const contact = projectCombSweep([0, 0, 0], -0.02, 0.02, 0.01);
+  assert.equal(contact.active, true);
+  assert.ok(contact.correction[0] > 0);
+  assert.equal(projectCombSweep([-0.5, 0, 0], -0.02, 0.02, 0.01).active, false);
+  assert.equal(projectCombSweep([0, 0, 0], 0.02, -0.02, 0.01).correction[0] < 0, true);
 }
 
 {
@@ -156,6 +165,33 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.equal(withoutOperators.receipt.collective_rules_enabled, false);
   assert.equal(withoutOperators.receipt.active_neighbor_contacts, 0);
   assert.equal(withoutOperators.receipt.persistent_clump_bonds, 0);
+}
+
+{
+  const combConfig = {
+    solver: { guideCount: 48, segments: 8, preset: "wavy", iterations: 6 },
+    steps: 120,
+    dt: 1 / 60,
+    baseWind: 0.08,
+    comb: { startStep: 20, endStep: 100, startX: -1.25, endX: 1.25 },
+  };
+  const dry = runHairReplay({ ...combConfig, moisture: 0.05 }).result;
+  const wet = runHairReplay({ ...combConfig, moisture: 0.85 }).result;
+  for (const result of [dry, wet]) {
+    assert.ok(result.receipt.comb.peak_reaction_proxy > 0);
+    assert.ok(result.receipt.comb.accumulated_work_proxy > 0);
+    assert.ok(result.receipt.comb.accumulated_travel > 2);
+    assert.ok(result.receipt.comb.clump_captures_during_window >= 0);
+    assert.ok(result.receipt.comb.clump_releases_during_window >= 0);
+    assert.equal(result.receipt.assumption_receipt.comb_work_nonnegative, true);
+    assert.equal(result.receipt.assumption_receipt.stretch.satisfied, true);
+  }
+  assert.notEqual(dry.state_digest, wet.state_digest);
+  assert.notEqual(dry.receipt.comb.accumulated_work_proxy, wet.receipt.comb.accumulated_work_proxy);
+  assert.notEqual(
+    dry.receipt.comb.clump_releases_during_window,
+    wet.receipt.comb.clump_releases_during_window
+  );
 }
 
 {

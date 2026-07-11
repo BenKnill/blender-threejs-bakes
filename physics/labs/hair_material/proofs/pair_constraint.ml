@@ -74,3 +74,16 @@ let HAIR_DIAGONAL_CUT_FRACTION_BOUNDS = prove
       ==> &2 / &5 <= &39 / &50 - (&19 / &50) * x /\
           &39 / &50 - (&19 / &50) * x <= &39 / &50`,
   REAL_ARITH_TAC);;
+
+(** The comb benchmark accumulates a nonnegative reaction proxy times absolute
+    travel.  This scalar contract justifies the runtime nonnegative-work flag;
+    it does not identify the proxy with calibrated mechanical energy. *)
+let HAIR_COMB_WORK_ACCUMULATION_NONNEGATIVE = prove
+ (`!work reaction travel:real.
+      &0 <= work /\ &0 <= reaction /\ &0 <= travel
+      ==> &0 <= work + reaction * travel`,
+  REPEAT STRIP_TAC THEN
+  MATCH_MP_TAC REAL_LE_ADD THEN
+  ASM_REWRITE_TAC[] THEN
+  MATCH_MP_TAC REAL_LE_MUL THEN
+  ASM_REWRITE_TAC[]);;

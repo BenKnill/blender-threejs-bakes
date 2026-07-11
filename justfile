@@ -10,7 +10,7 @@ default:
 
 # Lint everything (no changes) — JS + Python
 lint:
-    npx eslint editor physics/labs/contact_shell/demo/main.js physics/labs/hair_material/demo/*.js scripts/test_hair_material_solver.mjs scripts/run_hair_operator_ab.mjs
+    npx eslint editor physics/labs/contact_shell/demo/main.js physics/labs/hair_material/demo/*.js scripts/test_hair_material_solver.mjs scripts/run_hair_operator_ab.mjs scripts/run_hair_comb_benchmark.mjs
     npx prettier --check 'editor/**/*.{js,css,html}' 'physics/labs/contact_shell/demo/**/*.{js,css,html,json}' 'physics/labs/hair_material/demo/**/*.{js,css,html}'
     {{ruff}} check scripts
 
@@ -81,6 +81,10 @@ hair-phase-videos output_root:
 # Replay the exact operator ON/OFF scenario and print stable state digests.
 hair-replay:
     node scripts/run_hair_operator_ab.mjs
+
+# Run the deterministic 256-guide dry/wet comb-through instrument.
+hair-comb-benchmark:
+    node scripts/run_hair_comb_benchmark.mjs
 
 # Format everything in place — JS + Python
 format:

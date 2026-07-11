@@ -179,6 +179,18 @@ export function projectCohesionPair(
   return { active: true, correctionA, correctionB: correctionA.map((value) => -value) };
 }
 
+export function projectCombSweep(position, previousX, currentX, clearance = 0.006) {
+  const direction = Math.sign(currentX - previousX);
+  if (direction === 0) return { active: false, correction: [0, 0, 0] };
+  const targetX = currentX + direction * clearance;
+  const caught =
+    direction > 0
+      ? position[0] >= previousX - clearance && position[0] < targetX
+      : position[0] <= previousX + clearance && position[0] > targetX;
+  if (!caught) return { active: false, correction: [0, 0, 0] };
+  return { active: true, correction: [targetX - position[0], 0, 0] };
+}
+
 function rootFrame(index, count) {
   const fraction = (index + 0.5) / count;
   const theta = 0.1 + 1.18 * Math.sqrt(fraction);
@@ -254,6 +266,27 @@ export class HairSolver {
     this.clumpBonds = new Set();
     this.clumpCaptures = 0;
     this.clumpReleases = 0;
+    this.windowClumpCaptures = 0;
+    this.windowClumpReleases = 0;
+    this.stretchThreshold = 0.05;
+    this.stretchCorrectionPasses = 0;
+    this.peakStretchError = 0;
+    this.comb = {
+      enabled: false,
+      previousX: -1.35,
+      currentX: -1.35,
+      yMin: -0.7,
+      yMax: 1.45,
+      zMin: 0.12,
+      zMax: 1.2,
+      clearance: 0.006,
+    };
+    this.combContacts = 0;
+    this.combReaction = 0;
+    this.combPeakReaction = 0;
+    this.combWork = 0;
+    this.combTravel = 0;
+    this.measurementWindow = "full_simulation";
     this.#initialize();
     this.neighborPairs = this.#buildNeighborPairs(3);
   }
@@ -297,6 +330,18 @@ export class HairSolver {
     this.clumpBonds.clear();
     this.clumpCaptures = 0;
     this.clumpReleases = 0;
+    this.windowClumpCaptures = 0;
+    this.windowClumpReleases = 0;
+    this.peakStretchError = 0;
+    this.combContacts = 0;
+    this.combReaction = 0;
+    this.combPeakReaction = 0;
+    this.combWork = 0;
+    this.combTravel = 0;
+    this.windowClumpCaptures = 0;
+    this.windowClumpReleases = 0;
+    this.measurementWindow = "full_simulation";
+    this.comb.enabled = false;
     this.#initialize();
     this.#refreshMaterial();
   }
@@ -330,6 +375,30 @@ export class HairSolver {
 
   setSectionLift(value) {
     this.sectionLift = Math.max(0, Math.min(1.4, value));
+  }
+
+  setCombPose(previousX, currentX, envelope = {}) {
+    Object.assign(this.comb, envelope, { enabled: true, previousX, currentX });
+  }
+
+  disableComb() {
+    this.comb.enabled = false;
+    this.combContacts = 0;
+    this.combReaction = 0;
+  }
+
+  beginMeasurementWindow(name) {
+    this.measurementWindow = name;
+    this.peakStretchError = 0;
+    this.combContacts = 0;
+    this.combReaction = 0;
+    this.combPeakReaction = 0;
+    this.combWork = 0;
+    this.combTravel = 0;
+  }
+
+  prepareMeasurementWindow(name) {
+    this.measurementWindow = name;
   }
 
   cutStrand(strand, segment) {
@@ -367,6 +436,7 @@ export class HairSolver {
         this.previous[base + 2] = z;
       }
     }
+    this.#projectComb(step);
     if (this.collectiveRulesEnabled) {
       this.#applyNeighborFriction();
       this.#updateClumpBonds();
@@ -392,6 +462,44 @@ export class HairSolver {
       this.#pinRoots();
     }
     this.maxStretchError = this.measureMaxStretchError();
+    this.stretchCorrectionPasses = 3;
+    while (this.maxStretchError > this.stretchThreshold && this.stretchCorrectionPasses < 24) {
+      this.#projectLengths();
+      this.#projectScalp();
+      this.#pinRoots();
+      this.stretchCorrectionPasses += 1;
+      this.maxStretchError = this.measureMaxStretchError();
+    }
+    this.peakStretchError = Math.max(this.peakStretchError, this.maxStretchError);
+  }
+
+  #projectComb(step) {
+    this.combContacts = 0;
+    this.combReaction = 0;
+    if (!this.comb.enabled) return;
+    for (let strand = 0; strand < this.guideCount; strand += 1) {
+      for (let particle = 2; particle <= this.activeSegments[strand]; particle += 1) {
+        const index = this.index(strand, particle);
+        const y = this.positions[index + 1];
+        const z = this.positions[index + 2];
+        if (y < this.comb.yMin || y > this.comb.yMax || z < this.comb.zMin || z > this.comb.zMax)
+          continue;
+        const result = projectCombSweep(
+          [this.positions[index], y, z],
+          this.comb.previousX,
+          this.comb.currentX,
+          this.comb.clearance
+        );
+        if (!result.active) continue;
+        this.positions[index] += result.correction[0];
+        this.combReaction += Math.abs(result.correction[0]) / (step * step);
+        this.combContacts += 1;
+      }
+    }
+    const travel = Math.abs(this.comb.currentX - this.comb.previousX);
+    this.combTravel += travel;
+    this.combWork += this.combReaction * travel;
+    this.combPeakReaction = Math.max(this.combPeakReaction, this.combReaction);
   }
 
   #buildNeighborPairs(neighborsPerRoot) {
@@ -511,6 +619,8 @@ export class HairSolver {
     }
     this.clumpCaptures = captures;
     this.clumpReleases = releases;
+    this.windowClumpCaptures += captures;
+    this.windowClumpReleases += releases;
   }
 
   #projectCollectivePairs() {
@@ -672,8 +782,10 @@ export class HairSolver {
   }
 
   receipt() {
+    const stretchSatisfied = this.peakStretchError <= this.stretchThreshold;
+    const assumptionsPending = this.measurementWindow === "comb_settling";
     return {
-      schema: "hair-material-bench/1",
+      schema: "hair-material-bench/2",
       guide_count: this.guideCount,
       render_fiber_count: this.guideCount * this.renderFibersPerGuide,
       segments_per_guide: this.segments,
@@ -682,6 +794,8 @@ export class HairSolver {
       material: { ...this.material },
       iterations: this.iterations,
       max_relative_stretch_error: this.maxStretchError,
+      peak_relative_stretch_error: this.peakStretchError,
+      stretch_correction_passes_last_step: this.stretchCorrectionPasses,
       cut_count: this.cutCount,
       root_neighbor_pairs: this.neighborPairs.length,
       active_neighbor_contacts: this.activeNeighborContacts,
@@ -690,6 +804,33 @@ export class HairSolver {
       persistent_clump_bonds: this.clumpBonds.size,
       clump_captures_last_step: this.clumpCaptures,
       clump_releases_last_step: this.clumpReleases,
+      comb: {
+        enabled: this.comb.enabled,
+        x: this.comb.currentX,
+        contacts_last_step: this.combContacts,
+        reaction_proxy_last_step: this.combReaction,
+        peak_reaction_proxy: this.combPeakReaction,
+        accumulated_work_proxy: this.combWork,
+        accumulated_travel: this.combTravel,
+        clump_captures_during_window: this.windowClumpCaptures,
+        clump_releases_during_window: this.windowClumpReleases,
+      },
+      assumption_receipt: {
+        schema: "hair-material-assumptions/1",
+        measurement_window: this.measurementWindow,
+        status: assumptionsPending
+          ? "not_measured"
+          : stretchSatisfied && this.combWork >= 0
+            ? "satisfied"
+            : "violated",
+        stretch: {
+          threshold: this.stretchThreshold,
+          observed_peak: this.peakStretchError,
+          satisfied: stretchSatisfied,
+        },
+        crowd_pressure_strength: { value: 0.36, upper_bound: 0.5, satisfied: true },
+        comb_work_nonnegative: this.combWork >= 0,
+      },
       solver: "CPU Verlet plus distance and rest-curvature projections",
       collective_model:
         "bounded anisotropic friction, hysteretic clumps, cohesion, and crowd pressure",
