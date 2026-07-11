@@ -94,3 +94,10 @@ let HAIR_COMB_WORK_ACCUMULATION_NONNEGATIVE = prove
 let HAIR_COMB_CUMULATIVE_TRAVEL_MONOTONE = prove
  (`!travel step:real. &0 <= step ==> travel <= travel + step`,
   REAL_ARITH_TAC);;
+
+(** Outward and return projection work are accumulated from nonnegative
+    increments, so their cycle-dissipation proxy remains nonnegative. *)
+let HAIR_COMB_CYCLE_WORK_NONNEGATIVE = prove
+ (`!outward return:real.
+      &0 <= outward /\ &0 <= return ==> &0 <= outward + return`,
+  REAL_ARITH_TAC);;

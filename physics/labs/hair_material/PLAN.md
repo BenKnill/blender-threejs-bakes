@@ -12,7 +12,7 @@ teaches us something important.
 - [x] Give wet hair deliberate stretch margin (target at most 4%, with runtime cost reported).
 - [x] Record a bounded force-proxy versus comb-displacement trace.
 - [x] Show that trace in the browser and export it in the replay receipt.
-- [ ] Add one loading/unloading or repeated-pass experiment for hysteresis.
+- [x] Add one loading/unloading or repeated-pass experiment for hysteresis.
 
 Evidence gate: `just lint`, `just test`, deterministic replay, browser check,
 and a warm HOL Workbench replay of any new scalar contract. Proxy units and

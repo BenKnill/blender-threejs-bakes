@@ -52,7 +52,8 @@ function applyDiagonalCut(solver, config, elapsed, state) {
 
 function applyCombPass(solver, config, state) {
   const comb = config.comb;
-  if (!comb || state.step > comb.endStep) {
+  const finalStep = comb?.returnEndStep ?? comb?.endStep;
+  if (!comb || state.step > finalStep) {
     solver.disableComb();
     return;
   }
@@ -61,15 +62,33 @@ function applyCombPass(solver, config, state) {
     solver.disableComb();
     return;
   }
-  if (state.step === comb.startStep) solver.beginMeasurementWindow("comb_pass");
-  const span = Math.max(1, comb.endStep - comb.startStep);
-  const progress = Math.min(1, Math.max(0, (state.step - comb.startStep) / span));
-  const priorProgress = Math.min(1, Math.max(0, (state.step - 1 - comb.startStep) / span));
+  if (state.step === comb.startStep) {
+    solver.beginMeasurementWindow(comb.returnEndStep ? "comb_cycle" : "comb_pass");
+  }
   const startX = comb.startX ?? -1.35;
   const endX = comb.endX ?? 1.35;
-  const currentX = startX + (endX - startX) * progress;
-  const previousX = startX + (endX - startX) * priorProgress;
-  solver.setCombPose(previousX, currentX, comb.envelope);
+  let phase = "forward";
+  let phaseStart = comb.startStep;
+  let phaseEnd = comb.endStep;
+  let fromX = startX;
+  let toX = endX;
+  if (state.step > comb.endStep) {
+    if (!comb.returnStartStep || state.step < comb.returnStartStep) {
+      solver.disableComb();
+      return;
+    }
+    phase = "return";
+    phaseStart = comb.returnStartStep;
+    phaseEnd = comb.returnEndStep;
+    fromX = endX;
+    toX = comb.returnX ?? startX;
+  }
+  const span = Math.max(1, phaseEnd - phaseStart);
+  const progress = Math.min(1, Math.max(0, (state.step - phaseStart) / span));
+  const priorProgress = Math.min(1, Math.max(0, (state.step - 1 - phaseStart) / span));
+  const currentX = fromX + (toX - fromX) * progress;
+  const previousX = fromX + (toX - fromX) * priorProgress;
+  solver.setCombPose(previousX, currentX, { ...comb.envelope, phase });
 }
 
 export function advanceHairReplay(solver, config, state, targetStep) {

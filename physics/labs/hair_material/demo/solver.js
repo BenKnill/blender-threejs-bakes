@@ -280,11 +280,14 @@ export class HairSolver {
       zMin: 0.12,
       zMax: 1.2,
       clearance: 0.006,
+      phase: "idle",
     };
     this.combContacts = 0;
     this.combReaction = 0;
     this.combPeakReaction = 0;
     this.combWork = 0;
+    this.combForwardWork = 0;
+    this.combReturnWork = 0;
     this.combTravel = 0;
     this.combTrace = [];
     this.combTraceStride = 1;
@@ -340,12 +343,12 @@ export class HairSolver {
     this.combReaction = 0;
     this.combPeakReaction = 0;
     this.combWork = 0;
+    this.combForwardWork = 0;
+    this.combReturnWork = 0;
     this.combTravel = 0;
     this.combTrace = [];
     this.combTraceStride = 1;
     this.combMeasurementStep = 0;
-    this.windowClumpCaptures = 0;
-    this.windowClumpReleases = 0;
     this.measurementWindow = "full_simulation";
     this.comb.enabled = false;
     this.#initialize();
@@ -400,6 +403,8 @@ export class HairSolver {
     this.combReaction = 0;
     this.combPeakReaction = 0;
     this.combWork = 0;
+    this.combForwardWork = 0;
+    this.combReturnWork = 0;
     this.combTravel = 0;
     this.combTrace = [];
     this.combTraceStride = 1;
@@ -494,6 +499,7 @@ export class HairSolver {
     this.combTrace.push({
       step: this.combMeasurementStep,
       x: this.comb.currentX,
+      phase: this.comb.phase,
       displacement: this.combTravel,
       reaction_proxy: this.combReaction,
       accumulated_work_proxy: this.combWork,
@@ -529,7 +535,10 @@ export class HairSolver {
     }
     const travel = Math.abs(this.comb.currentX - this.comb.previousX);
     this.combTravel += travel;
-    this.combWork += this.combReaction * travel;
+    const work = this.combReaction * travel;
+    this.combWork += work;
+    if (this.comb.phase === "return") this.combReturnWork += work;
+    else this.combForwardWork += work;
     this.combPeakReaction = Math.max(this.combPeakReaction, this.combReaction);
   }
 
@@ -842,6 +851,9 @@ export class HairSolver {
         reaction_proxy_last_step: this.combReaction,
         peak_reaction_proxy: this.combPeakReaction,
         accumulated_work_proxy: this.combWork,
+        forward_work_proxy: this.combForwardWork,
+        return_work_proxy: this.combReturnWork,
+        cycle_dissipation_proxy: this.combForwardWork + this.combReturnWork,
         accumulated_travel: this.combTravel,
         clump_captures_during_window: this.windowClumpCaptures,
         clump_releases_during_window: this.windowClumpReleases,
