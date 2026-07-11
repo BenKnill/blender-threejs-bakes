@@ -1,16 +1,16 @@
 import { createEditorScene } from "./scene.js";
+import { createCameraActions } from "./camera-actions.js";
 import { COMPUTE_EFFECTS, computeEffectMap } from "./effects.js";
-import {
-  frameObjectsWithCamera,
-  renderAspectFromInputs,
-  updateSafeFrameOverlay,
-} from "./framing.js";
+import { updateSafeFrameOverlay } from "./framing.js";
 import { createInstanceStore } from "./instances.js";
 import { createInspector } from "./inspector.js";
 import { applyLightingToControls, createLightingControls, currentLighting } from "./lighting.js";
 import { applyLayoutFields, cameraSnapshot, currentLayout, downloadLayout } from "./layout-io.js";
 import { loadManifest } from "./manifest-loader.js";
+import { createMotionControls } from "./motion-controls.js";
+import { createMotionPlayer } from "./motion-player.js";
 import { createEffectProxyObject, createProxyLoader } from "./proxies.js";
+import { createRenderUi } from "./render-ui.js";
 import { createSelection } from "./selection.js";
 import { renderAssetPalette, renderInstanceList, setModeButtons } from "./ui.js";
 
@@ -22,6 +22,9 @@ const assetPalette = document.querySelector("#assetPalette");
 const instanceList = document.querySelector("#instanceList");
 const renderGallery = document.querySelector("#renderGallery");
 const renderStatus = document.querySelector("#renderStatus");
+const renderUi = createRenderUi({ gallery: renderGallery, status: renderStatus });
+const setRenderStatus = renderUi.setStatus;
+const renderRenderGallery = renderUi.renderGallery;
 const manifestStatus = document.querySelector("#manifestStatus");
 const layoutNameInput = document.querySelector("#layoutName");
 const renderInputs = {
@@ -65,9 +68,16 @@ const cameraFields = {
 
 let savedCamera = null;
 let inspector = null;
+let motionPlayer = null;
+let motionControls = null;
 let manifestAssets = [];
 const assetMap = new Map();
-const editorScene = createEditorScene(viewport, renderInstances, () => inspector?.updateCamera());
+const editorScene = createEditorScene(
+  viewport,
+  renderInstances,
+  () => inspector?.updateCamera(),
+  (deltaSeconds) => motionPlayer?.update(deltaSeconds)
+);
 const proxyLoader = createProxyLoader({ onProxyStatus: updateAssetHealth });
 const store = createInstanceStore({
   scene: editorScene.scene,
@@ -77,6 +87,13 @@ const store = createInstanceStore({
   createProxyObject: proxyLoader.createProxyObject,
   createEffectObject: createEffectProxyObject,
   onChange: renderInstances,
+});
+const cameraActions = createCameraActions({
+  store,
+  editorScene,
+  renderInputs,
+  saveCamera,
+  flashButton,
 });
 inspector = createInspector({
   instanceFields,
@@ -92,6 +109,12 @@ createLightingControls({
   elements: lightingInputs,
   onChange: editorScene.applyLighting,
 });
+motionPlayer = createMotionPlayer({
+  getInstances: () => store.instances,
+  onStateChange: (state) => motionControls?.update(state),
+});
+motionControls = createMotionControls({ player: motionPlayer });
+motionControls.wire();
 
 createSelection({
   renderer: editorScene.renderer,
@@ -149,8 +172,8 @@ function wireControls() {
   document.querySelector("#modeRotate").addEventListener("click", () => setMode("rotate"));
   document.querySelector("#modeScale").addEventListener("click", () => setMode("scale"));
   document.querySelector("#saveCamera").addEventListener("click", saveCamera);
-  document.querySelector("#frameSelected").addEventListener("click", frameSelected);
-  document.querySelector("#frameAll").addEventListener("click", frameAll);
+  document.querySelector("#frameSelected").addEventListener("click", cameraActions.frameSelected);
+  document.querySelector("#frameAll").addEventListener("click", cameraActions.frameAll);
   for (const input of Object.values(renderInputs)) input.addEventListener("input", updateSafeFrame);
   document.querySelector("#duplicateInstance").addEventListener("click", store.duplicateSelected);
   document.querySelector("#deleteInstance").addEventListener("click", store.deleteSelected);
@@ -215,35 +238,6 @@ function saveCamera() {
   window.setTimeout(() => {
     button.textContent = "Save Camera";
   }, 1200);
-}
-
-function frameSelected() {
-  const selected = store.selected();
-  if (!selected) {
-    flashButton("#frameSelected", "No Selection");
-    return;
-  }
-  frameCamera([selected], "#frameSelected", "Framed");
-}
-
-function frameAll() {
-  const objects = [...store.instances.values()];
-  if (!objects.length) {
-    flashButton("#frameAll", "No Instances");
-    return;
-  }
-  frameCamera(objects, "#frameAll", "Framed");
-}
-
-function frameCamera(objects, selector, label) {
-  const framed = frameObjectsWithCamera(objects, {
-    camera: editorScene.camera,
-    orbit: editorScene.orbit,
-    renderAspect: renderAspectFromInputs(renderInputs),
-  });
-  if (!framed) return;
-  saveCamera();
-  flashButton(selector, label);
 }
 
 function exportLayout() {
@@ -313,28 +307,6 @@ function updateSafeFrame() {
   updateSafeFrameOverlay({ viewport, safeFrame, renderInputs });
 }
 
-function renderRenderGallery(renders) {
-  renderGallery.replaceChildren();
-  if (!renders.length) {
-    const empty = document.createElement("p");
-    empty.textContent = "No renders yet";
-    empty.dataset.testid = "render-empty";
-    renderGallery.appendChild(empty);
-    return;
-  }
-  for (const render of renders.slice(0, 6)) {
-    const link = document.createElement("a");
-    link.className = "renderTile";
-    link.href = render.url;
-    link.target = "_blank";
-    link.rel = "noreferrer";
-    link.setAttribute("aria-label", `Open render ${render.name}`);
-    link.dataset.testid = `render-tile:${render.name}`;
-    link.innerHTML = `<img src="${render.url}?v=${render.mtime}" alt="${render.name}" loading="lazy" /><span>${render.name}</span>`;
-    renderGallery.appendChild(link);
-  }
-}
-
 function readCurrentLayout() {
   return currentLayout({
     nameInput: layoutNameInput,
@@ -358,10 +330,6 @@ function flashButton(selector, text) {
   window.setTimeout(() => {
     button.textContent = oldText;
   }, 1200);
-}
-
-function setRenderStatus(message) {
-  renderStatus.textContent = message;
 }
 
 async function loadLayoutFromFile(event) {

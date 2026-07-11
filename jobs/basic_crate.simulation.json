@@ -1,0 +1,12 @@
+{
+  "schema": "simulation-job/1",
+  "gravity_m_s2": [0, -10, 0],
+  "fixed_step_s": 0.008333333333333333,
+  "substeps": 2,
+  "ground": {
+    "height_m": 0,
+    "half_extent_m": 20,
+    "friction": 0.8,
+    "restitution": 0.08
+  }
+}

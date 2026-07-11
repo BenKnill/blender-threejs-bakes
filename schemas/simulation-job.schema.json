@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.blender-threejs-bakes/schemas/simulation-job.schema.json",
+  "title": "Box3D simulation job",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "gravity_m_s2", "fixed_step_s", "substeps", "ground"],
+  "properties": {
+    "schema": { "const": "simulation-job/1" },
+    "gravity_m_s2": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "type": "number" }
+    },
+    "fixed_step_s": { "type": "number", "exclusiveMinimum": 0 },
+    "substeps": { "type": "integer", "minimum": 1 },
+    "restitution_threshold_m_s": { "type": "number", "minimum": 0 },
+    "hit_event_threshold_m_s": { "type": "number", "minimum": 0 },
+    "contact_hertz": { "type": "number", "exclusiveMinimum": 0 },
+    "contact_damping_ratio": { "type": "number", "exclusiveMinimum": 0 },
+    "contact_speed_m_s": { "type": "number", "minimum": 0 },
+    "maximum_linear_speed_m_s": { "type": "number", "exclusiveMinimum": 0 },
+    "enable_sleep": { "type": "boolean" },
+    "enable_continuous": { "type": "boolean" },
+    "ground": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["height_m", "half_extent_m", "friction", "restitution"],
+      "properties": {
+        "height_m": { "type": "number" },
+        "half_extent_m": { "type": "number", "exclusiveMinimum": 0 },
+        "friction": { "type": "number", "minimum": 0 },
+        "restitution": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    }
+  }
+}

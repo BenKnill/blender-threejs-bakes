@@ -1,0 +1,12 @@
+{
+  "schema": "render-job/1",
+  "name": "compiled_shrine_collision",
+  "active_camera": "hero_camera",
+  "fps": 24,
+  "duration_s": 8,
+  "output": {
+    "width_px": 1920,
+    "height_px": 1080,
+    "samples": 256
+  }
+}

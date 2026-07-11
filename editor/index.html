@@ -99,6 +99,30 @@
           ></div>
         </section>
 
+        <section class="panel" data-testid="motion-preview">
+          <div class="panelHeader">
+            <h2>Physics Preview</h2>
+            <div class="minirow">
+              <button id="motionPlay" type="button" disabled data-testid="motion-play">Play</button>
+              <button id="motionReset" type="button" disabled data-testid="motion-reset">
+                Reset
+              </button>
+            </div>
+          </div>
+          <label class="field">
+            <span>Motion clip</span>
+            <input
+              id="motionClipFile"
+              type="file"
+              accept="application/json,.json"
+              data-testid="motion-clip-file"
+            />
+          </label>
+          <p id="motionStatus" class="statusLine" data-testid="motion-status">
+            No motion clip loaded
+          </p>
+        </section>
+
         <section class="panel">
           <div class="panelHeader">
             <h2>Instances</h2>
