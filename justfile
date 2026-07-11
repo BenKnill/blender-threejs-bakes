@@ -44,6 +44,14 @@ soft-ribbon:
 soft-ribbon-video: soft-ribbon
     bash scripts/render_soft_ribbon_animation.sh
 
+# Branching and hanging-fiber proxies in a traveling Box3D wind field.
+wind-garden:
+    bash scripts/build_wind_garden.sh
+
+# Render the recorded wind-garden trajectory in Eevee.
+wind-garden-video: wind-garden
+    bash scripts/render_wind_garden_animation.sh
+
 # Format everything in place — JS + Python
 format:
     npx prettier --write 'editor/**/*.{js,css,html}'

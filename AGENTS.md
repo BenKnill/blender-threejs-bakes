@@ -82,6 +82,13 @@ The first command produces a deterministic motion clip, structural/performance
 receipts, and a lightweight SVG preview. The second renders the recorded Box3D
 motion in Blender; Blender does not resimulate it.
 
+The wind-wave follow-up uses the same recorded-motion boundary:
+
+```sh
+just wind-garden
+just wind-garden-video
+```
+
 Validate a layout or manifest contract:
 
 ```sh
