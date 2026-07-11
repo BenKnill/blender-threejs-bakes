@@ -89,6 +89,38 @@ for (let tooth = 0; tooth < 13; tooth += 1) {
 comb.visible = false;
 scene.add(comb);
 
+const windCompass = new THREE.Group();
+const windRing = new THREE.Mesh(
+  new THREE.TorusGeometry(1.45, 0.012, 8, 96),
+  new THREE.MeshBasicMaterial({ color: 0x63e6ff, transparent: true, opacity: 0.32 })
+);
+windRing.rotation.x = Math.PI * 0.5;
+windCompass.add(windRing);
+const windArrow = new THREE.ArrowHelper(
+  new THREE.Vector3(1, 0, 0),
+  new THREE.Vector3(0, 0, 0),
+  1.35,
+  0x63e6ff,
+  0.24,
+  0.14
+);
+windCompass.add(windArrow);
+windCompass.position.y = 2.95;
+windCompass.visible = false;
+scene.add(windCompass);
+
+const windStreakCount = 36;
+const windStreakPositions = new Float32Array(windStreakCount * 2 * 3);
+const windStreaks = new THREE.LineSegments(
+  new THREE.BufferGeometry().setAttribute(
+    "position",
+    new THREE.BufferAttribute(windStreakPositions, 3)
+  ),
+  new THREE.LineBasicMaterial({ color: 0x63e6ff, transparent: true, opacity: 0.38 })
+);
+windStreaks.visible = false;
+scene.add(windStreaks);
+
 let solver;
 let hair;
 let hairPositions;
@@ -110,6 +142,7 @@ const filmDirection = {
   cutDuration: 1.4,
   cutDone: false,
   cutStrands: new Set(),
+  windRotationRate: 0,
 };
 const deterministicReplay = {
   enabled: false,
@@ -283,6 +316,9 @@ function updateFilmDirection(now) {
   const elapsed = (now - filmDirection.startTime) / 1000;
   const gustWave = 0.5 + 0.5 * Math.sin(elapsed * 2.4 - Math.PI * 0.5);
   solver.wind = filmDirection.baseWind + filmDirection.gust * gustWave;
+  if (filmDirection.windRotationRate) {
+    solver.setWindDirection(elapsed * filmDirection.windRotationRate);
+  }
   if (elapsed < filmDirection.cutAt || filmDirection.cutDone) return;
   if (filmDirection.cut === "bob") {
     cutToGuideLine();
@@ -334,6 +370,12 @@ function updateTelemetry(now) {
     receipt.max_relative_stretch_error * 100
   ).toFixed(2)}%`;
   document.querySelector("#metric-cuts").textContent = receipt.cut_count.toLocaleString();
+  const windDegrees = ((((receipt.wind.angle_radians * 180) / Math.PI) % 360) + 360) % 360;
+  document.querySelector("#metric-wind-direction").textContent = receipt.wind.mode.startsWith(
+    "directional"
+  )
+    ? `${windDegrees.toFixed(0)}°`
+    : "legacy";
   document.querySelector("#metric-comb-force").textContent =
     receipt.comb.peak_reaction_proxy.toFixed(0);
   document.querySelector("#metric-comb-work").textContent =
@@ -348,6 +390,15 @@ function updateTelemetry(now) {
   assumptionMetric.textContent = receipt.assumption_receipt.status;
   assumptionMetric.dataset.status = receipt.assumption_receipt.status;
   drawCombTrace(receipt.comb.force_displacement_trace);
+  document.querySelector("#showcase-phase").textContent = receipt.comb.enabled
+    ? `${solver.comb.phase} comb pass`
+    : receipt.assumption_receipt.measurement_window === "comb_cycle"
+      ? "two-pass complete · wind orbit continues"
+      : receipt.assumption_receipt.measurement_window.replaceAll("_", " ");
+  document.querySelector("#showcase-wind").textContent =
+    `wind ${windDegrees.toFixed(0)}° · ${receipt.wind.magnitude.toFixed(2)}`;
+  document.querySelector("#showcase-stretch").textContent =
+    `stretch ${(receipt.max_relative_stretch_error * 100).toFixed(2)}% · ${receipt.assumption_receipt.status}`;
   if (performance.memory) {
     document.querySelector("#metric-memory").textContent = `${(
       performance.memory.usedJSHeapSize /
@@ -355,6 +406,32 @@ function updateTelemetry(now) {
       1024
     ).toFixed(1)} MiB`;
   }
+}
+
+function updateWindVisual() {
+  windCompass.visible = solver.directionalWind;
+  windStreaks.visible = solver.directionalWind;
+  if (!solver.directionalWind) return;
+  const direction = new THREE.Vector3(solver.windDirection[0], 0, solver.windDirection[2]);
+  const perpendicular = new THREE.Vector3(-direction.z, 0, direction.x);
+  windArrow.setDirection(direction);
+  windArrow.setLength(0.9 + solver.wind * 0.9, 0.24, 0.14);
+  for (let index = 0; index < windStreakCount; index += 1) {
+    const phase = (solver.time * (0.35 + solver.wind) + index * 0.173) % 1;
+    const along = (phase - 0.5) * 6.2;
+    const lateral = (((index * 0.61803398875) % 1) - 0.5) * 4.2;
+    const y = -0.55 + ((index * 0.38196601125) % 1) * 4.4;
+    const centerX = direction.x * along + perpendicular.x * lateral;
+    const centerZ = direction.z * along + perpendicular.z * lateral;
+    const cursor = index * 6;
+    windStreakPositions[cursor] = centerX - direction.x * 0.12;
+    windStreakPositions[cursor + 1] = y;
+    windStreakPositions[cursor + 2] = centerZ - direction.z * 0.12;
+    windStreakPositions[cursor + 3] = centerX + direction.x * 0.12;
+    windStreakPositions[cursor + 4] = y;
+    windStreakPositions[cursor + 5] = centerZ + direction.z * 0.12;
+  }
+  windStreaks.geometry.attributes.position.needsUpdate = true;
 }
 
 function drawCombTrace(trace) {
@@ -412,6 +489,7 @@ function animate(now) {
     smoothedSolverMs = smoothedSolverMs * 0.9 + (performance.now() - start) * 0.1;
   }
   updateHairGeometry();
+  updateWindVisual();
   comb.visible = Boolean(deterministicReplay.config.comb);
   comb.position.x = solver.comb.currentX;
   controls.update();
@@ -429,6 +507,8 @@ function resize() {
 
 function applyQueryConfiguration() {
   const params = new URLSearchParams(window.location.search);
+  const showcase = params.get("showcase") === "1";
+  document.body.classList.toggle("showcase", showcase);
   const controlsByParameter = {
     guides: "guides",
     iterations: "iterations",
@@ -463,12 +543,13 @@ function applyQueryConfiguration() {
       : "none";
     filmDirection.cutAt = Math.max(0, Number(params.get("cutAt") ?? 2.5));
     filmDirection.cutDuration = Math.max(0.2, Number(params.get("cutDuration") ?? 1.4));
+    filmDirection.windRotationRate = Number(params.get("windRotation") ?? 0);
     controls.autoRotate = true;
     controls.autoRotateSpeed = Number(params.get("orbit") ?? 0.8);
   }
   if (params.get("replay") === "1") {
     deterministicReplay.enabled = true;
-    deterministicReplay.autoplay = params.get("autoplay") === "1";
+    deterministicReplay.autoplay = params.get("autoplay") === "1" || showcase;
     deterministicReplay.targetStep = Math.max(
       0,
       Math.floor(Number(params.get("replaySteps") ?? 0))
@@ -481,6 +562,8 @@ function applyQueryConfiguration() {
       cut: params.get("cut") === "diagonal" ? "diagonal" : "none",
       cutAt: Math.max(0, Number(params.get("cutAt") ?? 2.5)),
       cutDuration: Math.max(0.2, Number(params.get("cutDuration") ?? 1.4)),
+      windAngle: Number(params.get("windAngle") ?? 0),
+      windRotationRate: Number(params.get("windRotation") ?? 0),
       comb:
         params.get("comb") === "1"
           ? {
@@ -494,6 +577,10 @@ function applyQueryConfiguration() {
             }
           : undefined,
     };
+    if (showcase) {
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = Number(params.get("orbit") ?? 0.35);
+    }
   }
 }
 

@@ -20,6 +20,7 @@ proof boundaries must remain explicit.
 
 ## Next: improve material behavior where the traces point
 
+- [x] Add a continuously rotating directional wind field with a visible flow indicator and autoplay showcase.
 - [ ] Compare dry, wet, and product-heavy response using peaks, work, releases,
       trace shape, and runtime—not appearance alone.
 - [ ] Choose one operator to improve from evidence: friction, cohesion, pressure,
