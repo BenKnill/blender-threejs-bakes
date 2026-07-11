@@ -7,8 +7,8 @@ export const MATERIAL_PRESETS = Object.freeze({
     bendStiffness: 0.12,
     damping: 0.935,
     drag: 0.06,
-    friction: 0.16,
-    clump: 0.03,
+    friction: 0.22,
+    clump: 0.08,
   }),
   wavy: Object.freeze({
     label: "Wavy / medium",
@@ -18,8 +18,8 @@ export const MATERIAL_PRESETS = Object.freeze({
     bendStiffness: 0.2,
     damping: 0.925,
     drag: 0.075,
-    friction: 0.24,
-    clump: 0.07,
+    friction: 0.36,
+    clump: 0.18,
   }),
   curly: Object.freeze({
     label: "Curly / springy",
@@ -29,8 +29,8 @@ export const MATERIAL_PRESETS = Object.freeze({
     bendStiffness: 0.34,
     damping: 0.91,
     drag: 0.095,
-    friction: 0.36,
-    clump: 0.12,
+    friction: 0.5,
+    clump: 0.28,
   }),
   coily: Object.freeze({
     label: "Coily / high recovery",
@@ -40,8 +40,8 @@ export const MATERIAL_PRESETS = Object.freeze({
     bendStiffness: 0.52,
     damping: 0.89,
     drag: 0.12,
-    friction: 0.48,
-    clump: 0.18,
+    friction: 0.62,
+    clump: 0.38,
   }),
 });
 
@@ -105,6 +105,36 @@ export function projectPair(
   };
 }
 
+export function blendPairFriction(velocityA, velocityB, friction) {
+  const blend = Math.max(0, Math.min(1, friction));
+  const nextA = [];
+  const nextB = [];
+  for (let axis = 0; axis < 3; axis += 1) {
+    const mean = (velocityA[axis] + velocityB[axis]) * 0.5;
+    nextA.push(velocityA[axis] + (mean - velocityA[axis]) * blend);
+    nextB.push(velocityB[axis] + (mean - velocityB[axis]) * blend);
+  }
+  return [nextA, nextB];
+}
+
+export function projectCohesionPair(
+  positionA,
+  positionB,
+  targetGap,
+  contactRadius,
+  strength,
+  maxCorrection = 0.012
+) {
+  const delta = positionB.map((value, axis) => value - positionA[axis]);
+  const distance = length3(...delta);
+  if (distance <= targetGap || distance >= contactRadius || distance < 1e-12) {
+    return { active: false, correctionA: [0, 0, 0], correctionB: [0, 0, 0] };
+  }
+  const scale = Math.min(maxCorrection, (distance - targetGap) * strength) / distance;
+  const correctionA = delta.map((value) => value * scale);
+  return { active: true, correctionA, correctionB: correctionA.map((value) => -value) };
+}
+
 function rootFrame(index, count) {
   const fraction = (index + 0.5) / count;
   const theta = 0.1 + 1.18 * Math.sqrt(fraction);
@@ -142,7 +172,7 @@ function restPoint(frame, material, segment, segments) {
 }
 
 export class HairSolver {
-  constructor({ guideCount = 320, segments = 12, preset = "wavy", iterations = 5 } = {}) {
+  constructor({ guideCount = 512, segments = 12, preset = "wavy", iterations = 5 } = {}) {
     if (!(preset in MATERIAL_PRESETS)) throw new Error(`unknown material preset: ${preset}`);
     if (guideCount < 8 || segments < 4) throw new Error("hair solver resolution is too small");
     this.guideCount = guideCount;
@@ -163,7 +193,12 @@ export class HairSolver {
     this.wind = 0.18;
     this.sectionLift = 0;
     this.maxStretchError = 0;
+    this.moisture = 0;
+    this.product = 0;
+    this.activeNeighborContacts = 0;
+    this.cohesionCorrections = 0;
     this.#initialize();
+    this.neighborPairs = this.#buildNeighborPairs(3);
   }
 
   index(strand, particle, axis = 0) {
@@ -203,26 +238,34 @@ export class HairSolver {
     this.cutCount = 0;
     this.time = 0;
     this.#initialize();
+    this.#refreshMaterial();
   }
 
   setMoisture(value) {
-    const moisture = Math.max(0, Math.min(1, value));
-    const base = MATERIAL_PRESETS[this.preset];
-    this.material.damping = base.damping - 0.035 * moisture;
-    this.material.drag = base.drag + 0.16 * moisture;
-    this.material.bendStiffness = base.bendStiffness * (1 - 0.28 * moisture);
-    this.material.clump = base.clump + 0.3 * moisture;
-    this.material.moisture = moisture;
+    this.moisture = Math.max(0, Math.min(1, value));
+    this.#refreshMaterial();
   }
 
   setProduct(value) {
-    const product = Math.max(0, Math.min(1, value));
+    this.product = Math.max(0, Math.min(1, value));
+    this.#refreshMaterial();
+  }
+
+  #refreshMaterial() {
     const base = MATERIAL_PRESETS[this.preset];
-    this.material.bendStiffness = Math.min(0.92, base.bendStiffness + 0.34 * product);
-    this.material.damping = base.damping - 0.055 * product;
-    this.material.friction = Math.min(0.9, base.friction + 0.32 * product);
-    this.material.clump = Math.min(0.72, base.clump + 0.42 * product);
-    this.material.product = product;
+    this.material = {
+      ...base,
+      bendStiffness: Math.min(
+        0.92,
+        base.bendStiffness * (1 - 0.28 * this.moisture) + 0.34 * this.product
+      ),
+      damping: base.damping - 0.035 * this.moisture - 0.055 * this.product,
+      drag: base.drag + 0.16 * this.moisture,
+      friction: Math.min(0.94, base.friction + 0.28 * this.moisture + 0.32 * this.product),
+      clump: Math.min(0.82, base.clump + 0.34 * this.moisture + 0.42 * this.product),
+      moisture: this.moisture,
+      product: this.product,
+    };
   }
 
   setSectionLift(value) {
@@ -259,9 +302,11 @@ export class HairSolver {
         this.previous[base + 2] = z;
       }
     }
+    this.#applyNeighborFriction();
     for (let iteration = 0; iteration < this.iterations; iteration += 1) {
       this.#projectLengths();
       this.#projectRestCurvature();
+      this.#projectCohesion();
       this.#projectSectionLift();
       this.#projectScalp();
       this.#pinRoots();
@@ -275,6 +320,96 @@ export class HairSolver {
       this.#pinRoots();
     }
     this.maxStretchError = this.measureMaxStretchError();
+  }
+
+  #buildNeighborPairs(neighborsPerRoot) {
+    const keys = new Set();
+    for (let strand = 0; strand < this.guideCount; strand += 1) {
+      const a = strand * 3;
+      const candidates = [];
+      for (let other = 0; other < this.guideCount; other += 1) {
+        if (strand === other) continue;
+        const b = other * 3;
+        candidates.push({
+          other,
+          distanceSquared:
+            (this.roots[a] - this.roots[b]) ** 2 +
+            (this.roots[a + 1] - this.roots[b + 1]) ** 2 +
+            (this.roots[a + 2] - this.roots[b + 2]) ** 2,
+        });
+      }
+      candidates.sort((left, right) => left.distanceSquared - right.distanceSquared);
+      for (const candidate of candidates.slice(0, neighborsPerRoot)) {
+        keys.add(
+          strand < candidate.other ? `${strand}:${candidate.other}` : `${candidate.other}:${strand}`
+        );
+      }
+    }
+    return Array.from(keys, (key) => key.split(":").map(Number));
+  }
+
+  #applyNeighborFriction() {
+    const contactRadius = 0.14 + this.material.clump * 0.3;
+    const blend = this.material.friction * 0.16;
+    let contacts = 0;
+    for (const [strandA, strandB] of this.neighborPairs) {
+      const active = Math.min(this.activeSegments[strandA], this.activeSegments[strandB]);
+      for (let particle = 2; particle <= active; particle += 1) {
+        const a = this.index(strandA, particle);
+        const b = this.index(strandB, particle);
+        const distance = length3(
+          this.positions[b] - this.positions[a],
+          this.positions[b + 1] - this.positions[a + 1],
+          this.positions[b + 2] - this.positions[a + 2]
+        );
+        if (distance > contactRadius) continue;
+        const velocityA = [
+          this.positions[a] - this.previous[a],
+          this.positions[a + 1] - this.previous[a + 1],
+          this.positions[a + 2] - this.previous[a + 2],
+        ];
+        const velocityB = [
+          this.positions[b] - this.previous[b],
+          this.positions[b + 1] - this.previous[b + 1],
+          this.positions[b + 2] - this.previous[b + 2],
+        ];
+        const [nextA, nextB] = blendPairFriction(velocityA, velocityB, blend);
+        for (let axis = 0; axis < 3; axis += 1) {
+          this.previous[a + axis] = this.positions[a + axis] - nextA[axis];
+          this.previous[b + axis] = this.positions[b + axis] - nextB[axis];
+        }
+        contacts += 1;
+      }
+    }
+    this.activeNeighborContacts = contacts;
+  }
+
+  #projectCohesion() {
+    const strength = this.material.clump * 0.055;
+    const contactRadius = 0.16 + this.material.clump * 0.42;
+    const targetGap = 0.035 + (1 - this.material.clump) * 0.075;
+    let corrections = 0;
+    for (const [strandA, strandB] of this.neighborPairs) {
+      const active = Math.min(this.activeSegments[strandA], this.activeSegments[strandB]);
+      for (let particle = 2; particle <= active; particle += 1) {
+        const a = this.index(strandA, particle);
+        const b = this.index(strandB, particle);
+        const result = projectCohesionPair(
+          [this.positions[a], this.positions[a + 1], this.positions[a + 2]],
+          [this.positions[b], this.positions[b + 1], this.positions[b + 2]],
+          targetGap,
+          contactRadius,
+          strength
+        );
+        if (!result.active) continue;
+        for (let axis = 0; axis < 3; axis += 1) {
+          this.positions[a + axis] += result.correctionA[axis];
+          this.positions[b + axis] += result.correctionB[axis];
+        }
+        corrections += 1;
+      }
+    }
+    this.cohesionCorrections = corrections;
   }
 
   #projectLengths() {
@@ -395,7 +530,7 @@ export class HairSolver {
     return {
       schema: "hair-material-bench/1",
       guide_count: this.guideCount,
-      render_fiber_count: this.guideCount * 3,
+      render_fiber_count: this.guideCount * 9,
       segments_per_guide: this.segments,
       active_segments: Array.from(this.activeSegments).reduce((sum, value) => sum + value, 0),
       preset: this.preset,
@@ -403,7 +538,11 @@ export class HairSolver {
       iterations: this.iterations,
       max_relative_stretch_error: this.maxStretchError,
       cut_count: this.cutCount,
+      root_neighbor_pairs: this.neighborPairs.length,
+      active_neighbor_contacts: this.activeNeighborContacts,
+      cohesion_corrections_last_iteration: this.cohesionCorrections,
       solver: "CPU Verlet plus distance and rest-curvature projections",
+      collective_model: "bounded root-neighbor friction and cohesion",
       continuum_hair_mechanics: false,
       strand_self_contact: false,
       dense_fibers_are_interpolated: true,

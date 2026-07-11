@@ -35,8 +35,8 @@
       </label>
 
       <label>
-        Simulated guides <output id="guide-output">320</output>
-        <input id="guides" type="range" min="128" max="512" step="64" value="320" />
+        Simulated guides <output id="guide-output">512</output>
+        <input id="guides" type="range" min="128" max="768" step="64" value="512" />
       </label>
 
       <label>
@@ -88,6 +88,18 @@
             <dd id="metric-particles">—</dd>
           </div>
           <div>
+            <dt>Neighbor pairs</dt>
+            <dd id="metric-neighbors">—</dd>
+          </div>
+          <div>
+            <dt>Close contacts</dt>
+            <dd id="metric-contacts">—</dd>
+          </div>
+          <div>
+            <dt>Cohesion moves</dt>
+            <dd id="metric-cohesion">—</dd>
+          </div>
+          <div>
             <dt>Solver</dt>
             <dd id="metric-solver">—</dd>
           </div>
@@ -112,7 +124,8 @@
 
       <p class="boundary">
         <strong>Boundary:</strong> CPU Verlet plus constraint projection; no strand self-contact or
-        continuum claim. Three visible fibers interpolate each mechanical guide.
+        continuum claim. Nine visible fibers interpolate each mechanical guide. Friction/cohesion
+        uses a bounded root-neighbor graph, not general self-contact.
       </p>
       <div id="status" role="status">Running deterministic wavy preset.</div>
     </aside>

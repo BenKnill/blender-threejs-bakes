@@ -1,21 +1,26 @@
 {
   "browser_observation": {
-    "guide_count": 320,
-    "javascript_heap_mib_range": [10.8, 15.0],
-    "max_relative_stretch_percent_range": [0.29, 0.61],
-    "particles": 4160,
+    "guide_count": 512,
+    "javascript_heap_mib_range": [12.9, 16.1],
+    "max_relative_stretch_percent_default_dry": 2.08,
+    "neighbor_pairs": 935,
+    "observed_close_contacts": 10011,
+    "particles": 6656,
     "platform_scope": "primary M5 Mac in-app browser; not a portable benchmark",
-    "solver_step_ms_range": [2.3, 2.9],
-    "spatial_scissors_exercised": true,
-    "visible_fibers": 960
+    "solver_step_ms_range": [7.57, 9.21],
+    "displayed_fps_range": [104, 120],
+    "guide_line_cut_strands": 395,
+    "material_control_exercise": { "wetness": 0.65, "product": 0.55 },
+    "visible_fibers": 4608
   },
   "claim_boundary": {
     "continuum_hair_mechanics": false,
     "dense_fibers_are_interpolated": true,
+    "bounded_root_neighbor_friction_cohesion": true,
     "strand_self_contact": false,
     "torsional_rod_frames": false
   },
-  "schema": "hair-material-bench-receipt/1",
+  "schema": "hair-material-bench-receipt/2",
   "solver": {
     "default_iterations": 5,
     "default_segments_per_guide": 12,
@@ -25,6 +30,8 @@
       "rest second difference",
       "section lift",
       "ellipsoidal scalp collision",
+      "root-neighbor relative-velocity friction",
+      "root-neighbor capped cohesion",
       "root pin"
     ]
   },
@@ -35,6 +42,9 @@
     "profile": "light",
     "restore_seconds": 0.0,
     "successful_attempt_seconds": 0.3,
-    "theorem": "HAIR_PAIR_CORRECTION_PRESERVES_MOMENT"
+    "theorems": [
+      "HAIR_PAIR_CORRECTION_PRESERVES_MOMENT",
+      "HAIR_EQUAL_MASS_FRICTION_PRESERVES_VELOCITY_SUM"
+    ]
   }
 }
