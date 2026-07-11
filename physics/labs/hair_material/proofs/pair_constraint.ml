@@ -13,3 +13,12 @@ let HAIR_PAIR_CORRECTION_PRESERVES_MOMENT = prove
   REPEAT STRIP_TAC THEN
   REPEAT(POP_ASSUM MP_TAC) THEN
   CONV_TAC REAL_FIELD);;
+
+let HAIR_EQUAL_MASS_FRICTION_PRESERVES_VELOCITY_SUM = prove
+ (`!velocity_a velocity_b friction:real.
+      (velocity_a +
+       (((velocity_a + velocity_b) / &2) - velocity_a) * friction) +
+      (velocity_b +
+       (((velocity_a + velocity_b) / &2) - velocity_b) * friction) =
+      velocity_a + velocity_b`,
+  CONV_TAC REAL_FIELD);;

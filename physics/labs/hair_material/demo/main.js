@@ -3,6 +3,8 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 import { HairSolver } from "./solver.js";
 
+const RENDER_FIBERS_PER_GUIDE = 9;
+
 const viewport = document.querySelector("#viewport");
 const status = document.querySelector("#status");
 const cutCursor = document.querySelector("#cut-cursor");
@@ -96,14 +98,14 @@ function rebuildHairObject() {
     hair.geometry.dispose();
     hair.material.dispose();
   }
-  const vertexCapacity = solver.guideCount * solver.segments * 3 * 2;
+  const vertexCapacity = solver.guideCount * solver.segments * RENDER_FIBERS_PER_GUIDE * 2;
   hairPositions = new Float32Array(vertexCapacity * 3);
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.BufferAttribute(hairPositions, 3));
   const material = new THREE.LineBasicMaterial({
     color: hairColor(),
     transparent: true,
-    opacity: 0.92,
+    opacity: 0.72,
   });
   hair = new THREE.LineSegments(geometry, material);
   hair.frustumCulled = false;
@@ -131,9 +133,9 @@ function applyMaterialControls() {
 function updateHairGeometry() {
   let cursor = 0;
   for (let strand = 0; strand < solver.guideCount; strand += 1) {
-    for (let copy = 0; copy < 3; copy += 1) {
-      const offset = (copy - 1) * 0.012;
-      const phase = strand * 1.618 + copy * 2.094;
+    for (let copy = 0; copy < RENDER_FIBERS_PER_GUIDE; copy += 1) {
+      const phase = strand * 1.618 + ((copy - 1) * Math.PI * 2) / 8;
+      const offset = copy === 0 ? 0 : 0.009 + (strand % 3) * 0.0018;
       const offsetX = Math.cos(phase) * offset;
       const offsetZ = Math.sin(phase) * offset;
       for (let segment = 0; segment < solver.activeSegments[strand]; segment += 1) {
@@ -203,6 +205,12 @@ function updateTelemetry(now) {
   document.querySelector("#metric-fibers").textContent =
     receipt.render_fiber_count.toLocaleString();
   document.querySelector("#metric-particles").textContent = solver.particleCount.toLocaleString();
+  document.querySelector("#metric-neighbors").textContent =
+    receipt.root_neighbor_pairs.toLocaleString();
+  document.querySelector("#metric-contacts").textContent =
+    receipt.active_neighbor_contacts.toLocaleString();
+  document.querySelector("#metric-cohesion").textContent =
+    receipt.cohesion_corrections_last_iteration.toLocaleString();
   document.querySelector("#metric-solver").textContent = `${smoothedSolverMs.toFixed(2)} ms`;
   document.querySelector("#metric-fps").textContent = smoothedFps.toFixed(0);
   document.querySelector("#metric-stretch").textContent = `${(
@@ -251,7 +259,10 @@ for (const [id, output, format] of [
 ]) {
   const input = document.querySelector(`#${id}`);
   input.addEventListener("input", () => {
-    document.querySelector(`#${output}`).textContent = format(Number(input.value));
+    const outputElement = document.querySelector(`#${output}`);
+    const formattedValue = format(Number(input.value));
+    outputElement.textContent = formattedValue;
+    outputElement.setAttribute("aria-label", `${input.labels[0].textContent} ${formattedValue}`);
     if (["moisture", "product", "lift", "wind"].includes(id)) applyMaterialControls();
   });
   if (["guides", "iterations"].includes(id)) input.addEventListener("change", rebuildSolver);
