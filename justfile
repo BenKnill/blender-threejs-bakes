@@ -21,6 +21,7 @@ test:
     python3 scripts/test_compile_tree_assembly.py
     python3 scripts/test_bake_telemetry.py
     python3 scripts/test_wind_canopy_math.py
+    python3 scripts/test_haircut_math.py
     python3 scripts/test_contact_shell_demo.py
 
 # Native Box3D crate proof: compile, replay-validate, and bake 97 frames.
@@ -62,6 +63,10 @@ wind-garden-video: wind-garden
 # Real SeedThree canopy plus a 127-fiber groom driven by Box3D wind guides.
 seedthree-wind: wind-garden
     bash scripts/build_seedthree_wind_canopy.sh
+
+# Dense mannequin groom and a primitive shoulder-length-to-bob cut.
+mannequin-haircut: wind-garden
+    bash scripts/build_mannequin_haircut.sh
 
 # Format everything in place — JS + Python
 format:

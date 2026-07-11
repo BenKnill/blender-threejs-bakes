@@ -1,0 +1,79 @@
+{
+  "claim_boundary": {
+    "continuum_hair_mechanics": false,
+    "cutting_tool_contact_mechanics": false,
+    "strand_self_contact": false
+  },
+  "fixture": {
+    "cut_height_m": 6.45,
+    "cut_time_s": 2.0,
+    "frames": 97,
+    "physical_guides": 7,
+    "points_per_fiber": 18,
+    "render_fibers": 1200,
+    "resolution": [
+      960,
+      540
+    ],
+    "severed_fibers": 845
+  },
+  "headroom_gates": {
+    "all_97_frames_present": true,
+    "blender_peak_under_2_gib": true,
+    "blender_under_180_seconds": true
+  },
+  "platform_scope": "observed on the primary M5 Mac; not a portable benchmark",
+  "render_receipt_sha256": "4386c98ef2d136f7d50968d821d313d57a73e82ab69fb7c376fdff4fb2de9215",
+  "scale_decision": "1200 fine render fibers were selected after a 480-fiber probe remained comfortably laptop-safe",
+  "schema": "mannequin-haircut-bake-summary/1",
+  "stages": {
+    "blender_frames": {
+      "artifacts": [
+        {
+          "exists": true,
+          "file_count": 97,
+          "kind": "directory",
+          "path": "mannequin_haircut_frames",
+          "size_bytes": 54837385
+        },
+        {
+          "exists": true,
+          "file_count": 1,
+          "kind": "file",
+          "path": "mannequin_haircut.receipt.json",
+          "size_bytes": 803
+        }
+      ],
+      "label": "Mannequin haircut Blender frames",
+      "peak_rss_bytes": 649101312,
+      "sample_count": 387,
+      "sample_interval_seconds": 0.1,
+      "source_sha256": "510da9b7c41852c8b9239ca4af35d432eb91660ac119fdd101ceb7bef4b584f3",
+      "wall_seconds": 46.037593582994305
+    },
+    "video_packaging": {
+      "artifacts": [
+        {
+          "exists": true,
+          "file_count": 1,
+          "kind": "file",
+          "path": "mannequin_haircut.mp4",
+          "size_bytes": 1099197
+        },
+        {
+          "exists": true,
+          "file_count": 1,
+          "kind": "file",
+          "path": "mannequin_haircut_contact.png",
+          "size_bytes": 280754
+        }
+      ],
+      "label": "Mannequin haircut video packaging",
+      "peak_rss_bytes": 284393472,
+      "sample_count": 6,
+      "sample_interval_seconds": 0.1,
+      "source_sha256": "f25b0383fd60835f7bdf08714a57ac6d4d684c811e5d89b12702fcba76fae960",
+      "wall_seconds": 0.6179205420048675
+    }
+  }
+}
