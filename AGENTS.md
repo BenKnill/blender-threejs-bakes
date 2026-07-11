@@ -71,6 +71,17 @@ and Blender):
 BOX3D_SOURCE_DIR=/Users/boxer/box3d bash scripts/build_basic_animation.sh
 ```
 
+Run the small native-Box3D soft-ribbon fixture and its optional neon replay:
+
+```sh
+just soft-ribbon
+just soft-ribbon-video
+```
+
+The first command produces a deterministic motion clip, structural/performance
+receipts, and a lightweight SVG preview. The second renders the recorded Box3D
+motion in Blender; Blender does not resimulate it.
+
 Validate a layout or manifest contract:
 
 ```sh
