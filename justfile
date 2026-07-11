@@ -19,6 +19,7 @@ test:
     python3 scripts/test_scene_compile.py
     python3 scripts/test_compile_physics.py
     python3 scripts/test_compile_tree_assembly.py
+    python3 scripts/test_bake_telemetry.py
 
 # Native Box3D crate proof: compile, replay-validate, and bake 97 frames.
 box3d-basic:
@@ -47,6 +48,14 @@ soft-ribbon-video: soft-ribbon
 # Prove and probe the bounded Box3D contact-update shell.
 contact-shell:
     bash scripts/build_contact_shell.sh
+
+# Branching and hanging-fiber proxies in a traveling Box3D wind field.
+wind-garden:
+    bash scripts/build_wind_garden.sh
+
+# Render the recorded wind-garden trajectory in Eevee.
+wind-garden-video: wind-garden
+    bash scripts/render_wind_garden_animation.sh
 
 # Format everything in place — JS + Python
 format:

@@ -60,6 +60,11 @@ Run the dependency-light Box3D scene/physics compiler contracts:
 just test
 ```
 
+Wrap expensive Blender/ffmpeg stages with `scripts/bake_telemetry.py` when bake
+cost matters. It records wall time, sampled peak process-tree RSS, exit status,
+and declared artifact sizes without hiding child output. See
+`docs/BAKE_TELEMETRY.md`.
+
 The local `just lint` and `just test` commands are the source of truth for
 editor lint/format and Python/compiler checks. See [the integration handoff](docs/INTEGRATION_HANDOFF.md)
 for the stable boundary and deliberate non-claims.
@@ -81,6 +86,13 @@ just soft-ribbon-video
 The first command produces a deterministic motion clip, structural/performance
 receipts, and a lightweight SVG preview. The second renders the recorded Box3D
 motion in Blender; Blender does not resimulate it.
+
+The wind-wave follow-up uses the same recorded-motion boundary:
+
+```sh
+just wind-garden
+just wind-garden-video
+```
 
 Validate a layout or manifest contract:
 
