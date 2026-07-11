@@ -4,7 +4,12 @@ import { TransformControls } from "three/addons/controls/TransformControls.js";
 import { installUniformScale } from "./uniform-scale.js";
 import { sunDirection } from "./lighting.js";
 
-export function createEditorScene(viewport, onTransformChange, onCameraChange = () => {}) {
+export function createEditorScene(
+  viewport,
+  onTransformChange,
+  onCameraChange = () => {},
+  onFrame = () => {}
+) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x171a18);
 
@@ -91,10 +96,15 @@ export function createEditorScene(viewport, onTransformChange, onCameraChange = 
   }
 
   function animate() {
+    const now = performance.now();
+    const deltaSeconds = Math.min((now - animate.lastTime) / 1000, 0.1);
+    animate.lastTime = now;
+    onFrame(deltaSeconds);
     orbit.update();
     renderer.render(scene, camera);
     requestAnimationFrame(animate);
   }
+  animate.lastTime = performance.now();
 
   resize();
   window.addEventListener("resize", resize);

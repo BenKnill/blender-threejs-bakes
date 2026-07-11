@@ -14,9 +14,11 @@ The basic proof is a complete native-physics-to-Blender path:
 5. `box3d_scene_runner` simulates at 120 Hz, samples at 24 Hz, writes a
    `motion-clip/1` JSON file, writes a native cumulative event receipt, saves a
    `.b3rec`, and validates replay.
-6. `render_motion.py` turns the sampled transforms into linear Blender
+6. The editor's Physics Preview loads the same sampled transforms and interpolates
+   them in Three.js space, so pose and quaternion mistakes are visible before bake.
+7. `render_motion.py` turns the sampled transforms into linear Blender
    keyframes, integrates camera velocity, and renders reusable PNG frames.
-7. FFmpeg encodes those cached frames without asking Blender to render again.
+8. FFmpeg encodes those cached frames without asking Blender to render again.
 
 The native boundary is documented in
 [`BOX3D_NATIVE_CONVENTIONS.md`](BOX3D_NATIVE_CONVENTIONS.md). The scene
@@ -48,6 +50,9 @@ Outputs are gitignored:
 - Camera motion currently integrates constant linear and angular velocity. More
   expressive camera controllers should compile down to the same canonical
   state rather than changing the renderer contract.
+- The editor preview is playback, not a second physics engine. It currently
+  previews body poses only; a future parity receipt should compare sampled
+  Three.js and Blender transforms directly.
 - Blender renders a PNG sequence because this build exposes no FFmpeg render
   format. External FFmpeg encoding is intentional and lets video settings be
   changed without rerendering frames.

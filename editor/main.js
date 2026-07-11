@@ -10,6 +10,7 @@ import { createInspector } from "./inspector.js";
 import { applyLightingToControls, createLightingControls, currentLighting } from "./lighting.js";
 import { applyLayoutFields, cameraSnapshot, currentLayout, downloadLayout } from "./layout-io.js";
 import { loadManifest } from "./manifest-loader.js";
+import { createMotionPlayer } from "./motion-player.js";
 import { createEffectProxyObject, createProxyLoader } from "./proxies.js";
 import { createSelection } from "./selection.js";
 import { renderAssetPalette, renderInstanceList, setModeButtons } from "./ui.js";
@@ -22,6 +23,7 @@ const assetPalette = document.querySelector("#assetPalette");
 const instanceList = document.querySelector("#instanceList");
 const renderGallery = document.querySelector("#renderGallery");
 const renderStatus = document.querySelector("#renderStatus");
+const motionStatus = document.querySelector("#motionStatus");
 const manifestStatus = document.querySelector("#manifestStatus");
 const layoutNameInput = document.querySelector("#layoutName");
 const renderInputs = {
@@ -65,9 +67,15 @@ const cameraFields = {
 
 let savedCamera = null;
 let inspector = null;
+let motionPlayer = null;
 let manifestAssets = [];
 const assetMap = new Map();
-const editorScene = createEditorScene(viewport, renderInstances, () => inspector?.updateCamera());
+const editorScene = createEditorScene(
+  viewport,
+  renderInstances,
+  () => inspector?.updateCamera(),
+  (deltaSeconds) => motionPlayer?.update(deltaSeconds)
+);
 const proxyLoader = createProxyLoader({ onProxyStatus: updateAssetHealth });
 const store = createInstanceStore({
   scene: editorScene.scene,
@@ -91,6 +99,10 @@ inspector = createInspector({
 createLightingControls({
   elements: lightingInputs,
   onChange: editorScene.applyLighting,
+});
+motionPlayer = createMotionPlayer({
+  getInstances: () => store.instances,
+  onStateChange: updateMotionControls,
 });
 
 createSelection({
@@ -161,6 +173,9 @@ function wireControls() {
   document.querySelector("#bakeLayout").addEventListener("click", bakeLayout);
   document.querySelector("#refreshRenders").addEventListener("click", refreshRenders);
   document.querySelector("#loadLayout").addEventListener("change", loadLayoutFromFile);
+  document.querySelector("#motionClipFile").addEventListener("change", loadMotionClip);
+  document.querySelector("#motionPlay").addEventListener("click", () => motionPlayer.toggle());
+  document.querySelector("#motionReset").addEventListener("click", () => motionPlayer.reset());
 
   window.addEventListener("keydown", (event) => {
     if (event.target instanceof HTMLInputElement) return;
@@ -189,6 +204,30 @@ function setMode(mode) {
   editorScene.transform.setMode(mode);
   setModeButtons(mode);
   document.querySelector("#hudMode").textContent = MODE_LABELS[mode] || mode;
+}
+
+async function loadMotionClip(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  try {
+    motionPlayer.load(JSON.parse(await file.text()));
+    motionStatus.textContent = `Loaded ${file.name}`;
+  } catch (error) {
+    motionStatus.textContent = error.message;
+  } finally {
+    event.target.value = "";
+  }
+}
+
+function updateMotionControls(state) {
+  const play = document.querySelector("#motionPlay");
+  const reset = document.querySelector("#motionReset");
+  play.disabled = !state.loaded;
+  reset.disabled = !state.loaded;
+  play.textContent = state.playing ? "Pause" : "Play";
+  if (state.loaded) {
+    motionStatus.textContent = `${state.time_s.toFixed(2)} / ${state.duration_s.toFixed(2)} s · ${state.frame_count} frames`;
+  }
 }
 
 function renderInstances() {
