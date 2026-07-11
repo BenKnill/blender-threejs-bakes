@@ -255,6 +255,32 @@ function resize() {
   renderer.setSize(width, height);
 }
 
+function applyQueryConfiguration() {
+  const params = new URLSearchParams(window.location.search);
+  const controlsByParameter = {
+    guides: "guides",
+    iterations: "iterations",
+    wetness: "moisture",
+    product: "product",
+    lift: "lift",
+    wind: "wind",
+  };
+  const preset = params.get("preset");
+  if (["straight", "wavy", "curly", "coily"].includes(preset)) {
+    document.querySelector("#preset").value = preset;
+  }
+  for (const [parameter, id] of Object.entries(controlsByParameter)) {
+    if (!params.has(parameter)) continue;
+    const input = document.querySelector(`#${id}`);
+    input.value = params.get(parameter);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  if (params.has("scenario")) {
+    document.querySelector("#scenario-label").textContent =
+      `Hair phase film · ${params.get("scenario")}`;
+  }
+}
+
 for (const [id, output, format] of [
   ["guides", "guide-output", (value) => value],
   ["iterations", "iteration-output", (value) => value],
@@ -313,4 +339,6 @@ renderer.domElement.addEventListener("pointerup", () => {
 
 window.addEventListener("resize", resize);
 resize();
+rebuildSolver();
+applyQueryConfiguration();
 rebuildSolver();
