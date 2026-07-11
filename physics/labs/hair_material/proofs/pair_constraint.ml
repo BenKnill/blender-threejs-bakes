@@ -50,6 +50,21 @@ let HAIR_CROWD_PRESSURE_PRESERVES_PAIR_SUM = prove
       position_a + position_b`,
   REAL_ARITH_TAC);;
 
+(** The uncapped production pressure rule moves each endpoint by
+    0.36 * (minimum_gap - distance).  Thus the scalar gap closes 0.72 of
+    its deficit without crossing the minimum.  The implementation also caps
+    the correction, so this is a coefficient-bearing design constraint rather
+    than a choreography fact. *)
+let HAIR_PRESSURE_STRENGTH_036_PREVENTS_GAP_OVERSHOOT = prove
+ (`!distance minimum_gap:real.
+      &0 <= distance /\ distance <= minimum_gap
+      ==> distance <=
+          distance + &18 / &25 * (minimum_gap - distance) /\
+          distance + &18 / &25 * (minimum_gap - distance) <= minimum_gap`,
+  REPEAT GEN_TAC THEN
+  DISCH_THEN(CONJUNCTS_THEN ASSUME_TAC) THEN
+  CONJ_TAC THEN ASM_REAL_ARITH_TAC);;
+
 (** The hero-film diagonal director maps normalized horizontal root position to
     the cut fraction 0.78 - 0.38 x.  Before integer segment rounding, every cut
     therefore remains between 40% and 78% of the strand length. *)

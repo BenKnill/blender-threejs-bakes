@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 import { HairSolver } from "./solver.js";
+import { advanceHairReplay, createReplayState, digestHairState } from "./replay.js";
 
 let renderFibersPerGuide = 9;
 
@@ -92,6 +93,14 @@ const filmDirection = {
   cutDone: false,
   cutStrands: new Set(),
 };
+const deterministicReplay = {
+  enabled: false,
+  autoplay: false,
+  targetStep: 0,
+  collectiveRulesEnabled: true,
+  state: createReplayState(),
+  config: { dt: 1 / 60, baseWind: 0.18, gust: 0, cut: "none", cutAt: 2.5, cutDuration: 1.4 },
+};
 
 function hairColor() {
   const colors = {
@@ -134,10 +143,12 @@ function rebuildSolver() {
     iterations,
     preset,
     renderFibersPerGuide,
+    collectiveRulesEnabled: deterministicReplay.collectiveRulesEnabled,
   });
   filmDirection.startTime = null;
   filmDirection.cutDone = false;
   filmDirection.cutStrands.clear();
+  deterministicReplay.state = createReplayState();
   applyMaterialControls();
   rebuildHairObject();
   status.textContent = `Running deterministic ${preset} preset.`;
@@ -289,9 +300,20 @@ function animate(now) {
   lastFrame = now;
   smoothedFps = smoothedFps * 0.92 + (1 / frameDt) * 0.08;
   if (!paused) {
-    updateFilmDirection(now);
     const start = performance.now();
-    solver.step(frameDt);
+    if (deterministicReplay.enabled) {
+      if (deterministicReplay.autoplay) {
+        advanceHairReplay(
+          solver,
+          deterministicReplay.config,
+          deterministicReplay.state,
+          deterministicReplay.state.step + 1
+        );
+      }
+    } else {
+      updateFilmDirection(now);
+      solver.step(frameDt);
+    }
     smoothedSolverMs = smoothedSolverMs * 0.9 + (performance.now() - start) * 0.1;
   }
   updateHairGeometry();
@@ -347,6 +369,23 @@ function applyQueryConfiguration() {
     controls.autoRotate = true;
     controls.autoRotateSpeed = Number(params.get("orbit") ?? 0.8);
   }
+  if (params.get("replay") === "1") {
+    deterministicReplay.enabled = true;
+    deterministicReplay.autoplay = params.get("autoplay") === "1";
+    deterministicReplay.targetStep = Math.max(
+      0,
+      Math.floor(Number(params.get("replaySteps") ?? 0))
+    );
+    deterministicReplay.collectiveRulesEnabled = params.get("operators") !== "off";
+    deterministicReplay.config = {
+      dt: 1 / Math.max(1, Number(params.get("simulationFps") ?? 60)),
+      baseWind: Number(params.get("wind") ?? 0.18),
+      gust: Math.max(0, Number(params.get("gust") ?? 0)),
+      cut: params.get("cut") === "diagonal" ? "diagonal" : "none",
+      cutAt: Math.max(0, Number(params.get("cutAt") ?? 2.5)),
+      cutDuration: Math.max(0.2, Number(params.get("cutDuration") ?? 1.4)),
+    };
+  }
 }
 
 for (const [id, output, format] of [
@@ -362,7 +401,8 @@ for (const [id, output, format] of [
     const outputElement = document.querySelector(`#${output}`);
     const formattedValue = format(Number(input.value));
     outputElement.textContent = formattedValue;
-    outputElement.setAttribute("aria-label", `${input.labels[0].textContent} ${formattedValue}`);
+    const controlLabel = input.closest("label")?.querySelector("span")?.textContent ?? id;
+    outputElement.setAttribute("aria-label", `${controlLabel} ${formattedValue}`);
     if (["moisture", "product", "lift", "wind"].includes(id)) applyMaterialControls();
   });
   if (["guides", "iterations"].includes(id)) input.addEventListener("change", rebuildSolver);
@@ -410,3 +450,35 @@ resize();
 rebuildSolver();
 applyQueryConfiguration();
 rebuildSolver();
+
+if (deterministicReplay.enabled && deterministicReplay.targetStep > 0) {
+  const replayResult = advanceHairReplay(
+    solver,
+    deterministicReplay.config,
+    deterministicReplay.state,
+    deterministicReplay.targetStep
+  );
+  updateHairGeometry();
+  status.textContent = `Replay step ${replayResult.step} · ${replayResult.state_digest}`;
+}
+
+window.hairMaterialReplay = {
+  advanceToStep(targetStep) {
+    if (!deterministicReplay.enabled) throw new Error("add replay=1 to enable fixed-step replay");
+    const result = advanceHairReplay(
+      solver,
+      deterministicReplay.config,
+      deterministicReplay.state,
+      targetStep
+    );
+    updateHairGeometry();
+    renderer.render(scene, camera);
+    return result;
+  },
+  digest() {
+    return digestHairState(solver);
+  },
+  receipt() {
+    return solver.receipt();
+  },
+};
