@@ -74,6 +74,10 @@ hair-material:
     ./scripts/serve.sh start
     @echo "http://127.0.0.1:8091/physics/labs/hair_material/demo/"
 
+# Package browser-captured anisotropic-hair frames and a ten-up comparison.
+hair-phase-videos output_root:
+    bash scripts/package_hair_phase_space_videos.sh {{output_root}}
+
 # Format everything in place — JS + Python
 format:
     npx prettier --write 'editor/**/*.{js,css,html}' 'physics/labs/contact_shell/demo/**/*.{js,css,html,json}' 'physics/labs/hair_material/demo/**/*.{js,css,html}'

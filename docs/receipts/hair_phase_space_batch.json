@@ -1,0 +1,43 @@
+{
+  "schema": "hair-phase-space-batch/1",
+  "generated_shelf": "physics/outputs/hair_phase_space_20260711T1650Z",
+  "tracked_scenario_manifest": "docs/receipts/hair_phase_space_scenarios.json",
+  "scenario_count": 10,
+  "individual_video": {
+    "codec": "h264",
+    "width": 1280,
+    "height": 720,
+    "duration_seconds": 4,
+    "frames": 96,
+    "fps": 24
+  },
+  "comparison_video": {
+    "path": "physics/outputs/hair_phase_space_20260711T1650Z/hair_phase_space_contact_sheet.mp4",
+    "width": 1920,
+    "height": 432,
+    "duration_seconds": 4,
+    "frames": 96,
+    "fps": 24
+  },
+  "observed_terminal_ranges": {
+    "persistent_clump_bonds": [5525, 10037],
+    "crowd_pressure_corrections": [0, 70],
+    "solver_ms": [15.03, 28.53],
+    "displayed_fps_during_capture": [34, 61],
+    "max_stretch_percent": [3.07, 12.63]
+  },
+  "workbench": {
+    "backend": "orbstack-criu",
+    "profile": "light",
+    "restore_seconds": 0.0,
+    "warm_attempt_seconds": 0.4,
+    "theorems_observed": 5,
+    "evidence": "warm semantic development evidence; videos are not theorem evidence"
+  },
+  "claim_boundary": {
+    "qualitative_browser_observation": true,
+    "pixel_deterministic": false,
+    "displayed_fps_includes_capture_overhead": true,
+    "large_media_tracked_by_git": false
+  }
+}

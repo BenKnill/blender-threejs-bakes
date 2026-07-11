@@ -1,0 +1,113 @@
+{
+  "schema": "hair-phase-space-scenarios/1",
+  "capture": {
+    "settle_seconds": 1.5,
+    "clip_seconds": 4,
+    "capture_fps": 12,
+    "frame_encoding": "jpeg",
+    "output_fps": 24,
+    "viewport": [1280, 720]
+  },
+  "scenarios": [
+    {
+      "id": "01_dry_wavy_slip",
+      "intent": "Low-viscosity axial slip in a sparse dry clump phase",
+      "preset": "wavy",
+      "wetness": 0,
+      "product": 0,
+      "lift": 0,
+      "wind": 0.46,
+      "iterations": 5
+    },
+    {
+      "id": "02_wet_wavy_clumps",
+      "intent": "Moisture-driven capture and coherent lock motion",
+      "preset": "wavy",
+      "wetness": 0.9,
+      "product": 0.1,
+      "lift": 0,
+      "wind": 0.3,
+      "iterations": 5
+    },
+    {
+      "id": "03_product_sculpted_wave",
+      "intent": "High hold plus section lift creates a styled yielding solid",
+      "preset": "wavy",
+      "wetness": 0.1,
+      "product": 0.9,
+      "lift": 0.46,
+      "wind": 0.52,
+      "iterations": 6
+    },
+    {
+      "id": "04_storm_breakup",
+      "intent": "Strong wind probes hysteretic bond release",
+      "preset": "wavy",
+      "wetness": 0.35,
+      "product": 0.2,
+      "lift": 0,
+      "wind": 1.2,
+      "iterations": 5
+    },
+    {
+      "id": "05_dry_curly_shear",
+      "intent": "Curvature recovery competes with transverse drag",
+      "preset": "curly",
+      "wetness": 0.05,
+      "product": 0.1,
+      "lift": 0.12,
+      "wind": 0.84,
+      "iterations": 6
+    },
+    {
+      "id": "06_wet_curly_locks",
+      "intent": "Dense hysteretic locks in a curly rest geometry",
+      "preset": "curly",
+      "wetness": 0.82,
+      "product": 0.45,
+      "lift": 0,
+      "wind": 0.38,
+      "iterations": 6
+    },
+    {
+      "id": "07_coily_product_hold",
+      "intent": "High recovery and product behave like a soft porous solid",
+      "preset": "coily",
+      "wetness": 0.3,
+      "product": 0.88,
+      "lift": 0.24,
+      "wind": 0.58,
+      "iterations": 7
+    },
+    {
+      "id": "08_straight_wet_sheet",
+      "intent": "Straight fibers test whether cohesion becomes an artificial sheet",
+      "preset": "straight",
+      "wetness": 0.9,
+      "product": 0.15,
+      "lift": 0,
+      "wind": 0.72,
+      "iterations": 5
+    },
+    {
+      "id": "09_coily_extreme_mix",
+      "intent": "Extreme wetness, hold, and wind stress every collective rule",
+      "preset": "coily",
+      "wetness": 1,
+      "product": 1,
+      "lift": 0.4,
+      "wind": 1.2,
+      "iterations": 8
+    },
+    {
+      "id": "10_density_pressure_stress",
+      "intent": "Maximum cohesion tests the minimum pore-gap pressure guard",
+      "preset": "wavy",
+      "wetness": 1,
+      "product": 1,
+      "lift": 0,
+      "wind": 0.16,
+      "iterations": 10
+    }
+  ]
+}
