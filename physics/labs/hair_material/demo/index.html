@@ -17,7 +17,7 @@
   <body>
     <main id="viewport" aria-label="Interactive hair material simulation"></main>
     <aside class="panel">
-      <div class="eyebrow" id="scenario-label">Box3D chain lab · issue #79</div>
+      <div class="eyebrow" id="scenario-label">Hair material instrument · issue #95</div>
       <h1>Hair Material Bench</h1>
       <p class="lede">
         Hundreds of coupled 3D guides behaving like a directed porous fluid, not seven animated
@@ -69,6 +69,8 @@
         <button id="reset">Reset groom</button>
         <button id="scissors" aria-pressed="false">Scissors: off</button>
         <button id="plane-cut">Cut to guide line</button>
+        <button id="comb-dry">Run dry comb</button>
+        <button id="comb-wet">Run wet comb</button>
         <button id="receipt">Copy receipt</button>
       </div>
 
@@ -104,7 +106,7 @@
             <dd id="metric-bonds">—</dd>
           </div>
           <div>
-            <dt>Capture / release</dt>
+            <dt>Capture / release (step · pass)</dt>
             <dd id="metric-hysteresis">—</dd>
           </div>
           <div>
@@ -128,6 +130,22 @@
             <dd id="metric-cuts">0</dd>
           </div>
           <div>
+            <dt>Comb peak force*</dt>
+            <dd id="metric-comb-force">0</dd>
+          </div>
+          <div>
+            <dt>Comb work*</dt>
+            <dd id="metric-comb-work">0</dd>
+          </div>
+          <div>
+            <dt>Comb travel</dt>
+            <dd id="metric-comb-travel">0.00 m</dd>
+          </div>
+          <div>
+            <dt>Assumptions</dt>
+            <dd id="metric-assumptions">—</dd>
+          </div>
+          <div>
             <dt>JS heap</dt>
             <dd id="metric-memory">unavailable</dd>
           </div>
@@ -138,7 +156,7 @@
         <strong>Boundary:</strong> CPU Verlet plus constraint projection; no strand self-contact or
         continuum claim. Up to 21 visible fibers can interpolate each mechanical guide. Anisotropic
         drag, hysteretic clumps, and crowd pressure use a bounded root-neighbor graph, not general
-        self-contact.
+        self-contact. *Comb force/work are unit-mass projection proxies, not calibrated N/J.
       </p>
       <div id="status" role="status">Running deterministic wavy preset.</div>
     </aside>

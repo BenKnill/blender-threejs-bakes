@@ -71,6 +71,24 @@ const guideLine = new THREE.Line(
 guideLine.computeLineDistances();
 scene.add(guideLine);
 
+const comb = new THREE.Group();
+const combMaterial = new THREE.MeshStandardMaterial({
+  color: 0x63e6ff,
+  emissive: 0x0b3951,
+  roughness: 0.24,
+  metalness: 0.5,
+});
+const combSpine = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.14, 1.75), combMaterial);
+combSpine.position.y = 1.42;
+comb.add(combSpine);
+for (let tooth = 0; tooth < 13; tooth += 1) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.045, 1.65, 0.045), combMaterial);
+  mesh.position.set(0, 0.56, -0.72 + tooth * 0.12);
+  comb.add(mesh);
+}
+comb.visible = false;
+scene.add(comb);
+
 let solver;
 let hair;
 let hairPositions;
@@ -152,6 +170,27 @@ function rebuildSolver() {
   applyMaterialControls();
   rebuildHairObject();
   status.textContent = `Running deterministic ${preset} preset.`;
+}
+
+function startCombPass(condition) {
+  const wet = condition === "wet";
+  document.querySelector("#moisture").value = wet ? "0.85" : "0.05";
+  document.querySelector("#product").value = wet ? "0.2" : "0";
+  document.querySelector("#moisture").dispatchEvent(new Event("input", { bubbles: true }));
+  document.querySelector("#product").dispatchEvent(new Event("input", { bubbles: true }));
+  deterministicReplay.enabled = true;
+  deterministicReplay.autoplay = true;
+  deterministicReplay.targetStep = 0;
+  deterministicReplay.config = {
+    dt: 1 / 60,
+    baseWind: 0.08,
+    gust: 0.08,
+    cut: "none",
+    comb: { startStep: 30, endStep: 150, startX: -1.35, endX: 1.35 },
+  };
+  rebuildSolver();
+  document.querySelector("#scenario-label").textContent = `Comb-through instrument · ${condition}`;
+  status.textContent = `${condition} comb pass: settling, then measuring steps 30–150.`;
 }
 
 function applyMaterialControls() {
@@ -277,7 +316,7 @@ function updateTelemetry(now) {
   document.querySelector("#metric-bonds").textContent =
     receipt.persistent_clump_bonds.toLocaleString();
   document.querySelector("#metric-hysteresis").textContent =
-    `${receipt.clump_captures_last_step} / ${receipt.clump_releases_last_step}`;
+    `${receipt.clump_captures_last_step} / ${receipt.clump_releases_last_step} · pass ${receipt.comb.clump_captures_during_window} / ${receipt.comb.clump_releases_during_window}`;
   document.querySelector("#metric-pressure").textContent =
     receipt.crowd_pressure_corrections_last_iteration.toLocaleString();
   document.querySelector("#metric-solver").textContent = `${smoothedSolverMs.toFixed(2)} ms`;
@@ -286,6 +325,15 @@ function updateTelemetry(now) {
     receipt.max_relative_stretch_error * 100
   ).toFixed(2)}%`;
   document.querySelector("#metric-cuts").textContent = receipt.cut_count.toLocaleString();
+  document.querySelector("#metric-comb-force").textContent =
+    receipt.comb.peak_reaction_proxy.toFixed(0);
+  document.querySelector("#metric-comb-work").textContent =
+    receipt.comb.accumulated_work_proxy.toFixed(0);
+  document.querySelector("#metric-comb-travel").textContent =
+    `${receipt.comb.accumulated_travel.toFixed(2)} m`;
+  const assumptionMetric = document.querySelector("#metric-assumptions");
+  assumptionMetric.textContent = receipt.assumption_receipt.status;
+  assumptionMetric.dataset.status = receipt.assumption_receipt.status;
   if (performance.memory) {
     document.querySelector("#metric-memory").textContent = `${(
       performance.memory.usedJSHeapSize /
@@ -317,6 +365,8 @@ function animate(now) {
     smoothedSolverMs = smoothedSolverMs * 0.9 + (performance.now() - start) * 0.1;
   }
   updateHairGeometry();
+  comb.visible = Boolean(deterministicReplay.config.comb);
+  comb.position.x = solver.comb.currentX;
   controls.update();
   renderer.render(scene, camera);
   updateTelemetry(now);
@@ -384,6 +434,15 @@ function applyQueryConfiguration() {
       cut: params.get("cut") === "diagonal" ? "diagonal" : "none",
       cutAt: Math.max(0, Number(params.get("cutAt") ?? 2.5)),
       cutDuration: Math.max(0.2, Number(params.get("cutDuration") ?? 1.4)),
+      comb:
+        params.get("comb") === "1"
+          ? {
+              startStep: Math.max(0, Number(params.get("combStart") ?? 30)),
+              endStep: Math.max(1, Number(params.get("combEnd") ?? 150)),
+              startX: -1.35,
+              endX: 1.35,
+            }
+          : undefined,
     };
   }
 }
@@ -425,6 +484,8 @@ document.querySelector("#scissors").addEventListener("click", (event) => {
     : "Orbit control restored.";
 });
 document.querySelector("#plane-cut").addEventListener("click", cutToGuideLine);
+document.querySelector("#comb-dry").addEventListener("click", () => startCombPass("dry"));
+document.querySelector("#comb-wet").addEventListener("click", () => startCombPass("wet"));
 document.querySelector("#receipt").addEventListener("click", async () => {
   await navigator.clipboard.writeText(JSON.stringify(solver.receipt(), null, 2));
   status.textContent = "Copied the current material and solver receipt.";
