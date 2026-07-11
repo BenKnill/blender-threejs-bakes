@@ -82,6 +82,11 @@ and a dense oracle on one idealized quadratic, plus a separate observational
 Box3D distance-joint trace. It produces deterministic CSV, JSON, and SVG
 artifacts without Blender. See [the chain-lab note](docs/JGS2_COMPLIANCE_LAB.md).
 
+The bounded [Box3D contact-shell lab](docs/BOX3D_CONTACT_SHELL.md) isolates the
+actual normal-clamp, softness, speculative-bias, and friction-projection algebra
+from whole-world physics claims. It pairs exact-real HOL development claims with
+public-API Box3D probes and deliberately does not modify the production solver.
+
 Before opening a change, run the local review gate:
 
 ```sh

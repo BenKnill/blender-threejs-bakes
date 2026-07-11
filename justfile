@@ -44,6 +44,10 @@ soft-ribbon:
 soft-ribbon-video: soft-ribbon
     bash scripts/render_soft_ribbon_animation.sh
 
+# Prove and probe the bounded Box3D contact-update shell.
+contact-shell:
+    bash scripts/build_contact_shell.sh
+
 # Format everything in place — JS + Python
 format:
     npx prettier --write 'editor/**/*.{js,css,html}'
