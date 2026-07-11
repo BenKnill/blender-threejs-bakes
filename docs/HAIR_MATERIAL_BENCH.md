@@ -102,9 +102,15 @@ hol-workbench/bin/prove \
 
 On the primary Mac this routed automatically through the live OrbStack CRIU
 `light` shelf. Restore/reuse took 0.000 seconds and the warm semantic attempt
-covering both theorems succeeded in 0.3 seconds. This is warm development
+covering all seven theorems succeeded in 0.3 seconds. This is warm development
 evidence, not a cold audit or a proof that the JavaScript implementation refines
 the HOL statements.
+
+The pressure suite now also pins the production coefficient `0.36 = 9 / 25`.
+`HAIR_PRESSURE_STRENGTH_036_PREVENTS_GAP_OVERSHOOT` proves that the symmetric
+uncapped update closes 72% of a scalar pore-gap deficit without crossing the
+minimum gap. Changing that coefficient now requires changing a theorem rather
+than merely refreshing a choreography receipt.
 
 The loop produced useful Workbench feedback: the first failed attempt identified
 the incorrect use of `REAL_RING` as a tactic without printing a transcript; later
@@ -147,3 +153,13 @@ but no general strand self-contact, torsional frame, comb teeth, detached
 cut-hair dynamics, or calibrated moisture chemistry. Nine visible fibers share
 each guide's mechanical state. The HOL theorems cover scalar conservation and
 threshold-ordering rules only.
+
+## Fixed-step replay
+
+`just hair-replay` runs the exact wet, product-heavy diagonal-cut comparison in
+Node and prints two 240-step receipts. The browser route accepts `replay=1`,
+`replaySteps=N`, and `operators=on|off`; it advances by exact 1/60-second solver
+steps and publishes the final digest in the status line. Digests quantize
+positions to `1e-6` world units before hashing, which matched Node and the
+browser in this exercise. This is semantic trajectory reproducibility, not a
+promise of byte-identical pixels across renderers.

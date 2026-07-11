@@ -1,0 +1,52 @@
+{
+  "schema": "hair-operator-ab-replay/1",
+  "issue": 92,
+  "simulation": {
+    "steps": 240,
+    "fixed_step_seconds": 0.016666666666666666,
+    "guides": 256,
+    "visible_fibers": 3840,
+    "wetness": 0.8,
+    "product": 0.65,
+    "cut": "diagonal"
+  },
+  "operators_on": {
+    "state_digest": "547042f48fd25cad",
+    "active_neighbor_contacts": 2634,
+    "persistent_clump_bonds": 2597,
+    "cohesion_corrections": 2582,
+    "max_relative_stretch_error": 0.08381004335892621
+  },
+  "operators_off": {
+    "state_digest": "2ec97438e6a4e9dc",
+    "active_neighbor_contacts": 0,
+    "persistent_clump_bonds": 0,
+    "cohesion_corrections": 0,
+    "max_relative_stretch_error": 0.011797718863168213
+  },
+  "digest": {
+    "algorithm": "FNV-1a 64",
+    "position_quantization_world_units": 0.000001,
+    "node_browser_match": true,
+    "pixel_deterministic": false
+  },
+  "film": {
+    "local_path": "physics/outputs/hair_operator_ab_20260711T1808Z/hair_operator_ab_comparison.mp4",
+    "duration_seconds": 4.083333,
+    "width": 544,
+    "height": 216,
+    "frames": 98,
+    "bytes": 75210,
+    "source_shelf_before_packaging_bytes_approx": 6606029,
+    "source_frames_retained": 0
+  },
+  "workbench": {
+    "backend": "orbstack-criu",
+    "profile": "light",
+    "restore_seconds": 0.0,
+    "successful_warm_attempt_seconds": 0.3,
+    "theorems_observed": 7,
+    "new_theorem": "HAIR_PRESSURE_STRENGTH_036_PREVENTS_GAP_OVERSHOOT",
+    "cold_audit": "not run; warm semantic development evidence only"
+  }
+}

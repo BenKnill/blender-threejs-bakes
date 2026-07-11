@@ -222,6 +222,7 @@ export class HairSolver {
     preset = "wavy",
     iterations = 5,
     renderFibersPerGuide = 9,
+    collectiveRulesEnabled = true,
   } = {}) {
     if (!(preset in MATERIAL_PRESETS)) throw new Error(`unknown material preset: ${preset}`);
     if (guideCount < 8 || segments < 4) throw new Error("hair solver resolution is too small");
@@ -230,6 +231,7 @@ export class HairSolver {
     this.particlesPerGuide = segments + 1;
     this.iterations = iterations;
     this.renderFibersPerGuide = Math.max(1, Math.floor(renderFibersPerGuide));
+    this.collectiveRulesEnabled = Boolean(collectiveRulesEnabled);
     this.preset = preset;
     this.material = { ...MATERIAL_PRESETS[preset] };
     this.particleCount = guideCount * this.particlesPerGuide;
@@ -365,12 +367,18 @@ export class HairSolver {
         this.previous[base + 2] = z;
       }
     }
-    this.#applyNeighborFriction();
-    this.#updateClumpBonds();
+    if (this.collectiveRulesEnabled) {
+      this.#applyNeighborFriction();
+      this.#updateClumpBonds();
+    } else {
+      this.activeNeighborContacts = 0;
+      this.clumpCaptures = 0;
+      this.clumpReleases = 0;
+    }
     for (let iteration = 0; iteration < this.iterations; iteration += 1) {
       this.#projectLengths();
       this.#projectRestCurvature();
-      this.#projectCollectivePairs();
+      if (this.collectiveRulesEnabled) this.#projectCollectivePairs();
       this.#projectSectionLift();
       this.#projectScalp();
       this.#pinRoots();
@@ -685,6 +693,7 @@ export class HairSolver {
       solver: "CPU Verlet plus distance and rest-curvature projections",
       collective_model:
         "bounded anisotropic friction, hysteretic clumps, cohesion, and crowd pressure",
+      collective_rules_enabled: this.collectiveRulesEnabled,
       continuum_hair_mechanics: false,
       strand_self_contact: false,
       dense_fibers_are_interpolated: true,

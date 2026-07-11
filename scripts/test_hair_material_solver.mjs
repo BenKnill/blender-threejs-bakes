@@ -12,6 +12,12 @@ import {
   projectPressurePair,
   updateClumpBond,
 } from "../physics/labs/hair_material/demo/solver.js";
+import {
+  advanceHairReplay,
+  createReplayState,
+  digestHairState,
+  runHairReplay,
+} from "../physics/labs/hair_material/demo/replay.js";
 
 function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} != ${expected}`);
@@ -110,6 +116,59 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
 {
   const solver = new HairSolver({ guideCount: 16, segments: 6, renderFibersPerGuide: 17 });
   assert.equal(solver.receipt().render_fiber_count, 272);
+}
+
+{
+  const config = {
+    solver: {
+      guideCount: 96,
+      segments: 8,
+      preset: "wavy",
+      iterations: 5,
+      collectiveRulesEnabled: true,
+    },
+    steps: 120,
+    dt: 1 / 60,
+    baseWind: 0.2,
+    gust: 0.45,
+    cut: "diagonal",
+    cutAt: 0.8,
+    cutDuration: 0.7,
+  };
+  const first = runHairReplay(config).result;
+  const second = runHairReplay(config).result;
+  assert.equal(first.state_digest, second.state_digest);
+  assert.deepEqual(first.receipt, second.receipt);
+  assert.equal(first.step, 120);
+  assert.ok(first.receipt.cut_count > 0);
+
+  const stagedSolver = new HairSolver(config.solver);
+  const stagedState = createReplayState();
+  advanceHairReplay(stagedSolver, config, stagedState, 60);
+  const staged = advanceHairReplay(stagedSolver, config, stagedState, 120);
+  assert.equal(staged.state_digest, first.state_digest);
+
+  const withoutOperators = runHairReplay({
+    ...config,
+    solver: { ...config.solver, collectiveRulesEnabled: false },
+  }).result;
+  assert.notEqual(withoutOperators.state_digest, first.state_digest);
+  assert.equal(withoutOperators.receipt.collective_rules_enabled, false);
+  assert.equal(withoutOperators.receipt.active_neighbor_contacts, 0);
+  assert.equal(withoutOperators.receipt.persistent_clump_bonds, 0);
+}
+
+{
+  const state = (position) => ({
+    positions: new Float64Array([position]),
+    previous: new Float64Array([0]),
+    activeSegments: new Uint16Array([1]),
+    cutCount: 0,
+    time: 0,
+    clumpBonds: new Set(),
+  });
+  assert.equal(digestHairState(state(1.0000001)), digestHairState(state(1.0000004)));
+  assert.notEqual(digestHairState(state(1.0000001)), digestHairState(state(1.0000021)));
 }
 
 {
