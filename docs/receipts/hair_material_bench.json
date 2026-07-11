@@ -11,16 +11,28 @@
     "displayed_fps_range": [104, 120],
     "guide_line_cut_strands": 395,
     "material_control_exercise": { "wetness": 0.65, "product": 0.55 },
-    "visible_fibers": 4608
+    "visible_fibers": 4608,
+    "anisotropic_rules_observation": {
+      "default_dry_clump_bonds": 4770,
+      "default_dry_cohesion_moves": 2495,
+      "capture_and_release_observed": true,
+      "solver_step_ms": 13.49,
+      "displayed_fps": 73,
+      "wetness_0_7_product_0_7_clump_bonds": 5078,
+      "wetness_0_7_product_0_7_displayed_fps": 72
+    }
   },
   "claim_boundary": {
     "continuum_hair_mechanics": false,
     "dense_fibers_are_interpolated": true,
     "bounded_root_neighbor_friction_cohesion": true,
+    "anisotropic_friction": true,
+    "hysteretic_clumps": true,
+    "local_crowd_pressure": true,
     "strand_self_contact": false,
     "torsional_rod_frames": false
   },
-  "schema": "hair-material-bench-receipt/2",
+  "schema": "hair-material-bench-receipt/3",
   "solver": {
     "default_iterations": 5,
     "default_segments_per_guide": 12,
@@ -30,8 +42,10 @@
       "rest second difference",
       "section lift",
       "ellipsoidal scalp collision",
-      "root-neighbor relative-velocity friction",
-      "root-neighbor capped cohesion",
+      "root-neighbor anisotropic relative-velocity friction",
+      "hysteretic clump capture and release",
+      "root-neighbor bonded cohesion",
+      "root-neighbor crowd pressure",
       "root pin"
     ]
   },
@@ -44,7 +58,10 @@
     "successful_attempt_seconds": 0.3,
     "theorems": [
       "HAIR_PAIR_CORRECTION_PRESERVES_MOMENT",
-      "HAIR_EQUAL_MASS_FRICTION_PRESERVES_VELOCITY_SUM"
+      "HAIR_EQUAL_MASS_FRICTION_PRESERVES_VELOCITY_SUM",
+      "HAIR_ANISOTROPIC_PAIR_EXCHANGE_PRESERVES_SUM",
+      "HAIR_CLUMP_CAPTURE_LIES_INSIDE_RELEASE_ENVELOPE",
+      "HAIR_CROWD_PRESSURE_PRESERVES_PAIR_SUM"
     ]
   }
 }

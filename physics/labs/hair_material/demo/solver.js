@@ -117,6 +117,50 @@ export function blendPairFriction(velocityA, velocityB, friction) {
   return [nextA, nextB];
 }
 
+export function blendPairAnisotropicFriction(
+  velocityA,
+  velocityB,
+  tangent,
+  axialFriction,
+  transverseFriction
+) {
+  const direction = normalize3(...tangent);
+  const axialBlend = Math.max(0, Math.min(1, axialFriction));
+  const transverseBlend = Math.max(0, Math.min(1, transverseFriction));
+  const relative = velocityB.map((value, axis) => value - velocityA[axis]);
+  const axialMagnitude = relative.reduce((sum, value, axis) => sum + value * direction[axis], 0);
+  const axial = direction.map((value) => value * axialMagnitude);
+  const correction = relative.map(
+    (value, axis) => 0.5 * (axial[axis] * axialBlend + (value - axial[axis]) * transverseBlend)
+  );
+  return [
+    velocityA.map((value, axis) => value + correction[axis]),
+    velocityB.map((value, axis) => value - correction[axis]),
+  ];
+}
+
+export function updateClumpBond(bonded, distance, captureRadius, releaseRadius) {
+  if (releaseRadius <= captureRadius) throw new Error("release radius must exceed capture radius");
+  return bonded ? distance < releaseRadius : distance < captureRadius;
+}
+
+export function projectPressurePair(
+  positionA,
+  positionB,
+  minimumGap,
+  strength,
+  maxCorrection = 0.01
+) {
+  const delta = positionB.map((value, axis) => value - positionA[axis]);
+  const distance = length3(...delta);
+  if (distance >= minimumGap || distance < 1e-12) {
+    return { active: false, correctionA: [0, 0, 0], correctionB: [0, 0, 0] };
+  }
+  const scale = Math.min(maxCorrection, (minimumGap - distance) * strength) / distance;
+  const correctionA = delta.map((value) => -value * scale);
+  return { active: true, correctionA, correctionB: correctionA.map((value) => -value) };
+}
+
 export function projectCohesionPair(
   positionA,
   positionB,
@@ -197,6 +241,10 @@ export class HairSolver {
     this.product = 0;
     this.activeNeighborContacts = 0;
     this.cohesionCorrections = 0;
+    this.pressureCorrections = 0;
+    this.clumpBonds = new Set();
+    this.clumpCaptures = 0;
+    this.clumpReleases = 0;
     this.#initialize();
     this.neighborPairs = this.#buildNeighborPairs(3);
   }
@@ -237,6 +285,9 @@ export class HairSolver {
     this.material = { ...MATERIAL_PRESETS[preset] };
     this.cutCount = 0;
     this.time = 0;
+    this.clumpBonds.clear();
+    this.clumpCaptures = 0;
+    this.clumpReleases = 0;
     this.#initialize();
     this.#refreshMaterial();
   }
@@ -277,6 +328,11 @@ export class HairSolver {
     const next = Math.max(1, Math.min(this.activeSegments[strand], Math.floor(segment)));
     if (next >= this.activeSegments[strand]) return false;
     this.activeSegments[strand] = next;
+    for (const key of this.clumpBonds) {
+      const [pairIndex, particle] = key.split(":").map(Number);
+      if (particle <= next) continue;
+      if (this.neighborPairs[pairIndex].includes(strand)) this.clumpBonds.delete(key);
+    }
     this.cutCount += 1;
     return true;
   }
@@ -303,10 +359,11 @@ export class HairSolver {
       }
     }
     this.#applyNeighborFriction();
+    this.#updateClumpBonds();
     for (let iteration = 0; iteration < this.iterations; iteration += 1) {
       this.#projectLengths();
       this.#projectRestCurvature();
-      this.#projectCohesion();
+      this.#projectCollectivePairs();
       this.#projectSectionLift();
       this.#projectScalp();
       this.#pinRoots();
@@ -350,7 +407,8 @@ export class HairSolver {
 
   #applyNeighborFriction() {
     const contactRadius = 0.14 + this.material.clump * 0.3;
-    const blend = this.material.friction * 0.16;
+    const axialBlend = this.material.friction * 0.045;
+    const transverseBlend = this.material.friction * 0.24;
     let contacts = 0;
     for (const [strandA, strandB] of this.neighborPairs) {
       const active = Math.min(this.activeSegments[strandA], this.activeSegments[strandB]);
@@ -373,7 +431,31 @@ export class HairSolver {
           this.positions[b + 1] - this.previous[b + 1],
           this.positions[b + 2] - this.previous[b + 2],
         ];
-        const [nextA, nextB] = blendPairFriction(velocityA, velocityB, blend);
+        const priorA = this.index(strandA, particle - 1);
+        const nextIndexA = this.index(strandA, Math.min(active, particle + 1));
+        const priorB = this.index(strandB, particle - 1);
+        const nextIndexB = this.index(strandB, Math.min(active, particle + 1));
+        const tangent = normalize3(
+          this.positions[nextIndexA] -
+            this.positions[priorA] +
+            this.positions[nextIndexB] -
+            this.positions[priorB],
+          this.positions[nextIndexA + 1] -
+            this.positions[priorA + 1] +
+            this.positions[nextIndexB + 1] -
+            this.positions[priorB + 1],
+          this.positions[nextIndexA + 2] -
+            this.positions[priorA + 2] +
+            this.positions[nextIndexB + 2] -
+            this.positions[priorB + 2]
+        );
+        const [nextA, nextB] = blendPairAnisotropicFriction(
+          velocityA,
+          velocityB,
+          tangent,
+          axialBlend,
+          transverseBlend
+        );
         for (let axis = 0; axis < 3; axis += 1) {
           this.previous[a + axis] = this.positions[a + axis] - nextA[axis];
           this.previous[b + axis] = this.positions[b + axis] - nextB[axis];
@@ -384,19 +466,66 @@ export class HairSolver {
     this.activeNeighborContacts = contacts;
   }
 
-  #projectCohesion() {
-    const strength = this.material.clump * 0.055;
-    const contactRadius = 0.16 + this.material.clump * 0.42;
-    const targetGap = 0.035 + (1 - this.material.clump) * 0.075;
-    let corrections = 0;
-    for (const [strandA, strandB] of this.neighborPairs) {
+  #updateClumpBonds() {
+    const captureRadius = 0.075 + this.material.clump * 0.14;
+    const releaseRadius = captureRadius + 0.035 + this.material.clump * 0.035;
+    let captures = 0;
+    let releases = 0;
+    for (let pairIndex = 0; pairIndex < this.neighborPairs.length; pairIndex += 1) {
+      const [strandA, strandB] = this.neighborPairs[pairIndex];
       const active = Math.min(this.activeSegments[strandA], this.activeSegments[strandB]);
       for (let particle = 2; particle <= active; particle += 1) {
         const a = this.index(strandA, particle);
         const b = this.index(strandB, particle);
+        const distance = length3(
+          this.positions[b] - this.positions[a],
+          this.positions[b + 1] - this.positions[a + 1],
+          this.positions[b + 2] - this.positions[a + 2]
+        );
+        const key = `${pairIndex}:${particle}`;
+        const wasBonded = this.clumpBonds.has(key);
+        const isBonded = updateClumpBond(wasBonded, distance, captureRadius, releaseRadius);
+        if (isBonded && !wasBonded) {
+          this.clumpBonds.add(key);
+          captures += 1;
+        } else if (!isBonded && wasBonded) {
+          this.clumpBonds.delete(key);
+          releases += 1;
+        }
+      }
+    }
+    this.clumpCaptures = captures;
+    this.clumpReleases = releases;
+  }
+
+  #projectCollectivePairs() {
+    const strength = this.material.clump * 0.055;
+    const contactRadius = 0.29 + this.material.clump * 0.28;
+    const targetGap = 0.035 + (1 - this.material.clump) * 0.075;
+    const minimumGap = Math.max(0.024, targetGap * 0.58);
+    let corrections = 0;
+    let pressureCorrections = 0;
+    for (let pairIndex = 0; pairIndex < this.neighborPairs.length; pairIndex += 1) {
+      const [strandA, strandB] = this.neighborPairs[pairIndex];
+      const active = Math.min(this.activeSegments[strandA], this.activeSegments[strandB]);
+      for (let particle = 2; particle <= active; particle += 1) {
+        const a = this.index(strandA, particle);
+        const b = this.index(strandB, particle);
+        const positionA = [this.positions[a], this.positions[a + 1], this.positions[a + 2]];
+        const positionB = [this.positions[b], this.positions[b + 1], this.positions[b + 2]];
+        const pressure = projectPressurePair(positionA, positionB, minimumGap, 0.36);
+        if (pressure.active) {
+          for (let axis = 0; axis < 3; axis += 1) {
+            this.positions[a + axis] += pressure.correctionA[axis];
+            this.positions[b + axis] += pressure.correctionB[axis];
+          }
+          pressureCorrections += 1;
+          continue;
+        }
+        if (!this.clumpBonds.has(`${pairIndex}:${particle}`)) continue;
         const result = projectCohesionPair(
-          [this.positions[a], this.positions[a + 1], this.positions[a + 2]],
-          [this.positions[b], this.positions[b + 1], this.positions[b + 2]],
+          positionA,
+          positionB,
           targetGap,
           contactRadius,
           strength
@@ -410,6 +539,7 @@ export class HairSolver {
       }
     }
     this.cohesionCorrections = corrections;
+    this.pressureCorrections = pressureCorrections;
   }
 
   #projectLengths() {
@@ -541,8 +671,13 @@ export class HairSolver {
       root_neighbor_pairs: this.neighborPairs.length,
       active_neighbor_contacts: this.activeNeighborContacts,
       cohesion_corrections_last_iteration: this.cohesionCorrections,
+      crowd_pressure_corrections_last_iteration: this.pressureCorrections,
+      persistent_clump_bonds: this.clumpBonds.size,
+      clump_captures_last_step: this.clumpCaptures,
+      clump_releases_last_step: this.clumpReleases,
       solver: "CPU Verlet plus distance and rest-curvature projections",
-      collective_model: "bounded root-neighbor friction and cohesion",
+      collective_model:
+        "bounded anisotropic friction, hysteretic clumps, cohesion, and crowd pressure",
       continuum_hair_mechanics: false,
       strand_self_contact: false,
       dense_fibers_are_interpolated: true,
