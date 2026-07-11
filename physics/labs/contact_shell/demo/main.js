@@ -3,52 +3,47 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 const state = {
   fixture: null,
   experiment: "energy",
-  progress: 0,
-  twin: "slow",
+  progress: 1,
   frictionDemand: { x: 3, y: 4 },
-  animationFrame: null,
   frictionDragging: false,
+  animationFrame: null,
 };
 
 const elements = {
-  kicker: document.querySelector("#stage-kicker"),
-  title: document.querySelector("#stage-title"),
-  description: document.querySelector("#stage-description"),
+  number: document.querySelector("#stage-number"),
+  question: document.querySelector("#stage-question"),
+  takeaway: document.querySelector("#stage-takeaway"),
   readout: document.querySelector("#readout"),
   actions: document.querySelector("#stage-actions"),
+  technical: document.querySelector("#technical-content"),
   visual: document.querySelector("#contact-visual"),
   content: document.querySelector("#visual-content"),
   visualTitle: document.querySelector("#visual-title"),
   visualDescription: document.querySelector("#visual-description"),
-  caption: document.querySelector("#visual-caption"),
-  evidenceNote: document.querySelector("#evidence-note"),
 };
 
-const descriptions = {
+const copy = {
   energy: {
-    kicker: "PUBLIC BOX3D PROBE · P1",
-    title: "Overlap becomes motion.",
-    description:
-      "With gravity disabled, the solver pushes an interpenetrating cube away from the floor. Its translational kinetic energy rises from exactly zero.",
+    number: "EXPERIMENT 1 · MEASURED IN BOX3D",
+    question: "Can a resting box gain speed?",
+    answer: "Yes. Correcting an overlap launches it upward.",
   },
   threshold: {
-    kicker: "PUBLIC BOX3D PROBE · P2",
-    title: "Two thousandths split the future.",
-    description:
-      "The saved approach speed is compared with a strict 1 m/s restitution threshold. The slower twin keeps falling; the faster twin rebounds.",
+    number: "EXPERIMENT 2 · MEASURED IN BOX3D",
+    question: "Can 0.002 m/s decide a bounce?",
+    answer: "Yes. One box keeps falling; the other rebounds.",
   },
   friction: {
-    kicker: "MODEL + HOL SHELL · C5 / P3",
-    title: "Friction lives inside a disk.",
-    description:
-      "Drag the demand vector anywhere. The contact shell preserves demands inside the radius and projects larger ones back to its boundary.",
+    number: "EXPERIMENT 3 · MODEL + BOX3D CHECK",
+    question: "What if we ask for too much friction?",
+    answer: "The solver supplies only the maximum allowed amount.",
   },
 };
 
-function svg(tag, attributes = {}, text = null) {
+function svg(tag, attributes = {}, label = null) {
   const node = document.createElementNS(SVG_NS, tag);
   Object.entries(attributes).forEach(([name, value]) => node.setAttribute(name, String(value)));
-  if (text !== null) node.textContent = text;
+  if (label !== null) node.textContent = label;
   return node;
 }
 
@@ -56,381 +51,318 @@ function line(parent, x1, y1, x2, y2, attributes = {}) {
   parent.append(svg("line", { x1, y1, x2, y2, ...attributes }));
 }
 
-function text(parent, x, y, value, attributes = {}) {
-  parent.append(svg("text", { x, y, ...attributes }, value));
+function text(parent, x, y, label, attributes = {}) {
+  parent.append(svg("text", { x, y, ...attributes }, label));
 }
 
-function format(value, digits = 4) {
-  if (value === 0) return "0";
-  return Number(value).toFixed(digits);
+function button(label, onClick) {
+  const control = document.createElement("button");
+  control.type = "button";
+  control.className = "primary-action";
+  control.textContent = label;
+  control.addEventListener("click", onClick);
+  return control;
 }
 
 function setReadout(items) {
   elements.readout.replaceChildren();
-  items.forEach(([label, value]) => {
-    const wrapper = document.createElement("div");
-    const term = document.createElement("dt");
-    const definition = document.createElement("dd");
-    term.textContent = label;
-    definition.textContent = value;
-    wrapper.append(term, definition);
-    elements.readout.append(wrapper);
+  items.forEach(([label, value, tone = ""]) => {
+    const item = document.createElement("p");
+    if (tone) item.classList.add(tone);
+    const name = document.createElement("span");
+    const result = document.createElement("strong");
+    name.textContent = label;
+    result.textContent = value;
+    item.append(name, result);
+    elements.readout.append(item);
   });
 }
 
-function setActions(children) {
-  elements.actions.replaceChildren(...children);
+function setTechnical(paragraphs) {
+  elements.technical.replaceChildren();
+  paragraphs.forEach((paragraph) => {
+    const node = document.createElement("p");
+    node.textContent = paragraph;
+    elements.technical.append(node);
+  });
 }
 
-function button(label, onClick, className = "") {
-  const control = document.createElement("button");
-  control.type = "button";
-  control.textContent = label;
-  control.className = className;
-  control.addEventListener("click", onClick);
-  return control;
+function floor(parent, x, y, width) {
+  parent.append(
+    svg("rect", {
+      x,
+      y,
+      width,
+      height: 55,
+      fill: "rgb(92 225 220 / 10%)",
+    })
+  );
+  line(parent, x, y, x + width, y, { stroke: "var(--cyan)", "stroke-width": 2 });
+}
+
+function cube(parent, x, y, fill, label) {
+  parent.append(
+    svg("rect", {
+      x,
+      y,
+      width: 112,
+      height: 112,
+      fill,
+      stroke: "var(--paper)",
+      "stroke-width": 1,
+    })
+  );
+  text(parent, x + 56, y + 62, label, {
+    fill: "var(--ink)",
+    "font-size": 14,
+    "text-anchor": "middle",
+  });
 }
 
 function renderEnergy() {
   const data = state.fixture.energy;
   const t = state.progress;
-  const eased = 1 - (1 - t) ** 3;
-  const cubeY = 245 - eased * 74;
-  const energy = data.energy_after * eased ** 2;
-  const velocity = data.post_vy * eased;
-
-  elements.visualTitle.textContent = "Energetic overlap recovery";
-  elements.visualDescription.textContent =
-    "An overlapped cube moves upward over one measured Box3D step while its kinetic energy meter increases.";
-  elements.caption.textContent = `MEASURED SUBSTEP · ${(data.dt * 1000 * t).toFixed(2)} / ${(data.dt * 1000).toFixed(2)} MS`;
-
   const group = svg("g");
-  group.append(svg("rect", { x: 40, y: 315, width: 680, height: 110, fill: "url(#floor-glow)" }));
-  line(group, 40, 315, 720, 315, { stroke: "var(--cyan)", "stroke-width": 2 });
-  for (let x = 55; x <= 710; x += 38) {
-    line(group, x, 315, x - 36, 370, { stroke: "var(--cyan-dim)", "stroke-width": 1 });
-  }
-  text(group, 54, 402, "STATIC FLOOR", { fill: "var(--muted-paper)", "font-size": 12 });
 
-  const overlap = Math.max(0, cubeY + 144 - 315);
-  if (overlap > 0.5) {
-    group.append(
-      svg("rect", {
-        x: 260,
-        y: 315 - overlap,
-        width: 144,
-        height: overlap,
-        fill: "var(--coral)",
-        opacity: 0.72,
-      })
-    );
-    text(group, 417, 310, `OVERLAP ${(overlap / 144).toFixed(2)} m`, {
-      fill: "var(--coral)",
-      "font-size": 11,
-      "text-anchor": "start",
-    });
-  }
+  elements.visualTitle.textContent = "A resting overlap becomes upward motion";
+  elements.visualDescription.textContent =
+    "Before and after panels show a resting box partly inside the floor, then moving upward after one measured step.";
 
-  group.append(
-    svg("rect", {
-      x: 260,
-      y: cubeY,
-      width: 144,
-      height: 144,
-      fill: "url(#cube-face)",
-      stroke: "var(--paper)",
-      "stroke-width": 1,
-    })
-  );
-  line(group, 260, cubeY, 285, cubeY - 22, { stroke: "var(--paper)" });
-  line(group, 404, cubeY, 429, cubeY - 22, { stroke: "var(--paper)" });
-  line(group, 285, cubeY - 22, 429, cubeY - 22, { stroke: "var(--paper)" });
-  text(group, 332, cubeY + 77, "1 kg", {
-    fill: "var(--ink)",
-    "font-size": 14,
-    "text-anchor": "middle",
-  });
-
-  if (velocity > 0.001) {
-    line(group, 468, cubeY + 72, 468, cubeY + 72 - velocity * 330, {
-      stroke: "var(--cyan)",
-      "stroke-width": 3,
-      "marker-end": "url(#arrow-cyan)",
-    });
-    text(group, 482, cubeY + 55, `v = ${velocity.toFixed(3)} m/s`, {
-      fill: "var(--cyan)",
-      "font-size": 12,
-    });
-  }
-
-  text(group, 548, 118, "KINETIC ENERGY", {
+  text(group, 190, 48, "BEFORE", {
     fill: "var(--muted-paper)",
-    "font-size": 11,
-  });
-  group.append(
-    svg("rect", {
-      x: 548,
-      y: 142,
-      width: 118,
-      height: 178,
-      fill: "none",
-      stroke: "var(--line)",
-    })
-  );
-  const barHeight = (energy / data.energy_after) * 178;
-  group.append(
-    svg("rect", {
-      x: 548,
-      y: 320 - barHeight,
-      width: 118,
-      height: barHeight,
-      fill: "var(--coral)",
-    })
-  );
-  text(group, 607, 345, `${energy.toFixed(5)} J`, {
-    fill: "var(--paper)",
-    "font-size": 14,
+    "font-size": 13,
     "text-anchor": "middle",
   });
-  elements.content.replaceChildren(group);
-
-  setReadout([
-    ["energy before", `${format(data.energy_before)} J`],
-    ["energy after", `${data.energy_after.toFixed(8)} J`],
-    ["post velocity", `${data.post_vy.toFixed(6)} m/s`],
-    ["contact points", String(data.contact_points)],
-  ]);
-
-  const replay = button(
-    "Replay substep",
-    () => {
-      state.progress = 0;
-      animateProgress(renderEnergy);
-    },
-    "is-primary"
-  );
-  const label = document.createElement("label");
-  label.className = "timeline-control";
-  label.textContent = "SCRUB SUBSTEP";
-  const range = document.createElement("input");
-  range.type = "range";
-  range.min = "0";
-  range.max = "1";
-  range.step = "0.001";
-  range.value = String(t);
-  range.setAttribute("aria-label", "Substep progress");
-  range.addEventListener("input", () => {
-    cancelAnimation();
-    state.progress = Number(range.value);
-    renderEnergy();
-  });
-  label.append(range);
-  setActions([replay, label]);
-}
-
-function renderThreshold() {
-  const data = state.fixture.threshold;
-  const selected = data[state.twin];
-  const t = state.progress;
-  elements.visualTitle.textContent = "Restitution threshold twins";
-  elements.visualDescription.textContent =
-    "Two cubes approach identical floors at nearly identical speeds; only the faster twin rebounds.";
-  elements.caption.textContent = "MEASURED PUBLIC-API OUTCOMES · RESTITUTION THRESHOLD 1.000 M/S";
-
-  const group = svg("g");
-  const twins = [
-    { key: "slow", x: 215, label: "SLOW TWIN", color: "var(--yellow)" },
-    { key: "fast", x: 545, label: "FAST TWIN", color: "var(--coral)" },
-  ];
-  line(group, 60, 340, 700, 340, { stroke: "var(--cyan)", "stroke-width": 2 });
-  line(group, 380, 65, 380, 395, { stroke: "var(--line)", "stroke-width": 1 });
-  twins.forEach((twin) => {
-    const sample = data[twin.key];
-    const outgoing = state.progress > 0.48;
-    const phase = outgoing ? (state.progress - 0.48) / 0.52 : state.progress / 0.48;
-    const incomingY = 112 + phase * 154;
-    const outgoingDistance = Math.abs(sample.post_vy) * 105 * phase;
-    const y = outgoing
-      ? twin.key === "fast"
-        ? 266 - outgoingDistance
-        : 266 + outgoingDistance
-      : incomingY;
-    const selectedOpacity = state.twin === twin.key ? 1 : 0.35;
-    group.append(
-      svg("rect", {
-        x: twin.x - 56,
-        y,
-        width: 112,
-        height: 74,
-        fill: twin.color,
-        opacity: selectedOpacity,
-      })
-    );
-    text(group, twin.x, y + 44, twin.key === "slow" ? "−0.999" : "−1.001", {
-      fill: "var(--ink)",
-      "font-size": 15,
-      "text-anchor": "middle",
-      opacity: selectedOpacity,
-    });
-    text(group, twin.x, 84, twin.label, {
-      fill: twin.color,
-      "font-size": 12,
-      "text-anchor": "middle",
-      opacity: selectedOpacity,
-    });
-    text(group, twin.x, 382, `${sample.post_vy > 0 ? "+" : ""}${sample.post_vy.toFixed(6)} m/s`, {
-      fill: "var(--paper)",
-      "font-size": 13,
-      "text-anchor": "middle",
-      opacity: selectedOpacity,
-    });
-  });
-  text(group, 380, 428, "THE SAME FLOOR · THE SAME MATERIAL · Δv = 0.002 m/s", {
+  text(group, 710, 48, "AFTER ONE STEP", {
     fill: "var(--muted-paper)",
-    "font-size": 11,
+    "font-size": 13,
     "text-anchor": "middle",
   });
-  elements.content.replaceChildren(group);
 
-  setReadout([
-    ["selected twin", state.twin],
-    ["saved approach", `${selected.saved_vn.toFixed(6)} m/s`],
-    ["post velocity", `${selected.post_vy > 0 ? "+" : ""}${selected.post_vy.toFixed(6)} m/s`],
-    ["branch", selected.saved_vn < -data.speed ? "restitution" : "no restitution"],
-  ]);
+  floor(group, 50, 292, 280);
+  cube(group, 134, 214, "var(--coral)", "at rest");
+  group.append(svg("rect", { x: 134, y: 292, width: 112, height: 34, fill: "var(--coral)" }));
+  text(group, 190, 374, "partly inside floor", {
+    fill: "var(--coral)",
+    "font-size": 13,
+    "text-anchor": "middle",
+  });
 
-  const slow = button("−0.999 slow", () => selectTwin("slow"), "twin-choice");
-  const fast = button("−1.001 fast", () => selectTwin("fast"), "twin-choice");
-  slow.classList.toggle("is-active", state.twin === "slow");
-  fast.classList.toggle("is-active", state.twin === "fast");
-  slow.setAttribute("aria-pressed", String(state.twin === "slow"));
-  fast.setAttribute("aria-pressed", String(state.twin === "fast"));
-  const replay = button(
-    "Drop twins",
-    () => {
-      state.progress = 0;
-      animateProgress(renderThreshold);
-    },
-    "is-primary"
-  );
-  setActions([slow, fast, replay]);
-}
-
-function selectTwin(twin) {
-  state.twin = twin;
-  state.progress = 1;
-  renderThreshold();
-}
-
-function renderFriction() {
-  const data = state.fixture.friction;
-  const oracle = state.fixture.oracle;
-  const center = { x: 380, y: 230 };
-  const scale = 62;
-  const demand = state.frictionDemand;
-  const demandNorm = Math.hypot(demand.x, demand.y);
-  const demoRadius = oracle.friction_norm;
-  const responseScale = demandNorm > demoRadius ? demoRadius / demandNorm : 1;
-  const response = { x: demand.x * responseScale, y: demand.y * responseScale };
-  const responseNorm = Math.hypot(response.x, response.y);
-
-  elements.visualTitle.textContent = "Friction impulse projection";
-  elements.visualDescription.textContent =
-    "A draggable demand vector is clamped to a circular friction bound; the measured Box3D impulse is also marked inside its own radius.";
-  elements.caption.textContent = "DRAG THE CORAL DEMAND HANDLE · RESPONSE IS THE CYAN VECTOR";
-
-  const group = svg("g");
-  group.append(
-    svg("circle", {
-      cx: center.x,
-      cy: center.y,
-      r: demoRadius * scale,
-      fill: "rgb(92 225 220 / 7%)",
-      stroke: "var(--cyan)",
-      "stroke-width": 2,
-    })
-  );
-  line(group, 90, center.y, 670, center.y, { stroke: "var(--line)" });
-  line(group, center.x, 35, center.x, 425, { stroke: "var(--line)" });
-  text(group, center.x + 8, 54, "t₂", { fill: "var(--muted-paper)", "font-size": 12 });
-  text(group, 652, center.y - 10, "t₁", { fill: "var(--muted-paper)", "font-size": 12 });
-  text(group, center.x, 86, "μ λₙ", {
-    fill: "var(--cyan)",
+  line(group, 390, 236, 510, 236, {
+    stroke: "var(--muted-paper)",
+    "stroke-width": 2,
+    "marker-end": "url(#arrow-cyan)",
+  });
+  text(group, 450, 216, "33 ms", {
+    fill: "var(--muted-paper)",
     "font-size": 12,
     "text-anchor": "middle",
   });
 
-  const measuredAngle = -0.72;
-  const measuredRatio = data.friction_impulse / data.radius;
-  const measuredX = center.x + Math.cos(measuredAngle) * demoRadius * scale * measuredRatio;
-  const measuredY = center.y + Math.sin(measuredAngle) * demoRadius * scale * measuredRatio;
-  group.append(
-    svg("circle", {
-      cx: measuredX,
-      cy: measuredY,
-      r: 7,
-      fill: "var(--yellow)",
-      stroke: "var(--ink)",
-      "stroke-width": 2,
+  floor(group, 570, 292, 280);
+  const liftedY = 180 - t * 35;
+  cube(group, 654, liftedY, "var(--paper)", "moving");
+  if (t > 0.05) {
+    line(group, 790, liftedY + 70, 790, liftedY + 20, {
+      stroke: "var(--cyan)",
+      "stroke-width": 4,
+      "marker-end": "url(#arrow-cyan)",
+    });
+    text(group, 710, 374, "upward at 0.223 m/s", {
+      fill: "var(--cyan)",
+      "font-size": 13,
+      "text-anchor": "middle",
+    });
+  }
+
+  elements.content.replaceChildren(group);
+  elements.actions.replaceChildren(
+    button("Replay before → after", () => {
+      state.progress = 0;
+      animate(renderEnergy);
     })
   );
-  text(group, measuredX + 13, measuredY - 10, "BOX3D PROBE", {
-    fill: "var(--paper)",
-    "font-size": 10,
+  setReadout([
+    ["speed before", "0 m/s"],
+    ["speed after", `${data.post_vy.toFixed(3)} m/s upward`, "positive"],
+  ]);
+  setTechnical([
+    `Native probe: translational kinetic energy rose from 0 to ${data.energy_after.toFixed(8)} J with gravity disabled.`,
+    `This is fixture observation P1 against the pinned Box3D checkout, not a claim that every contact adds energy.`,
+  ]);
+}
+
+function renderThreshold() {
+  const data = state.fixture.threshold;
+  const t = state.progress;
+  const group = svg("g");
+
+  elements.visualTitle.textContent = "Nearly identical approach speeds produce opposite outcomes";
+  elements.visualDescription.textContent =
+    "Two side-by-side boxes approach at 0.999 and 1.001 metres per second. Only the faster box rebounds.";
+
+  const samples = [
+    {
+      x: 245,
+      speed: "0.999 m/s",
+      result: "NO BOUNCE",
+      post: "still downward",
+      color: "var(--yellow)",
+      velocity: data.slow.post_vy,
+    },
+    {
+      x: 655,
+      speed: "1.001 m/s",
+      result: "BOUNCE",
+      post: "now upward",
+      color: "var(--coral)",
+      velocity: data.fast.post_vy,
+    },
+  ];
+
+  samples.forEach((sample) => {
+    floor(group, sample.x - 155, 300, 310);
+    const beforeImpact = t < 0.48;
+    const phase = beforeImpact ? t / 0.48 : (t - 0.48) / 0.52;
+    const y = beforeImpact
+      ? 86 + phase * 102
+      : sample.velocity > 0
+        ? 188 - phase * 70
+        : 188 + phase * 10;
+    cube(group, sample.x - 56, y, sample.color, sample.speed);
+    if (!beforeImpact) {
+      text(group, sample.x, 365, sample.result, {
+        fill: sample.color,
+        "font-size": 18,
+        "font-weight": 700,
+        "text-anchor": "middle",
+      });
+      text(group, sample.x, 391, sample.post, {
+        fill: "var(--paper)",
+        "font-size": 13,
+        "text-anchor": "middle",
+      });
+    }
   });
 
-  const demandEnd = {
-    x: center.x + demand.x * scale,
-    y: center.y - demand.y * scale,
+  line(group, 450, 56, 450, 392, { stroke: "var(--line)", "stroke-width": 1 });
+  text(group, 450, 36, "ONLY 0.002 m/s APART", {
+    fill: "var(--cyan)",
+    "font-size": 13,
+    "text-anchor": "middle",
+  });
+  elements.content.replaceChildren(group);
+  elements.actions.replaceChildren(
+    button("Replay both impacts", () => {
+      state.progress = 0;
+      animate(renderThreshold);
+    })
+  );
+  setReadout([
+    ["just below limit", "keeps falling"],
+    ["just above limit", "bounces upward", "positive"],
+  ]);
+  setTechnical([
+    `The configured restitution threshold is ${data.speed.toFixed(3)} m/s. Saved approach speeds were ${Math.abs(data.slow.saved_vn).toFixed(6)} and ${Math.abs(data.fast.saved_vn).toFixed(6)} m/s.`,
+    `Native probe P2 observed post-step vertical velocities ${data.slow.post_vy.toFixed(6)} and +${data.fast.post_vy.toFixed(6)} m/s.`,
+  ]);
+}
+
+function renderFriction() {
+  const oracle = state.fixture.oracle;
+  const native = state.fixture.friction;
+  const center = { x: 450, y: 260 };
+  const scale = 55;
+  const limit = oracle.friction_norm;
+  const request = state.frictionDemand;
+  const requested = Math.hypot(request.x, request.y);
+  const clamp = requested > limit ? limit / requested : 1;
+  const supplied = { x: request.x * clamp, y: request.y * clamp };
+  const suppliedNorm = Math.hypot(supplied.x, supplied.y);
+  const requestEnd = { x: center.x + request.x * scale, y: center.y - request.y * scale };
+  const suppliedEnd = {
+    x: center.x + supplied.x * scale,
+    y: center.y - supplied.y * scale,
   };
-  const responseEnd = {
-    x: center.x + response.x * scale,
-    y: center.y - response.y * scale,
-  };
-  line(group, center.x, center.y, demandEnd.x, demandEnd.y, {
+  const group = svg("g");
+
+  elements.visualTitle.textContent = "Requested friction is capped at a fixed limit";
+  elements.visualDescription.textContent =
+    "A draggable requested sideways push is shown as a dashed line. The friction actually supplied never leaves the labelled limit circle.";
+
+  group.append(
+    svg("circle", {
+      cx: center.x,
+      cy: center.y,
+      r: limit * scale,
+      fill: "rgb(92 225 220 / 8%)",
+      stroke: "var(--cyan)",
+      "stroke-width": 3,
+    })
+  );
+  text(group, center.x, 132, "MAXIMUM FRICTION", {
+    fill: "var(--cyan)",
+    "font-size": 14,
+    "text-anchor": "middle",
+  });
+
+  line(group, center.x, center.y, requestEnd.x, requestEnd.y, {
     stroke: "var(--coral)",
-    "stroke-width": 2,
-    "stroke-dasharray": "8 7",
+    "stroke-width": 3,
+    "stroke-dasharray": "9 8",
     "marker-end": "url(#arrow-coral)",
   });
-  line(group, center.x, center.y, responseEnd.x, responseEnd.y, {
+  line(group, center.x, center.y, suppliedEnd.x, suppliedEnd.y, {
     stroke: "var(--cyan)",
-    "stroke-width": 4,
+    "stroke-width": 6,
     "marker-end": "url(#arrow-cyan)",
   });
+  text(group, requestEnd.x, requestEnd.y - 24, "REQUESTED", {
+    fill: "var(--coral)",
+    "font-size": 13,
+    "text-anchor": "middle",
+  });
+  text(group, suppliedEnd.x - 18, suppliedEnd.y + 28, "SUPPLIED", {
+    fill: "var(--cyan)",
+    "font-size": 13,
+    "text-anchor": "end",
+  });
+
   const handle = svg("circle", {
-    cx: demandEnd.x,
-    cy: demandEnd.y,
-    r: 14,
+    cx: requestEnd.x,
+    cy: requestEnd.y,
+    r: 16,
     fill: "var(--coral)",
     stroke: "var(--paper)",
-    "stroke-width": 2,
+    "stroke-width": 3,
     role: "button",
-    "aria-label": "Drag friction demand vector",
+    "aria-label": "Drag requested friction",
     style: "cursor: grab",
   });
   group.append(handle);
   elements.content.replaceChildren(group);
   enableFrictionDrag(handle, center, scale);
 
-  setReadout([
-    ["demand norm", demandNorm.toFixed(3)],
-    ["response norm", responseNorm.toFixed(3)],
-    ["model radius", demoRadius.toFixed(3)],
-    ["native ratio", `${(measuredRatio * 100).toFixed(5)}%`],
-  ]);
-  const reset = button(
-    "Reset to (3, 4)",
-    () => {
+  const limited = requested > limit;
+  elements.takeaway.innerHTML = `<span>Answer</span> ${
+    limited
+      ? "The request is too large, so it is clipped to the limit."
+      : "The request is within the limit, so it is supplied exactly."
+  }`;
+  elements.actions.replaceChildren(
+    button("Reset to a too-large request", () => {
       state.frictionDemand = { x: 3, y: 4 };
       renderFriction();
-    },
-    "is-primary"
+    })
   );
-  const branch = document.createElement("span");
-  branch.className = "stage-kicker";
-  branch.textContent = demandNorm > demoRadius ? "PROJECTED TO BOUNDARY" : "UNCHANGED INSIDE DISK";
-  setActions([reset, branch]);
+  setReadout([
+    ["requested", requested.toFixed(2)],
+    ["supplied", suppliedNorm.toFixed(2), limited ? "limited" : "positive"],
+  ]);
+  setTechnical([
+    `The model example uses a limit of ${limit.toFixed(2)}. Dragging changes the requested two-dimensional impulse; larger vectors are projected back to the circle.`,
+    `Native probe P3 measured friction ${native.friction_impulse.toFixed(9)} within radius ${native.radius.toFixed(9)}. HOL claim C5 covers the exact-real projection formula only.`,
+  ]);
 }
 
 function enableFrictionDrag(handle, center, scale) {
@@ -440,14 +372,13 @@ function enableFrictionDrag(handle, center, scale) {
     point.y = event.clientY;
     const local = point.matrixTransform(elements.visual.getScreenCTM().inverse());
     state.frictionDemand = {
-      x: Math.max(-4.2, Math.min(4.2, (local.x - center.x) / scale)),
-      y: Math.max(-3.1, Math.min(3.1, (center.y - local.y) / scale)),
+      x: Math.max(-4.5, Math.min(4.5, (local.x - center.x) / scale)),
+      y: Math.max(-3.5, Math.min(3.5, (center.y - local.y) / scale)),
     };
     renderFriction();
   };
   handle.addEventListener("pointerdown", (event) => {
     state.frictionDragging = true;
-    handle.style.cursor = "grabbing";
     event.preventDefault();
   });
   elements.visual.onpointermove = (event) => {
@@ -466,10 +397,10 @@ function cancelAnimation() {
   state.animationFrame = null;
 }
 
-function animateProgress(render) {
+function animate(render) {
   cancelAnimation();
   const start = performance.now();
-  const duration = 1150;
+  const duration = 1000;
   const frame = (now) => {
     state.progress = Math.min(1, (now - start) / duration);
     render();
@@ -481,10 +412,10 @@ function animateProgress(render) {
 
 function renderExperiment() {
   cancelAnimation();
-  const copy = descriptions[state.experiment];
-  elements.kicker.textContent = copy.kicker;
-  elements.title.textContent = copy.title;
-  elements.description.textContent = copy.description;
+  const current = copy[state.experiment];
+  elements.number.textContent = current.number;
+  elements.question.textContent = current.question;
+  elements.takeaway.innerHTML = `<span>Answer</span> ${current.answer}`;
   document.querySelectorAll("[data-experiment]").forEach((tab) => {
     const active = tab.dataset.experiment === state.experiment;
     tab.classList.toggle("is-active", active);
@@ -498,21 +429,8 @@ function renderExperiment() {
 document.querySelectorAll("[data-experiment]").forEach((tab) => {
   tab.addEventListener("click", () => {
     state.experiment = tab.dataset.experiment;
-    state.progress = state.experiment === "friction" ? 1 : 0;
+    state.progress = 1;
     renderExperiment();
-    if (state.experiment !== "friction") {
-      animateProgress(state.experiment === "energy" ? renderEnergy : renderThreshold);
-    }
-  });
-});
-
-document.querySelectorAll("[data-evidence]").forEach((control) => {
-  control.addEventListener("click", () => {
-    document
-      .querySelectorAll("[data-evidence]")
-      .forEach((item) => item.classList.remove("is-active"));
-    control.classList.add("is-active");
-    elements.evidenceNote.textContent = state.fixture.evidence[control.dataset.evidence];
   });
 });
 
@@ -521,11 +439,10 @@ async function start() {
   if (!response.ok) throw new Error(`fixture load failed: ${response.status}`);
   state.fixture = await response.json();
   renderExperiment();
-  animateProgress(renderEnergy);
 }
 
 start().catch((error) => {
-  elements.title.textContent = "Fixture unavailable.";
-  elements.description.textContent = error.message;
+  elements.question.textContent = "The measured fixture could not be loaded.";
+  elements.takeaway.textContent = error.message;
   elements.visual.replaceChildren();
 });
