@@ -3,15 +3,46 @@
 import assert from "node:assert/strict";
 
 import {
+  blendPairAnisotropicFriction,
   blendPairFriction,
   HairSolver,
   MATERIAL_PRESETS,
   projectCohesionPair,
   projectPair,
+  projectPressurePair,
+  updateClumpBond,
 } from "../physics/labs/hair_material/demo/solver.js";
 
 function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} != ${expected}`);
+}
+
+{
+  const velocityA = [0, 0, 0];
+  const velocityB = [2, 3, 0];
+  const [nextA, nextB] = blendPairAnisotropicFriction(velocityA, velocityB, [1, 0, 0], 0.1, 0.8);
+  for (let axis = 0; axis < 3; axis += 1) {
+    nearlyEqual(nextA[axis] + nextB[axis], velocityA[axis] + velocityB[axis]);
+  }
+  const axialRelative = Math.abs(nextB[0] - nextA[0]);
+  const transverseRelative = Math.abs(nextB[1] - nextA[1]);
+  nearlyEqual(axialRelative, 1.8);
+  nearlyEqual(transverseRelative, 0.6);
+}
+
+{
+  assert.equal(updateClumpBond(false, 0.09, 0.1, 0.2), true);
+  assert.equal(updateClumpBond(true, 0.15, 0.1, 0.2), true);
+  assert.equal(updateClumpBond(true, 0.21, 0.1, 0.2), false);
+  assert.equal(updateClumpBond(false, 0.15, 0.1, 0.2), false);
+}
+
+{
+  const result = projectPressurePair([0, 0, 0], [0.02, 0, 0], 0.05, 0.5);
+  assert.equal(result.active, true);
+  nearlyEqual(result.correctionA[0] + result.correctionB[0], 0);
+  assert.ok(result.correctionA[0] < 0);
+  assert.ok(result.correctionB[0] > 0);
 }
 
 {
@@ -67,9 +98,12 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
 {
   const solver = new HairSolver({ guideCount: 12, segments: 7 });
   const before = solver.receipt().active_segments;
+  for (let frame = 0; frame < 3; frame += 1) solver.step(1 / 60);
+  const bondsBeforeCut = solver.clumpBonds.size;
   assert.equal(solver.cutStrand(3, 4), true);
   assert.equal(solver.activeSegments[3], 4);
   assert.equal(solver.receipt().active_segments, before - 3);
+  assert.ok(solver.clumpBonds.size <= bondsBeforeCut);
   assert.equal(solver.cutStrand(3, 6), false);
 }
 

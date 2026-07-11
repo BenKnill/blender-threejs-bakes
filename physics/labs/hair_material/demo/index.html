@@ -20,8 +20,8 @@
       <div class="eyebrow">Box3D chain lab · issue #79</div>
       <h1>Hair Material Bench</h1>
       <p class="lede">
-        Hundreds of independent 3D guides, not seven animated ropes. Drag to orbit; enable the
-        scissors and paint a cut directly onto the groom.
+        Hundreds of coupled 3D guides behaving like a directed porous fluid, not seven animated
+        ropes. Drag to orbit; enable the scissors and paint a cut directly onto the groom.
       </p>
 
       <label>
@@ -100,6 +100,18 @@
             <dd id="metric-cohesion">—</dd>
           </div>
           <div>
+            <dt>Clump bonds</dt>
+            <dd id="metric-bonds">—</dd>
+          </div>
+          <div>
+            <dt>Capture / release</dt>
+            <dd id="metric-hysteresis">—</dd>
+          </div>
+          <div>
+            <dt>Crowd pressure</dt>
+            <dd id="metric-pressure">—</dd>
+          </div>
+          <div>
             <dt>Solver</dt>
             <dd id="metric-solver">—</dd>
           </div>
@@ -124,8 +136,9 @@
 
       <p class="boundary">
         <strong>Boundary:</strong> CPU Verlet plus constraint projection; no strand self-contact or
-        continuum claim. Nine visible fibers interpolate each mechanical guide. Friction/cohesion
-        uses a bounded root-neighbor graph, not general self-contact.
+        continuum claim. Nine visible fibers interpolate each mechanical guide. Anisotropic drag,
+        hysteretic clumps, and crowd pressure use a bounded root-neighbor graph, not general
+        self-contact.
       </p>
       <div id="status" role="status">Running deterministic wavy preset.</div>
     </aside>

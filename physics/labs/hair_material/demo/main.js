@@ -211,6 +211,12 @@ function updateTelemetry(now) {
     receipt.active_neighbor_contacts.toLocaleString();
   document.querySelector("#metric-cohesion").textContent =
     receipt.cohesion_corrections_last_iteration.toLocaleString();
+  document.querySelector("#metric-bonds").textContent =
+    receipt.persistent_clump_bonds.toLocaleString();
+  document.querySelector("#metric-hysteresis").textContent =
+    `${receipt.clump_captures_last_step} / ${receipt.clump_releases_last_step}`;
+  document.querySelector("#metric-pressure").textContent =
+    receipt.crowd_pressure_corrections_last_iteration.toLocaleString();
   document.querySelector("#metric-solver").textContent = `${smoothedSolverMs.toFixed(2)} ms`;
   document.querySelector("#metric-fps").textContent = smoothedFps.toFixed(0);
   document.querySelector("#metric-stretch").textContent = `${(
