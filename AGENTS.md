@@ -100,6 +100,7 @@ dense visual groom while measuring the Blender and video stages separately:
 ```sh
 just seedthree-wind
 just mannequin-haircut
+just hair-material
 ```
 
 Validate a layout or manifest contract:

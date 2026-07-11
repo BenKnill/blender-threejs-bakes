@@ -171,6 +171,9 @@ Pass conditions:
 - cutting updates topology without instability;
 - the laboratory remains interactive on the primary M5 Mac.
 
+The first implementation of this artifact is documented in
+[Interactive hair material bench](HAIR_MATERIAL_BENCH.md).
+
 ### 2. Haircut construction
 
 Add named sections, elevation and over-direction guides, fingers/clips, a comb,
