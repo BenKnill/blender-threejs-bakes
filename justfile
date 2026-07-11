@@ -36,6 +36,14 @@ reduced-tree:
 chain-lab:
     bash scripts/build_chain_lab.sh
 
+# Small native-Box3D spring lattice with twist, gravity, and floor contact.
+soft-ribbon:
+    bash scripts/build_soft_ribbon.sh
+
+# Render the soft-ribbon motion as a neon Eevee animation.
+soft-ribbon-video: soft-ribbon
+    bash scripts/render_soft_ribbon_animation.sh
+
 # Format everything in place — JS + Python
 format:
     npx prettier --write 'editor/**/*.{js,css,html}'
