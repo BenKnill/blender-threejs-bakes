@@ -13,9 +13,9 @@ The generated local shelf is:
 physics/outputs/hair_hero_cuts_20260711T1710Z/
 ```
 
-It contains eight seven-second 1280x720 H.264 clips, 84 captured source frames
-and a terminal telemetry sidecar per scenario, and a synchronized four-by-two
-comparison:
+The capture initially produced eight seven-second 1280x720 H.264 clips, 84
+source frames and a terminal telemetry sidecar per scenario, plus a synchronized
+four-by-two comparison:
 
 ```text
 hair_hero_cut_contact_sheet.mp4
@@ -23,12 +23,21 @@ hair_hero_cut_contact_sheet.mp4
 
 The tracked configuration manifest is
 `docs/receipts/hair_hero_cut_scenarios.json`. Large media remains ignored by
-git. Repackage a compatible captured shelf with:
+git. After a successful encode, packaging deletes source frames and all
+individual clips unless one representative scenario is named. This keeps the
+comparison, manifests and telemetry while making experimental shelves cheap to
+replace. Repackage a compatible captured shelf with:
 
 ```sh
 COLUMNS=4 OUTPUT_NAME=hair_hero_cut_contact_sheet.mp4 \
+  RETAIN_SCENARIO=01_wavy_diagonal_gust \
   just hair-phase-videos physics/outputs/hair_hero_cuts_20260711T1710Z
 ```
+
+Set `KEEP_SOURCE_FRAMES=1` only while debugging capture. Omitting
+`RETAIN_SCENARIO` retains no individual clips. The command prints the final
+file count and shelf size so an experiment cannot silently leave a frame dump
+behind.
 
 ## Choreography
 
