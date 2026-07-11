@@ -18,6 +18,15 @@ lint:
 test:
     python3 scripts/test_scene_compile.py
     python3 scripts/test_compile_physics.py
+    python3 scripts/test_compile_tree_assembly.py
+
+# Native Box3D crate proof: compile, replay-validate, and bake 97 frames.
+box3d-basic:
+    bash scripts/build_basic_animation.sh
+
+# Articulated SeedThree tree: validate joint frames, simulate, and bake.
+box3d-tree:
+    bash scripts/build_tree_assembly_animation.sh
 
 # Format everything in place — JS + Python
 format:

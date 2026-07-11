@@ -1,0 +1,29 @@
+{
+  "schema": "tree-assembly/2",
+  "fps": 24,
+  "duration_s": 4.0,
+  "fixed_step_s": 0.008333333333333333,
+  "substeps": 2,
+  "gravity_m_s2": [0.0, -9.81, 0.0],
+  "ground": {
+    "height_m": 0.0,
+    "half_extent_m": 30.0,
+    "friction": 0.82,
+    "restitution": 0.03
+  },
+  "bodies": [
+    {"id": "base_anchor", "body_type": "static", "half": [0.35, 0.10, 0.35], "position": [0.0, 0.0, 0.0]},
+    {"id": "trunk", "body_type": "dynamic", "half": [1.0, 2.0, 1.0], "position": [0.0, 2.5, 0.0], "rotation": [0.0, 0.0, 0.059964, 0.998200], "angular_velocity": [0.0, 0.0, 0.65], "density": 620, "friction": 0.72, "restitution": 0.03},
+    {"id": "lower_scaffold", "body_type": "dynamic", "half": [2.5, 1.5, 2.5], "position": [0.0, 6.0, 0.0], "density": 420, "friction": 0.72, "restitution": 0.03},
+    {"id": "middle_scaffold", "body_type": "dynamic", "half": [2.5, 1.5, 2.5], "position": [0.0, 9.0, 0.0], "density": 300, "friction": 0.72, "restitution": 0.03},
+    {"id": "upper_scaffold", "body_type": "dynamic", "half": [2.25, 1.5, 2.25], "position": [0.0, 12.0, 0.0], "density": 210, "friction": 0.72, "restitution": 0.03},
+    {"id": "crown", "body_type": "dynamic", "half": [2.0, 2.0, 2.0], "position": [0.0, 15.5, 0.0], "density": 120, "friction": 0.72, "restitution": 0.03}
+  ],
+  "joints": [
+    {"id": "root_hinge", "body_a": "base_anchor", "body_b": "trunk", "anchor_a": [0.0, 0.0, 0.0], "anchor_b": [-0.299280647, -2.482021574, 0.0], "hertz": 20.0, "damping_ratio": 1.0, "lower_angle": -1.45, "upper_angle": 1.45, "release_step": 198, "release_angular_impulse": [0.0, 0.0, 30000.0], "target_angle": 0.0, "enable_limit": true, "collide_connected": false},
+    {"id": "trunk_lower_hinge", "body_a": "trunk", "body_b": "lower_scaffold", "anchor_a": [0.239424517, 1.985617259, 0.0], "anchor_b": [0.0, -1.5, 0.0], "hertz": 0.8, "damping_ratio": 0.7, "lower_angle": -1.2, "upper_angle": 1.2, "release_step": -1},
+    {"id": "lower_middle_hinge", "body_a": "lower_scaffold", "body_b": "middle_scaffold", "anchor_a": [0.0, 1.5, 0.0], "anchor_b": [0.0, -1.5, 0.0], "hertz": 0.8, "damping_ratio": 0.7, "lower_angle": -1.2, "upper_angle": 1.2, "release_step": -1},
+    {"id": "middle_upper_hinge", "body_a": "middle_scaffold", "body_b": "upper_scaffold", "anchor_a": [0.0, 1.5, 0.0], "anchor_b": [0.0, -1.5, 0.0], "hertz": 0.8, "damping_ratio": 0.7, "lower_angle": -1.2, "upper_angle": 1.2, "release_step": -1},
+    {"id": "upper_crown_hinge", "body_a": "upper_scaffold", "body_b": "crown", "anchor_a": [0.0, 1.5, 0.0], "anchor_b": [0.0, -2.0, 0.0], "hertz": 0.8, "damping_ratio": 0.7, "lower_angle": -1.2, "upper_angle": 1.2, "release_step": -1}
+  ]
+}

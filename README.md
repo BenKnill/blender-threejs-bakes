@@ -63,6 +63,14 @@ This produces a crate-drop MP4, a Blender render receipt, a sampled
 `physics/outputs/`. See [the Box3D animation guide](docs/BOX3D_ANIMATION.md)
 for the exact boundary and deliberate first-pass limits.
 
+For an articulated example, `just box3d-tree` compiles a six-body SeedThree
+tree with five revolute joints, validates coincident world anchors and aligned
+hinge axes, replay-validates the native simulation, and bakes the sampled motion.
+The source tree payload is intentionally local and currently lives under
+`/Users/boxer/blender-threejs-bakes/assets/`; see
+[the tree assembly guide](docs/SEEDTHREE_TREE_ASSEMBLY.md) for its visual-only
+deformation boundary. Override the Box3D checkout with `BOX3D_SOURCE_DIR`.
+
 Before opening a change, run the local review gate:
 
 ```sh
