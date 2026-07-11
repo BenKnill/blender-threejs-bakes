@@ -20,6 +20,7 @@ test:
     python3 scripts/test_compile_physics.py
     python3 scripts/test_compile_tree_assembly.py
     python3 scripts/test_bake_telemetry.py
+    python3 scripts/test_wind_canopy_math.py
 
 # Native Box3D crate proof: compile, replay-validate, and bake 97 frames.
 box3d-basic:
@@ -56,6 +57,10 @@ wind-garden:
 # Render the recorded wind-garden trajectory in Eevee.
 wind-garden-video: wind-garden
     bash scripts/render_wind_garden_animation.sh
+
+# Real SeedThree canopy plus a 127-fiber groom driven by Box3D wind guides.
+seedthree-wind: wind-garden
+    bash scripts/build_seedthree_wind_canopy.sh
 
 # Format everything in place — JS + Python
 format:

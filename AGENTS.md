@@ -94,6 +94,13 @@ just wind-garden
 just wind-garden-video
 ```
 
+The real-asset follow-up maps those guides onto the SeedThree canopy and a
+dense visual groom while measuring the Blender and video stages separately:
+
+```sh
+just seedthree-wind
+```
+
 Validate a layout or manifest contract:
 
 ```sh
