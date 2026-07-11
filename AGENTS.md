@@ -60,6 +60,11 @@ Run the dependency-light Box3D scene/physics compiler contracts:
 just test
 ```
 
+Wrap expensive Blender/ffmpeg stages with `scripts/bake_telemetry.py` when bake
+cost matters. It records wall time, sampled peak process-tree RSS, exit status,
+and declared artifact sizes without hiding child output. See
+`docs/BAKE_TELEMETRY.md`.
+
 The local `just lint` and `just test` commands are the source of truth for
 editor lint/format and Python/compiler checks. See [the integration handoff](docs/INTEGRATION_HANDOFF.md)
 for the stable boundary and deliberate non-claims.
