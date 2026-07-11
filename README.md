@@ -71,6 +71,11 @@ The source tree payload is intentionally local and currently lives under
 [the tree assembly guide](docs/SEEDTHREE_TREE_ASSEMBLY.md) for its visual-only
 deformation boundary. Override the Box3D checkout with `BOX3D_SOURCE_DIR`.
 
+`just reduced-tree` runs the smaller three-coordinate sway/fall visual model.
+Its receipt explicitly records that it is broad inspiration from
+arXiv:2506.06494, not FEM, JGS2, material-aware local subspaces, or Cubature.
+See [the reduced-tree note](docs/REDUCED_TREE_ELASTODYNAMICS.md).
+
 Before opening a change, run the local review gate:
 
 ```sh

@@ -28,6 +28,10 @@ box3d-basic:
 box3d-tree:
     bash scripts/build_tree_assembly_animation.sh
 
+# Broadly paper-inspired visual reduced coordinates; explicitly not FEM/JGS2.
+reduced-tree:
+    bash scripts/build_reduced_tree_animation.sh
+
 # Format everything in place — JS + Python
 format:
     npx prettier --write 'editor/**/*.{js,css,html}'
