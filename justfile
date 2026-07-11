@@ -19,6 +19,7 @@ test:
     python3 scripts/test_scene_compile.py
     python3 scripts/test_compile_physics.py
     python3 scripts/test_compile_tree_assembly.py
+    python3 scripts/test_bake_telemetry.py
 
 # Native Box3D crate proof: compile, replay-validate, and bake 97 frames.
 box3d-basic:
