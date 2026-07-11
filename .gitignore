@@ -9,6 +9,8 @@ node_modules/
 .run/
 physics/build/
 physics/outputs/
+physics/labs/*/build/
+physics/labs/*/outputs/
 tmp/
 coverage/
 .env

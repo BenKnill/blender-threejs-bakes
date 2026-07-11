@@ -32,6 +32,10 @@ box3d-tree:
 reduced-tree:
     bash scripts/build_reduced_tree_animation.sh
 
+# Compare local/colored/compliance-aware updates on a stiff axial chain.
+chain-lab:
+    bash scripts/build_chain_lab.sh
+
 # Format everything in place — JS + Python
 format:
     npx prettier --write 'editor/**/*.{js,css,html}'

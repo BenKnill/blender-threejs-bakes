@@ -76,6 +76,12 @@ Its receipt explicitly records that it is broad inspiration from
 arXiv:2506.06494, not FEM, JGS2, material-aware local subspaces, or Cubature.
 See [the reduced-tree note](docs/REDUCED_TREE_ELASTODYNAMICS.md).
 
+`just chain-lab` runs the numerical "Globally Aware Tether Chain" experiment:
+Jacobi, red-black Gauss-Seidel, finite-hop response, exact local Schur windows,
+and a dense oracle on one idealized quadratic, plus a separate observational
+Box3D distance-joint trace. It produces deterministic CSV, JSON, and SVG
+artifacts without Blender. See [the chain-lab note](docs/JGS2_COMPLIANCE_LAB.md).
+
 Before opening a change, run the local review gate:
 
 ```sh
