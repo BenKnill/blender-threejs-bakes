@@ -85,6 +85,22 @@ just contact-shell
 
 Inspect the proof run through the Workbench receipt, not process exit alone.
 
+## Interactive laboratory
+
+The static browser laboratory turns the fixed probe observations into three
+inspectable experiments: energy lift, restitution threshold twins, and friction
+disk projection. Start the existing repo server and open:
+
+```sh
+./scripts/serve.sh
+open http://127.0.0.1:8091/physics/labs/contact_shell/demo/
+```
+
+The demo reads the tracked `demo/fixture.json`; it does not run Box3D in the
+browser. `scripts/test_contact_shell_demo.py` checks its claim boundaries and,
+when a fresh ignored `outputs/contact_shell.jsonl` exists, requires the tracked
+fixture to match that native probe byte-for-byte at the JSON-value level.
+
 ## One-day gate
 
 **Go** only if the C self-tests and public Box3D probes pass, C2/C3/C5 are
