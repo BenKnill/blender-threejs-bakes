@@ -401,6 +401,8 @@ function animate(render) {
   cancelAnimation();
   const start = performance.now();
   const duration = 1000;
+  state.progress = 0;
+  render();
   const frame = (now) => {
     state.progress = Math.min(1, (now - start) / duration);
     render();
@@ -410,7 +412,11 @@ function animate(render) {
   state.animationFrame = requestAnimationFrame(frame);
 }
 
-function renderExperiment() {
+function prefersReducedMotion() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function renderExperiment({ playMotion = false } = {}) {
   cancelAnimation();
   const current = copy[state.experiment];
   elements.number.textContent = current.number;
@@ -421,16 +427,32 @@ function renderExperiment() {
     tab.classList.toggle("is-active", active);
     tab.setAttribute("aria-pressed", String(active));
   });
-  if (state.experiment === "energy") renderEnergy();
-  if (state.experiment === "threshold") renderThreshold();
+  elements.visual.onpointermove = null;
+  elements.visual.onpointerup = null;
+  elements.visual.onpointerleave = null;
+  state.frictionDragging = false;
+  const animateSelection = playMotion && !prefersReducedMotion();
+  if (state.experiment === "energy") {
+    if (animateSelection) animate(renderEnergy);
+    else {
+      state.progress = 1;
+      renderEnergy();
+    }
+  }
+  if (state.experiment === "threshold") {
+    if (animateSelection) animate(renderThreshold);
+    else {
+      state.progress = 1;
+      renderThreshold();
+    }
+  }
   if (state.experiment === "friction") renderFriction();
 }
 
 document.querySelectorAll("[data-experiment]").forEach((tab) => {
   tab.addEventListener("click", () => {
     state.experiment = tab.dataset.experiment;
-    state.progress = 1;
-    renderExperiment();
+    renderExperiment({ playMotion: true });
   });
 });
 
@@ -438,7 +460,7 @@ async function start() {
   const response = await fetch("fixture.json");
   if (!response.ok) throw new Error(`fixture load failed: ${response.status}`);
   state.fixture = await response.json();
-  renderExperiment();
+  renderExperiment({ playMotion: true });
 }
 
 start().catch((error) => {

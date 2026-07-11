@@ -43,6 +43,9 @@ def main() -> None:
     assert "Can a resting box gain speed?" in script
     assert "One box keeps falling; the other rebounds." in script
     assert "The solver supplies only the maximum allowed amount." in script
+    assert "renderExperiment({ playMotion: true });" in script
+    assert 'window.matchMedia("(prefers-reduced-motion: reduce)")' in script
+    assert "state.progress = 0;\n  render();" in script
 
     if PROBE.exists():
         probe_bytes = PROBE.read_bytes()
