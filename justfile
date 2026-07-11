@@ -10,8 +10,8 @@ default:
 
 # Lint everything (no changes) — JS + Python
 lint:
-    npx eslint editor physics/labs/contact_shell/demo/main.js
-    npx prettier --check 'editor/**/*.{js,css,html}' 'physics/labs/contact_shell/demo/**/*.{js,css,html,json}'
+    npx eslint editor physics/labs/contact_shell/demo/main.js physics/labs/hair_material/demo/*.js scripts/test_hair_material_solver.mjs
+    npx prettier --check 'editor/**/*.{js,css,html}' 'physics/labs/contact_shell/demo/**/*.{js,css,html,json}' 'physics/labs/hair_material/demo/**/*.{js,css,html}'
     {{ruff}} check scripts
 
 # Dependency-light compiler contracts for the Box3D scene bridge.
@@ -22,6 +22,7 @@ test:
     python3 scripts/test_bake_telemetry.py
     python3 scripts/test_wind_canopy_math.py
     python3 scripts/test_haircut_math.py
+    node scripts/test_hair_material_solver.mjs
     python3 scripts/test_contact_shell_demo.py
 
 # Native Box3D crate proof: compile, replay-validate, and bake 97 frames.
@@ -68,9 +69,14 @@ seedthree-wind: wind-garden
 mannequin-haircut: wind-garden
     bash scripts/build_mannequin_haircut.sh
 
+# Start the editor server and print the interactive hair-material lab URL.
+hair-material:
+    ./scripts/serve.sh start
+    @echo "http://127.0.0.1:8091/physics/labs/hair_material/demo/"
+
 # Format everything in place — JS + Python
 format:
-    npx prettier --write 'editor/**/*.{js,css,html}' 'physics/labs/contact_shell/demo/**/*.{js,css,html,json}'
+    npx prettier --write 'editor/**/*.{js,css,html}' 'physics/labs/contact_shell/demo/**/*.{js,css,html,json}' 'physics/labs/hair_material/demo/**/*.{js,css,html}'
     {{ruff}} format scripts
 
 # Install / refresh git hooks

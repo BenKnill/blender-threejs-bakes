@@ -1,0 +1,40 @@
+{
+  "browser_observation": {
+    "guide_count": 320,
+    "javascript_heap_mib_range": [10.8, 15.0],
+    "max_relative_stretch_percent_range": [0.29, 0.61],
+    "particles": 4160,
+    "platform_scope": "primary M5 Mac in-app browser; not a portable benchmark",
+    "solver_step_ms_range": [2.3, 2.9],
+    "spatial_scissors_exercised": true,
+    "visible_fibers": 960
+  },
+  "claim_boundary": {
+    "continuum_hair_mechanics": false,
+    "dense_fibers_are_interpolated": true,
+    "strand_self_contact": false,
+    "torsional_rod_frames": false
+  },
+  "schema": "hair-material-bench-receipt/1",
+  "solver": {
+    "default_iterations": 5,
+    "default_segments_per_guide": 12,
+    "integration": "CPU Verlet",
+    "projections": [
+      "pair distance",
+      "rest second difference",
+      "section lift",
+      "ellipsoidal scalp collision",
+      "root pin"
+    ]
+  },
+  "workbench": {
+    "backend": "orbstack-criu",
+    "evidence": "warm semantic development evidence; not cold audit evidence",
+    "issue_raised": "https://github.com/BenKnill/hol-light-workbench/issues/308",
+    "profile": "light",
+    "restore_seconds": 0.0,
+    "successful_attempt_seconds": 0.3,
+    "theorem": "HAIR_PAIR_CORRECTION_PRESERVES_MOMENT"
+  }
+}

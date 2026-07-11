@@ -6,8 +6,8 @@
   "scripts": {
     "prepare": "lefthook install",
     "serve": "./scripts/serve.sh",
-    "lint": "eslint editor physics/labs/contact_shell/demo/main.js && prettier --check 'editor/**/*.{js,css,html}' 'physics/labs/contact_shell/demo/**/*.{js,css,html,json}'",
-    "format": "prettier --write 'editor/**/*.{js,css,html}' 'physics/labs/contact_shell/demo/**/*.{js,css,html,json}'"
+    "lint": "eslint editor physics/labs/contact_shell/demo/main.js physics/labs/hair_material/demo/*.js scripts/test_hair_material_solver.mjs && prettier --check 'editor/**/*.{js,css,html}' 'physics/labs/contact_shell/demo/**/*.{js,css,html,json}' 'physics/labs/hair_material/demo/**/*.{js,css,html}'",
+    "format": "prettier --write 'editor/**/*.{js,css,html}' 'physics/labs/contact_shell/demo/**/*.{js,css,html,json}' 'physics/labs/hair_material/demo/**/*.{js,css,html}'"
   },
   "devDependencies": {
     "eslint": "^9",

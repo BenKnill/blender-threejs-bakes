@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hair Material Bench</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "../../../../editor/vendor/three.module.js",
+          "three/addons/": "../../../../editor/vendor/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <main id="viewport" aria-label="Interactive hair material simulation"></main>
+    <aside class="panel">
+      <div class="eyebrow">Box3D chain lab · issue #79</div>
+      <h1>Hair Material Bench</h1>
+      <p class="lede">
+        Hundreds of independent 3D guides, not seven animated ropes. Drag to orbit; enable the
+        scissors and paint a cut directly onto the groom.
+      </p>
+
+      <label>
+        Material preset
+        <select id="preset">
+          <option value="straight">Straight / fine</option>
+          <option value="wavy" selected>Wavy / medium</option>
+          <option value="curly">Curly / springy</option>
+          <option value="coily">Coily / high recovery</option>
+        </select>
+      </label>
+
+      <label>
+        Simulated guides <output id="guide-output">320</output>
+        <input id="guides" type="range" min="128" max="512" step="64" value="320" />
+      </label>
+
+      <label>
+        Solver iterations <output id="iteration-output">5</output>
+        <input id="iterations" type="range" min="2" max="10" step="1" value="5" />
+      </label>
+
+      <label>
+        Wetness <output id="moisture-output">0%</output>
+        <input id="moisture" type="range" min="0" max="1" step="0.01" value="0" />
+      </label>
+
+      <label>
+        Product / hold <output id="product-output">0%</output>
+        <input id="product" type="range" min="0" max="1" step="0.01" value="0" />
+      </label>
+
+      <label>
+        Section elevation <output id="lift-output">0.00 m</output>
+        <input id="lift" type="range" min="0" max="1.4" step="0.02" value="0" />
+      </label>
+
+      <label>
+        Wind <output id="wind-output">0.18</output>
+        <input id="wind" type="range" min="0" max="1.2" step="0.02" value="0.18" />
+      </label>
+
+      <div class="actions">
+        <button id="pause">Pause</button>
+        <button id="reset">Reset groom</button>
+        <button id="scissors" aria-pressed="false">Scissors: off</button>
+        <button id="plane-cut">Cut to guide line</button>
+        <button id="receipt">Copy receipt</button>
+      </div>
+
+      <section class="telemetry" aria-live="polite">
+        <h2>Live telemetry</h2>
+        <dl>
+          <div>
+            <dt>Guides</dt>
+            <dd id="metric-guides">—</dd>
+          </div>
+          <div>
+            <dt>Visible fibers</dt>
+            <dd id="metric-fibers">—</dd>
+          </div>
+          <div>
+            <dt>Particles</dt>
+            <dd id="metric-particles">—</dd>
+          </div>
+          <div>
+            <dt>Solver</dt>
+            <dd id="metric-solver">—</dd>
+          </div>
+          <div>
+            <dt>Frame rate</dt>
+            <dd id="metric-fps">—</dd>
+          </div>
+          <div>
+            <dt>Max stretch</dt>
+            <dd id="metric-stretch">—</dd>
+          </div>
+          <div>
+            <dt>Cuts</dt>
+            <dd id="metric-cuts">0</dd>
+          </div>
+          <div>
+            <dt>JS heap</dt>
+            <dd id="metric-memory">unavailable</dd>
+          </div>
+        </dl>
+      </section>
+
+      <p class="boundary">
+        <strong>Boundary:</strong> CPU Verlet plus constraint projection; no strand self-contact or
+        continuum claim. Three visible fibers interpolate each mechanical guide.
+      </p>
+      <div id="status" role="status">Running deterministic wavy preset.</div>
+    </aside>
+    <div id="cut-cursor" aria-hidden="true"></div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
