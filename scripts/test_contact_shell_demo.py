@@ -35,6 +35,14 @@ def main() -> None:
     assert 'href="styles.css"' in index
     assert 'fetch("fixture.json")' in script
     assert "final cold audit pending" in fixture["evidence"]["hol"].lower()
+    assert "Three surprises inside a collision." in index
+    assert "Overlap can add motion" in index
+    assert "A tiny change flips the bounce" in index
+    assert "Friction has a hard limit" in index
+    assert "Technical details and evidence boundary" in index
+    assert "Can a resting box gain speed?" in script
+    assert "One box keeps falling; the other rebounds." in script
+    assert "The solver supplies only the maximum allowed amount." in script
 
     if PROBE.exists():
         probe_bytes = PROBE.read_bytes()
