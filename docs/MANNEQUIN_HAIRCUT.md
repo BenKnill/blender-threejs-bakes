@@ -31,3 +31,7 @@ plane; the scissors do not detect contacts, and the falling cut portions use a
 simple visual gravity curve. This is not continuum hair mechanics, collision-
 aware strand dynamics, strand self-contact/friction, or a physical cutting
 simulation.
+
+The researched path from this visual prototype to an interactive material
+solver is documented in [Haircut simulator: product and physics
+direction](HAIRCUT_SIMULATOR_DIRECTION.md).
