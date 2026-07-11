@@ -3,7 +3,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 import { HairSolver } from "./solver.js";
 
-const RENDER_FIBERS_PER_GUIDE = 9;
+let renderFibersPerGuide = 9;
 
 const viewport = document.querySelector("#viewport");
 const status = document.querySelector("#status");
@@ -81,6 +81,17 @@ let smoothedSolverMs = 0;
 let smoothedFps = 60;
 let telemetryClock = 0;
 const projected = new THREE.Vector3();
+const filmDirection = {
+  enabled: false,
+  startTime: null,
+  baseWind: 0.18,
+  gust: 0,
+  cut: "none",
+  cutAt: 2.5,
+  cutDuration: 1.4,
+  cutDone: false,
+  cutStrands: new Set(),
+};
 
 function hairColor() {
   const colors = {
@@ -98,14 +109,14 @@ function rebuildHairObject() {
     hair.geometry.dispose();
     hair.material.dispose();
   }
-  const vertexCapacity = solver.guideCount * solver.segments * RENDER_FIBERS_PER_GUIDE * 2;
+  const vertexCapacity = solver.guideCount * solver.segments * renderFibersPerGuide * 2;
   hairPositions = new Float32Array(vertexCapacity * 3);
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.BufferAttribute(hairPositions, 3));
   const material = new THREE.LineBasicMaterial({
     color: hairColor(),
     transparent: true,
-    opacity: 0.72,
+    opacity: Math.max(0.42, 0.78 - renderFibersPerGuide * 0.02),
   });
   hair = new THREE.LineSegments(geometry, material);
   hair.frustumCulled = false;
@@ -117,7 +128,16 @@ function rebuildSolver() {
   const guideCount = Number(document.querySelector("#guides").value);
   const iterations = Number(document.querySelector("#iterations").value);
   const preset = document.querySelector("#preset").value;
-  solver = new HairSolver({ guideCount, segments: 12, iterations, preset });
+  solver = new HairSolver({
+    guideCount,
+    segments: 12,
+    iterations,
+    preset,
+    renderFibersPerGuide,
+  });
+  filmDirection.startTime = null;
+  filmDirection.cutDone = false;
+  filmDirection.cutStrands.clear();
   applyMaterialControls();
   rebuildHairObject();
   status.textContent = `Running deterministic ${preset} preset.`;
@@ -133,8 +153,9 @@ function applyMaterialControls() {
 function updateHairGeometry() {
   let cursor = 0;
   for (let strand = 0; strand < solver.guideCount; strand += 1) {
-    for (let copy = 0; copy < RENDER_FIBERS_PER_GUIDE; copy += 1) {
-      const phase = strand * 1.618 + ((copy - 1) * Math.PI * 2) / 8;
+    for (let copy = 0; copy < renderFibersPerGuide; copy += 1) {
+      const phase =
+        strand * 1.618 + ((copy - 1) * Math.PI * 2) / Math.max(1, renderFibersPerGuide - 1);
       const offset = copy === 0 ? 0 : 0.009 + (strand % 3) * 0.0018;
       const offsetX = Math.cos(phase) * offset;
       const offsetZ = Math.sin(phase) * offset;
@@ -197,6 +218,37 @@ function cutToGuideLine() {
   status.textContent = `Guide-line cut shortened ${cuts} mechanical strands.`;
 }
 
+function updateFilmDirection(now) {
+  if (!filmDirection.enabled) return;
+  if (filmDirection.startTime === null) filmDirection.startTime = now;
+  const elapsed = (now - filmDirection.startTime) / 1000;
+  const gustWave = 0.5 + 0.5 * Math.sin(elapsed * 2.4 - Math.PI * 0.5);
+  solver.wind = filmDirection.baseWind + filmDirection.gust * gustWave;
+  if (elapsed < filmDirection.cutAt || filmDirection.cutDone) return;
+  if (filmDirection.cut === "bob") {
+    cutToGuideLine();
+    filmDirection.cutDone = true;
+    return;
+  }
+  if (filmDirection.cut !== "diagonal") return;
+  const progress = Math.min(1, (elapsed - filmDirection.cutAt) / filmDirection.cutDuration);
+  const sweepX = -0.92 + progress * 1.84;
+  let newCuts = 0;
+  for (let strand = 0; strand < solver.guideCount; strand += 1) {
+    if (filmDirection.cutStrands.has(strand)) continue;
+    const rootX = solver.roots[strand * 3];
+    if (rootX > sweepX) continue;
+    const normalizedX = Math.max(0, Math.min(1, (rootX + 0.92) / 1.84));
+    const segment = Math.round(solver.segments * (0.78 - normalizedX * 0.38));
+    if (solver.cutStrand(strand, segment)) newCuts += 1;
+    filmDirection.cutStrands.add(strand);
+  }
+  if (newCuts > 0) {
+    status.textContent = `Traveling diagonal cut: ${filmDirection.cutStrands.size} guides visited.`;
+  }
+  if (progress >= 1) filmDirection.cutDone = true;
+}
+
 function updateTelemetry(now) {
   if (now - telemetryClock < 220) return;
   telemetryClock = now;
@@ -237,6 +289,7 @@ function animate(now) {
   lastFrame = now;
   smoothedFps = smoothedFps * 0.92 + (1 / frameDt) * 0.08;
   if (!paused) {
+    updateFilmDirection(now);
     const start = performance.now();
     solver.step(frameDt);
     smoothedSolverMs = smoothedSolverMs * 0.9 + (performance.now() - start) * 0.1;
@@ -278,6 +331,21 @@ function applyQueryConfiguration() {
   if (params.has("scenario")) {
     document.querySelector("#scenario-label").textContent =
       `Hair phase film · ${params.get("scenario")}`;
+  }
+  if (params.has("fibers")) {
+    renderFibersPerGuide = Math.max(1, Math.min(21, Number(params.get("fibers")) || 9));
+  }
+  if (params.get("film") === "1") {
+    filmDirection.enabled = true;
+    filmDirection.baseWind = Number(params.get("wind") ?? 0.18);
+    filmDirection.gust = Math.max(0, Number(params.get("gust") ?? 0));
+    filmDirection.cut = ["none", "bob", "diagonal"].includes(params.get("cut"))
+      ? params.get("cut")
+      : "none";
+    filmDirection.cutAt = Math.max(0, Number(params.get("cutAt") ?? 2.5));
+    filmDirection.cutDuration = Math.max(0.2, Number(params.get("cutDuration") ?? 1.4));
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = Number(params.get("orbit") ?? 0.8);
   }
 }
 
