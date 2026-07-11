@@ -207,6 +207,38 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
 }
 
 {
+  const cycle = runHairReplay({
+    solver: { guideCount: 48, segments: 8, preset: "wavy", iterations: 6 },
+    steps: 300,
+    dt: 1 / 60,
+    moisture: 0.85,
+    product: 0.2,
+    baseWind: 0.08,
+    comb: {
+      startStep: 20,
+      endStep: 100,
+      startX: -1.25,
+      endX: 1.25,
+      returnStartStep: 115,
+      returnEndStep: 195,
+      returnX: -1.25,
+    },
+  }).result;
+  const phases = new Set(cycle.receipt.comb.force_displacement_trace.map((sample) => sample.phase));
+  assert.deepEqual(phases, new Set(["forward", "return"]));
+  assert.ok(cycle.receipt.comb.forward_work_proxy > 0);
+  assert.ok(cycle.receipt.comb.return_work_proxy > 0);
+  assert.equal(
+    cycle.receipt.comb.cycle_dissipation_proxy,
+    cycle.receipt.comb.forward_work_proxy + cycle.receipt.comb.return_work_proxy
+  );
+  assert.ok(cycle.receipt.comb.accumulated_travel > 4.9);
+  assert.ok(cycle.receipt.comb.force_displacement_trace.length <= 128);
+  assert.equal(cycle.receipt.assumption_receipt.measurement_window, "comb_cycle");
+  assert.equal(cycle.receipt.assumption_receipt.status, "satisfied");
+}
+
+{
   const state = (position) => ({
     positions: new Float64Array([position]),
     previous: new Float64Array([0]),

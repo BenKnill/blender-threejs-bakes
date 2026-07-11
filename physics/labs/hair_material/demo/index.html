@@ -71,6 +71,7 @@
         <button id="plane-cut">Cut to guide line</button>
         <button id="comb-dry">Run dry comb</button>
         <button id="comb-wet">Run wet comb</button>
+        <button id="comb-cycle">Run wet two-pass</button>
         <button id="receipt">Copy receipt</button>
       </div>
 
@@ -138,6 +139,10 @@
             <dd id="metric-comb-work">0</dd>
           </div>
           <div>
+            <dt>Out / return work*</dt>
+            <dd id="metric-cycle-work">0 / 0</dd>
+          </div>
+          <div>
             <dt>Comb travel</dt>
             <dd id="metric-comb-travel">0.00 m</dd>
           </div>
@@ -156,7 +161,7 @@
         </dl>
         <figure class="comb-trace">
           <canvas id="comb-trace" width="320" height="120"></canvas>
-          <figcaption>Reaction proxy vs cumulative comb displacement</figcaption>
+          <figcaption>Reaction vs comb position · cyan outward · pink return</figcaption>
         </figure>
       </section>
 

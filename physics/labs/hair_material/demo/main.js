@@ -172,7 +172,7 @@ function rebuildSolver() {
   status.textContent = `Running deterministic ${preset} preset.`;
 }
 
-function startCombPass(condition) {
+function startCombPass(condition, cycle = false) {
   const wet = condition === "wet";
   document.querySelector("#moisture").value = wet ? "0.85" : "0.05";
   document.querySelector("#product").value = wet ? "0.2" : "0";
@@ -186,11 +186,20 @@ function startCombPass(condition) {
     baseWind: 0.08,
     gust: 0.08,
     cut: "none",
-    comb: { startStep: 30, endStep: 150, startX: -1.35, endX: 1.35 },
+    comb: {
+      startStep: 30,
+      endStep: 150,
+      startX: -1.35,
+      endX: 1.35,
+      ...(cycle ? { returnStartStep: 165, returnEndStep: 285, returnX: -1.35 } : {}),
+    },
   };
   rebuildSolver();
-  document.querySelector("#scenario-label").textContent = `Comb-through instrument · ${condition}`;
-  status.textContent = `${condition} comb pass: settling, then measuring steps 30–150.`;
+  document.querySelector("#scenario-label").textContent =
+    `Comb-through instrument · ${condition}${cycle ? " cycle" : ""}`;
+  status.textContent = cycle
+    ? `${condition} comb cycle: outward pass, pause, then visible return.`
+    : `${condition} comb pass: settling, then measuring steps 30–150.`;
 }
 
 function applyMaterialControls() {
@@ -329,6 +338,8 @@ function updateTelemetry(now) {
     receipt.comb.peak_reaction_proxy.toFixed(0);
   document.querySelector("#metric-comb-work").textContent =
     receipt.comb.accumulated_work_proxy.toFixed(0);
+  document.querySelector("#metric-cycle-work").textContent =
+    `${receipt.comb.forward_work_proxy.toFixed(0)} / ${receipt.comb.return_work_proxy.toFixed(0)}`;
   document.querySelector("#metric-comb-travel").textContent =
     `${receipt.comb.accumulated_travel.toFixed(2)} m`;
   document.querySelector("#metric-trace-samples").textContent =
@@ -359,19 +370,24 @@ function drawCombTrace(trace) {
   context.lineTo(canvas.width - 8, canvas.height - 20);
   context.stroke();
   if (trace.length < 2) return;
-  const maxDisplacement = Math.max(...trace.map((sample) => sample.displacement), 1e-9);
+  const minX = Math.min(...trace.map((sample) => sample.x));
+  const maxX = Math.max(...trace.map((sample) => sample.x));
+  const xSpan = Math.max(maxX - minX, 1e-9);
   const maxReaction = Math.max(...trace.map((sample) => sample.reaction_proxy), 1e-9);
-  context.strokeStyle = "#63e6ff";
   context.lineWidth = 2;
-  context.beginPath();
-  for (let index = 0; index < trace.length; index += 1) {
+  for (let index = 1; index < trace.length; index += 1) {
+    const prior = trace[index - 1];
     const sample = trace[index];
-    const x = 28 + (sample.displacement / maxDisplacement) * (canvas.width - 38);
-    const y = canvas.height - 20 - (sample.reaction_proxy / maxReaction) * (canvas.height - 32);
-    if (index === 0) context.moveTo(x, y);
-    else context.lineTo(x, y);
+    const x0 = 28 + ((prior.x - minX) / xSpan) * (canvas.width - 38);
+    const x1 = 28 + ((sample.x - minX) / xSpan) * (canvas.width - 38);
+    const y0 = canvas.height - 20 - (prior.reaction_proxy / maxReaction) * (canvas.height - 32);
+    const y1 = canvas.height - 20 - (sample.reaction_proxy / maxReaction) * (canvas.height - 32);
+    context.strokeStyle = sample.phase === "return" ? "#ff6f91" : "#63e6ff";
+    context.beginPath();
+    context.moveTo(x0, y0);
+    context.lineTo(x1, y1);
+    context.stroke();
   }
-  context.stroke();
 }
 
 function animate(now) {
@@ -472,6 +488,9 @@ function applyQueryConfiguration() {
               endStep: Math.max(1, Number(params.get("combEnd") ?? 150)),
               startX: -1.35,
               endX: 1.35,
+              ...(params.get("cycle") === "1"
+                ? { returnStartStep: 165, returnEndStep: 285, returnX: -1.35 }
+                : {}),
             }
           : undefined,
     };
@@ -517,6 +536,7 @@ document.querySelector("#scissors").addEventListener("click", (event) => {
 document.querySelector("#plane-cut").addEventListener("click", cutToGuideLine);
 document.querySelector("#comb-dry").addEventListener("click", () => startCombPass("dry"));
 document.querySelector("#comb-wet").addEventListener("click", () => startCombPass("wet"));
+document.querySelector("#comb-cycle").addEventListener("click", () => startCombPass("wet", true));
 document.querySelector("#receipt").addEventListener("click", async () => {
   await navigator.clipboard.writeText(JSON.stringify(solver.receipt(), null, 2));
   status.textContent = "Copied the current material and solver receipt.";
