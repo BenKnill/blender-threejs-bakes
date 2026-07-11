@@ -268,7 +268,7 @@ export class HairSolver {
     this.clumpReleases = 0;
     this.windowClumpCaptures = 0;
     this.windowClumpReleases = 0;
-    this.stretchThreshold = 0.05;
+    this.stretchThreshold = 0.035;
     this.stretchCorrectionPasses = 0;
     this.peakStretchError = 0;
     this.comb = {
@@ -286,6 +286,9 @@ export class HairSolver {
     this.combPeakReaction = 0;
     this.combWork = 0;
     this.combTravel = 0;
+    this.combTrace = [];
+    this.combTraceStride = 1;
+    this.combMeasurementStep = 0;
     this.measurementWindow = "full_simulation";
     this.#initialize();
     this.neighborPairs = this.#buildNeighborPairs(3);
@@ -338,6 +341,9 @@ export class HairSolver {
     this.combPeakReaction = 0;
     this.combWork = 0;
     this.combTravel = 0;
+    this.combTrace = [];
+    this.combTraceStride = 1;
+    this.combMeasurementStep = 0;
     this.windowClumpCaptures = 0;
     this.windowClumpReleases = 0;
     this.measurementWindow = "full_simulation";
@@ -395,6 +401,9 @@ export class HairSolver {
     this.combPeakReaction = 0;
     this.combWork = 0;
     this.combTravel = 0;
+    this.combTrace = [];
+    this.combTraceStride = 1;
+    this.combMeasurementStep = 0;
   }
 
   prepareMeasurementWindow(name) {
@@ -471,6 +480,28 @@ export class HairSolver {
       this.maxStretchError = this.measureMaxStretchError();
     }
     this.peakStretchError = Math.max(this.peakStretchError, this.maxStretchError);
+    this.#recordCombSample();
+  }
+
+  #recordCombSample() {
+    if (!this.comb.enabled) return;
+    this.combMeasurementStep += 1;
+    if (this.combMeasurementStep % this.combTraceStride !== 0) return;
+    if (this.combTrace.length >= 128) {
+      this.combTrace = this.combTrace.filter((_sample, index) => index % 2 === 0);
+      this.combTraceStride *= 2;
+    }
+    this.combTrace.push({
+      step: this.combMeasurementStep,
+      x: this.comb.currentX,
+      displacement: this.combTravel,
+      reaction_proxy: this.combReaction,
+      accumulated_work_proxy: this.combWork,
+      max_relative_stretch_error: this.maxStretchError,
+      contacts: this.combContacts,
+      clump_captures: this.windowClumpCaptures,
+      clump_releases: this.windowClumpReleases,
+    });
   }
 
   #projectComb(step) {
@@ -814,6 +845,8 @@ export class HairSolver {
         accumulated_travel: this.combTravel,
         clump_captures_during_window: this.windowClumpCaptures,
         clump_releases_during_window: this.windowClumpReleases,
+        force_displacement_trace: this.combTrace.map((sample) => ({ ...sample })),
+        trace_sample_stride: this.combTraceStride,
       },
       assumption_receipt: {
         schema: "hair-material-assumptions/1",

@@ -183,6 +183,14 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     assert.ok(result.receipt.comb.accumulated_travel > 2);
     assert.ok(result.receipt.comb.clump_captures_during_window >= 0);
     assert.ok(result.receipt.comb.clump_releases_during_window >= 0);
+    assert.ok(result.receipt.comb.force_displacement_trace.length > 20);
+    assert.ok(result.receipt.comb.force_displacement_trace.length <= 128);
+    assert.equal(result.receipt.comb.force_displacement_trace[0].step, 1);
+    assert.ok(
+      result.receipt.comb.force_displacement_trace.every(
+        (sample) => sample.max_relative_stretch_error <= 0.04
+      )
+    );
     assert.equal(result.receipt.assumption_receipt.comb_work_nonnegative, true);
     assert.equal(result.receipt.assumption_receipt.stretch.satisfied, true);
   }
@@ -191,6 +199,10 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.notEqual(
     dry.receipt.comb.clump_releases_during_window,
     wet.receipt.comb.clump_releases_during_window
+  );
+  assert.deepEqual(
+    dry.receipt.comb.force_displacement_trace.map((sample) => sample.displacement),
+    wet.receipt.comb.force_displacement_trace.map((sample) => sample.displacement)
   );
 }
 

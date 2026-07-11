@@ -87,3 +87,10 @@ let HAIR_COMB_WORK_ACCUMULATION_NONNEGATIVE = prove
   ASM_REWRITE_TAC[] THEN
   MATCH_MP_TAC REAL_LE_MUL THEN
   ASM_REWRITE_TAC[]);;
+
+(** Trace displacement uses cumulative absolute comb travel.  Adding a
+    nonnegative step therefore cannot move the graph's horizontal coordinate
+    backwards. *)
+let HAIR_COMB_CUMULATIVE_TRAVEL_MONOTONE = prove
+ (`!travel step:real. &0 <= step ==> travel <= travel + step`,
+  REAL_ARITH_TAC);;
