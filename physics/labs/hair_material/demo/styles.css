@@ -137,6 +137,24 @@ button[aria-pressed="true"] {
   background: rgb(255 255 255 / 3%);
 }
 
+.comb-trace {
+  margin: 0.75rem 0 0;
+}
+
+.comb-trace canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid #314165;
+  border-radius: 0.45rem;
+}
+
+.comb-trace figcaption {
+  margin-top: 0.3rem;
+  color: #91a0c0;
+  font-size: 0.7rem;
+}
+
 .telemetry h2 {
   margin: 0 0 8px;
   color: #aabbea;

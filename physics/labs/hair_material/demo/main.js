@@ -331,9 +331,12 @@ function updateTelemetry(now) {
     receipt.comb.accumulated_work_proxy.toFixed(0);
   document.querySelector("#metric-comb-travel").textContent =
     `${receipt.comb.accumulated_travel.toFixed(2)} m`;
+  document.querySelector("#metric-trace-samples").textContent =
+    `${receipt.comb.force_displacement_trace.length} @ ${receipt.comb.trace_sample_stride}`;
   const assumptionMetric = document.querySelector("#metric-assumptions");
   assumptionMetric.textContent = receipt.assumption_receipt.status;
   assumptionMetric.dataset.status = receipt.assumption_receipt.status;
+  drawCombTrace(receipt.comb.force_displacement_trace);
   if (performance.memory) {
     document.querySelector("#metric-memory").textContent = `${(
       performance.memory.usedJSHeapSize /
@@ -341,6 +344,34 @@ function updateTelemetry(now) {
       1024
     ).toFixed(1)} MiB`;
   }
+}
+
+function drawCombTrace(trace) {
+  const canvas = document.querySelector("#comb-trace");
+  const context = canvas.getContext("2d");
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "#080913";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.strokeStyle = "#314165";
+  context.beginPath();
+  context.moveTo(28, 8);
+  context.lineTo(28, canvas.height - 20);
+  context.lineTo(canvas.width - 8, canvas.height - 20);
+  context.stroke();
+  if (trace.length < 2) return;
+  const maxDisplacement = Math.max(...trace.map((sample) => sample.displacement), 1e-9);
+  const maxReaction = Math.max(...trace.map((sample) => sample.reaction_proxy), 1e-9);
+  context.strokeStyle = "#63e6ff";
+  context.lineWidth = 2;
+  context.beginPath();
+  for (let index = 0; index < trace.length; index += 1) {
+    const sample = trace[index];
+    const x = 28 + (sample.displacement / maxDisplacement) * (canvas.width - 38);
+    const y = canvas.height - 20 - (sample.reaction_proxy / maxReaction) * (canvas.height - 32);
+    if (index === 0) context.moveTo(x, y);
+    else context.lineTo(x, y);
+  }
+  context.stroke();
 }
 
 function animate(now) {
