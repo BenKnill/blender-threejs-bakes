@@ -1,0 +1,73 @@
+{
+  "fixture": {
+    "branch_vertices": 11752,
+    "foliage_objects": 1664,
+    "frames": 97,
+    "physical_hair_guides": 7,
+    "render_hairs": 127,
+    "resolution": [
+      960,
+      540
+    ],
+    "tree_guides": 35
+  },
+  "headroom_gates": {
+    "all_97_frames_present": true,
+    "blender_peak_under_2_gib": true,
+    "blender_under_120_seconds": true
+  },
+  "platform_scope": "observed on the primary M5 Mac; not a portable benchmark",
+  "render_receipt_sha256": "7cf7cb6beaa9f43af8f32a13e7a19186fcd71032e8a5d6372cabbef9f6235dd5",
+  "scale_decision": "127 render hairs at 960x540 remained comfortably laptop-safe",
+  "schema": "seedthree-wind-canopy-bake-summary/1",
+  "stages": {
+    "blender_frames": {
+      "artifacts": [
+        {
+          "exists": true,
+          "file_count": 97,
+          "kind": "directory",
+          "path": "seedthree_wind_canopy_frames",
+          "size_bytes": 57464920
+        },
+        {
+          "exists": true,
+          "file_count": 1,
+          "kind": "file",
+          "path": "seedthree_wind_canopy.receipt.json",
+          "size_bytes": 1027
+        }
+      ],
+      "label": "SeedThree wind canopy Blender frames",
+      "peak_rss_bytes": 591069184,
+      "sample_count": 380,
+      "sample_interval_seconds": 0.1,
+      "source_sha256": "3b6203258cd36f3aa44e624f8c17dca7e2f3671244525a354d97910ee7ce7703",
+      "wall_seconds": 46.68056012499437
+    },
+    "video_packaging": {
+      "artifacts": [
+        {
+          "exists": true,
+          "file_count": 1,
+          "kind": "file",
+          "path": "seedthree_wind_canopy.mp4",
+          "size_bytes": 662319
+        },
+        {
+          "exists": true,
+          "file_count": 1,
+          "kind": "file",
+          "path": "seedthree_wind_canopy_contact.png",
+          "size_bytes": 362363
+        }
+      ],
+      "label": "SeedThree wind canopy video packaging",
+      "peak_rss_bytes": 231538688,
+      "sample_count": 4,
+      "sample_interval_seconds": 0.1,
+      "source_sha256": "ae053f9bcd5c1d0430584ba386d3c04b1facbf18c575c5b15591c51bfd53a348",
+      "wall_seconds": 0.3771399580000434
+    }
+  }
+}
