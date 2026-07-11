@@ -69,3 +69,12 @@ Initial M5 cycle observation: 5.40 m travel in 5.40 s, digest
 `84286f894b527bf6`, outward/return work `9996 / 12342`, 122 retained samples at
 stride 2, and 3.50% peak stretch. The unequal colored legs are the first
 repeat-pass hysteresis result, not yet a calibrated material curve.
+
+## Rotating-wind showcase
+
+`just hair-wind-showcase` prints an autonomous URL intended for the narrow
+preview window. It hides the editor panel, runs the two-pass comb without user
+input, slowly orbits the camera, and continues afterward under a coherent wind
+whose horizontal direction rotates continuously. A compass ring, arrow, flow
+streaks, and compact HUD make the applied direction visible. The legacy scalar
+wind remains the default unless `windRotation` or `windAngle` is requested.

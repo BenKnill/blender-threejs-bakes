@@ -100,6 +100,9 @@ export function advanceHairReplay(solver, config, state, targetStep) {
     const elapsed = state.step * dt;
     const gustWave = 0.5 + 0.5 * Math.sin(elapsed * 2.4 - Math.PI * 0.5);
     solver.wind = (config.baseWind ?? 0.18) + (config.gust ?? 0) * gustWave;
+    if (config.windRotationRate || config.windAngle !== undefined) {
+      solver.setWindDirection((config.windAngle ?? 0) + elapsed * (config.windRotationRate ?? 0));
+    }
     if (config.cut === "diagonal") applyDiagonalCut(solver, config, elapsed, state);
     applyCombPass(solver, config, state);
     solver.step(dt);

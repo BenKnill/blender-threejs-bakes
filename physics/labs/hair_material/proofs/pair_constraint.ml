@@ -101,3 +101,10 @@ let HAIR_COMB_CYCLE_WORK_NONNEGATIVE = prove
  (`!outward return:real.
       &0 <= outward /\ &0 <= return ==> &0 <= outward + return`,
   REAL_ARITH_TAC);;
+
+(** A quarter-turn of the horizontal wind vector preserves squared magnitude.
+    The browser uses continuous sine/cosine directions; this is a narrow
+    algebraic rotation sanity contract, not a proof of JavaScript trig. *)
+let HAIR_WIND_QUARTER_TURN_PRESERVES_SQUARED_MAGNITUDE = prove
+ (`!x z:real. (--z) pow 2 + x pow 2 = x pow 2 + z pow 2`,
+  CONV_TAC REAL_RING);;

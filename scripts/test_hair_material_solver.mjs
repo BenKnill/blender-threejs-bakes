@@ -46,6 +46,16 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
 }
 
 {
+  const solver = new HairSolver({ guideCount: 8, segments: 4 });
+  solver.setWindDirection(Math.PI * 0.5);
+  nearlyEqual(solver.windDirection[0], 0);
+  nearlyEqual(solver.windDirection[2], 1);
+  assert.equal(solver.receipt().wind.mode, "directional");
+  solver.disableDirectionalWind();
+  assert.equal(solver.receipt().wind.mode, "legacy_scalar");
+}
+
+{
   assert.equal(updateClumpBond(false, 0.09, 0.1, 0.2), true);
   assert.equal(updateClumpBond(true, 0.15, 0.1, 0.2), true);
   assert.equal(updateClumpBond(true, 0.21, 0.1, 0.2), false);
@@ -236,6 +246,30 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.ok(cycle.receipt.comb.force_displacement_trace.length <= 128);
   assert.equal(cycle.receipt.assumption_receipt.measurement_window, "comb_cycle");
   assert.equal(cycle.receipt.assumption_receipt.status, "satisfied");
+}
+
+{
+  const rotating = runHairReplay({
+    solver: { guideCount: 24, segments: 6, preset: "wavy", iterations: 5 },
+    steps: 120,
+    dt: 1 / 60,
+    baseWind: 0.3,
+    gust: 0.4,
+    windAngle: 0.2,
+    windRotationRate: 0.7,
+  }).result;
+  const repeated = runHairReplay({
+    solver: { guideCount: 24, segments: 6, preset: "wavy", iterations: 5 },
+    steps: 120,
+    dt: 1 / 60,
+    baseWind: 0.3,
+    gust: 0.4,
+    windAngle: 0.2,
+    windRotationRate: 0.7,
+  }).result;
+  assert.equal(rotating.state_digest, repeated.state_digest);
+  assert.equal(rotating.receipt.wind.mode, "directional");
+  nearlyEqual(rotating.receipt.wind.angle_radians, 0.2 + (119 / 60) * 0.7);
 }
 
 {

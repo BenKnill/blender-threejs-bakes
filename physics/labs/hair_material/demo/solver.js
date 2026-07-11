@@ -256,6 +256,9 @@ export class HairSolver {
     this.cutCount = 0;
     this.time = 0;
     this.wind = 0.18;
+    this.windDirection = [1, 0, 0.45];
+    this.windAngle = Math.atan2(0.45, 1);
+    this.directionalWind = false;
     this.sectionLift = 0;
     this.maxStretchError = 0;
     this.moisture = 0;
@@ -333,6 +336,9 @@ export class HairSolver {
     this.material = { ...MATERIAL_PRESETS[preset] };
     this.cutCount = 0;
     this.time = 0;
+    this.windDirection = [1, 0, 0.45];
+    this.windAngle = Math.atan2(0.45, 1);
+    this.directionalWind = false;
     this.clumpBonds.clear();
     this.clumpCaptures = 0;
     this.clumpReleases = 0;
@@ -384,6 +390,18 @@ export class HairSolver {
 
   setSectionLift(value) {
     this.sectionLift = Math.max(0, Math.min(1.4, value));
+  }
+
+  setWindDirection(angle) {
+    this.windAngle = angle;
+    this.windDirection = [Math.cos(angle), 0, Math.sin(angle)];
+    this.directionalWind = true;
+  }
+
+  disableDirectionalWind() {
+    this.directionalWind = false;
+    this.windDirection = [1, 0, 0.45];
+    this.windAngle = Math.atan2(0.45, 1);
   }
 
   setCombPose(previousX, currentX, envelope = {}) {
@@ -440,11 +458,14 @@ export class HairSolver {
         const y = this.positions[base + 1];
         const z = this.positions[base + 2];
         const tipWeight = particle / this.segments;
-        const wind = this.wind * Math.sin(this.time * 1.7 + strand * 0.071) * tipWeight;
-        this.positions[base] += (x - this.previous[base]) * damping + wind * step * step;
+        const localWave = Math.sin(this.time * 1.7 + strand * 0.071);
+        const wind =
+          this.wind * (this.directionalWind ? 0.72 + 0.28 * localWave : localWave) * tipWeight;
+        this.positions[base] +=
+          (x - this.previous[base]) * damping + wind * this.windDirection[0] * step * step;
         this.positions[base + 1] += (y - this.previous[base + 1]) * damping - 9.81 * step * step;
         this.positions[base + 2] +=
-          (z - this.previous[base + 2]) * damping + 0.45 * wind * step * step;
+          (z - this.previous[base + 2]) * damping + wind * this.windDirection[2] * step * step;
         this.previous[base] = x;
         this.previous[base + 1] = y;
         this.previous[base + 2] = z;
@@ -832,6 +853,12 @@ export class HairSolver {
       active_segments: Array.from(this.activeSegments).reduce((sum, value) => sum + value, 0),
       preset: this.preset,
       material: { ...this.material },
+      wind: {
+        magnitude: this.wind,
+        mode: this.directionalWind ? "directional" : "legacy_scalar",
+        angle_radians: this.windAngle,
+        direction: [...this.windDirection],
+      },
       iterations: this.iterations,
       max_relative_stretch_error: this.maxStretchError,
       peak_relative_stretch_error: this.peakStretchError,

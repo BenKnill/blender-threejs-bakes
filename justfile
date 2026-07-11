@@ -74,6 +74,11 @@ hair-material:
     ./scripts/serve.sh start
     @echo "http://127.0.0.1:8091/physics/labs/hair_material/demo/"
 
+# Start and print the autonomous narrow-preview rotating-wind showcase.
+hair-wind-showcase:
+    ./scripts/serve.sh start
+    @echo "http://127.0.0.1:8091/physics/labs/hair_material/demo/?replay=1&showcase=1&comb=1&cycle=1&guides=256&iterations=6&wetness=0.85&product=0.2&wind=0.32&gust=0.48&windRotation=0.62&orbit=0.22&scenario=rotating-wind-two-pass"
+
 # Package hair frames, then prune source frames and non-selected scenario clips.
 hair-phase-videos output_root:
     bash scripts/package_hair_phase_space_videos.sh {{output_root}}

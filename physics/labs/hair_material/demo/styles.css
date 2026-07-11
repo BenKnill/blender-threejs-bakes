@@ -23,6 +23,38 @@ body {
   overflow: hidden;
 }
 
+#showcase-hud {
+  display: none;
+}
+
+body.showcase .panel,
+body.showcase #cut-cursor {
+  display: none;
+}
+
+body.showcase #showcase-hud {
+  position: fixed;
+  right: 0.8rem;
+  bottom: 0.8rem;
+  z-index: 5;
+  display: grid;
+  max-width: min(17rem, calc(100vw - 1.6rem));
+  padding: 0.65rem 0.8rem;
+  border: 1px solid rgb(99 230 255 / 35%);
+  border-radius: 0.65rem;
+  background: rgb(5 7 16 / 76%);
+  box-shadow: 0 0 28px rgb(36 177 222 / 18%);
+  color: #c8f7ff;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  backdrop-filter: blur(8px);
+}
+
+body.showcase #showcase-hud strong {
+  color: #fff;
+  font-size: 0.9rem;
+}
+
 #viewport {
   position: fixed;
   inset: 0;
