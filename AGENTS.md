@@ -54,6 +54,19 @@ pipx run ruff format scripts
 pipx run ruff check scripts
 ```
 
+Run the dependency-light Box3D scene/physics compiler contracts:
+
+```sh
+just test
+```
+
+Run the complete native Box3D → Blender proof (requires a local Box3D checkout
+and Blender):
+
+```sh
+BOX3D_SOURCE_DIR=/Users/boxer/box3d bash scripts/build_basic_animation.sh
+```
+
 Validate a layout or manifest contract:
 
 ```sh
@@ -102,6 +115,13 @@ python3 scripts/bt.py inspect /tmp/preset_sanity.layout.json
   `__pycache__/`, and `node_modules/`.
 - Blender outputs write receipt JSON sidecars. Keep that provenance intact when
   touching render or proxy export paths.
+- The first physics bridge keeps authored and simulated state in Three.js Y-up
+  MKS space. Box3D is the sole rigid-body integrator; Blender consumes the
+  sampled motion clip and performs the existing Y-up → Z-up conversion only at
+  the render boundary.
+- The shipped compiler supports static and dynamic bbox-collider bodies. It
+  explicitly rejects kinematic bodies and does not yet author joints or
+  articulated assemblies.
 
 ## Current Data Contracts
 

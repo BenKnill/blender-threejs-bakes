@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.blender-threejs-bakes/schemas/simulation-events.schema.json",
+  "title": "Native Box3D simulation event receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "sample_interval_s", "duration_s", "frames"],
+  "properties": {
+    "schema": { "const": "simulation-events/1" },
+    "sample_interval_s": { "type": "number", "exclusiveMinimum": 0 },
+    "duration_s": { "type": "number", "minimum": 0 },
+    "frames": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "index",
+          "time_s",
+          "contact_begin_count",
+          "contact_end_count",
+          "contact_hit_count",
+          "joint_event_count",
+          "body_move_count"
+        ],
+        "properties": {
+          "index": { "type": "integer", "minimum": 0 },
+          "time_s": { "type": "number", "minimum": 0 },
+          "contact_begin_count": { "type": "integer", "minimum": 0 },
+          "contact_end_count": { "type": "integer", "minimum": 0 },
+          "contact_hit_count": { "type": "integer", "minimum": 0 },
+          "joint_event_count": { "type": "integer", "minimum": 0 },
+          "body_move_count": { "type": "integer", "minimum": 0 }
+        }
+      }
+    }
+  }
+}

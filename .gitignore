@@ -7,3 +7,5 @@ __pycache__/
 node_modules/
 .ruff_cache/
 .run/
+physics/build/
+physics/outputs/

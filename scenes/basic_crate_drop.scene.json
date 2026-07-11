@@ -1,0 +1,93 @@
+{
+  "schema": "scene-state/1",
+  "space": "threejs_yup",
+  "entities": [
+    {
+      "id": "crate_left",
+      "kind": "asset",
+      "frame": "world",
+      "pose": {
+        "position_m": [-1.15, 5.5, 0.15],
+        "orientation_xyzw": [0, 0, 0, 1],
+        "scale_xyz": [1, 1, 1]
+      },
+      "motion": {
+        "linear_velocity_m_s": [0.8, 0, 0.15],
+        "angular_velocity_rad_s": [0.3, 1.2, 0.2]
+      },
+      "asset": { "asset_id": "medieval_prop_crate" },
+      "physics": {
+        "body_type": "dynamic",
+        "collider": "medieval_prop_crate.default",
+        "density_kg_m3": 550,
+        "friction": 0.68,
+        "restitution": 0.12
+      }
+    },
+    {
+      "id": "crate_center",
+      "kind": "asset",
+      "frame": "world",
+      "pose": {
+        "position_m": [0.1, 7.5, -0.1],
+        "orientation_xyzw": [0, 0.2164396139, 0, 0.9762960071],
+        "scale_xyz": [1, 1, 1]
+      },
+      "motion": {
+        "linear_velocity_m_s": [-0.25, -0.2, 0.3],
+        "angular_velocity_rad_s": [0.7, -0.4, 0.5]
+      },
+      "asset": { "asset_id": "medieval_prop_crate" },
+      "physics": {
+        "body_type": "dynamic",
+        "collider": "medieval_prop_crate.default",
+        "density_kg_m3": 620,
+        "friction": 0.72,
+        "restitution": 0.08
+      }
+    },
+    {
+      "id": "crate_right",
+      "kind": "asset",
+      "frame": "world",
+      "pose": {
+        "position_m": [1.25, 9.5, 0.25],
+        "orientation_xyzw": [0.1305261922, 0, 0, 0.9914448614],
+        "scale_xyz": [1, 1, 1]
+      },
+      "motion": {
+        "linear_velocity_m_s": [-0.45, -0.1, -0.25],
+        "angular_velocity_rad_s": [-0.5, 0.8, 1.1]
+      },
+      "asset": { "asset_id": "medieval_prop_crate" },
+      "physics": {
+        "body_type": "dynamic",
+        "collider": "medieval_prop_crate.default",
+        "density_kg_m3": 500,
+        "friction": 0.62,
+        "restitution": 0.16
+      }
+    },
+    {
+      "id": "hero_camera",
+      "kind": "camera",
+      "frame": "world",
+      "pose": {
+        "position_m": [12, 7.5, 15],
+        "orientation_xyzw": [-0.0561909082, 0.3304195565, 0.0197107063, 0.9419538134],
+        "scale_xyz": [1, 1, 1]
+      },
+      "motion": {
+        "linear_velocity_m_s": [-0.2170926792, -0.0416094302, -0.2713658489],
+        "angular_velocity_rad_s": [0, 0, 0]
+      },
+      "camera": {
+        "focal_length_mm": 35,
+        "sensor_width_mm": 36,
+        "focus_distance_m": 19.3465759244,
+        "aperture_fstop": 4,
+        "exposure_stops": 0.35
+      }
+    }
+  ]
+}

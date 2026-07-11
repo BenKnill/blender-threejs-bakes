@@ -1,0 +1,101 @@
+{
+  "schema": "scene-state/1",
+  "space": "threejs_yup",
+  "entities": [
+    {
+      "id": "shrine",
+      "kind": "asset",
+      "frame": "world",
+      "pose": {
+        "position_m": [0, 0, 0],
+        "orientation_xyzw": [0, 0, 0, 1],
+        "scale_xyz": [1, 1, 1]
+      },
+      "motion": {
+        "linear_velocity_m_s": [0, 0, 0],
+        "angular_velocity_rad_s": [0, 0, 0]
+      },
+      "asset": {
+        "asset_id": "japanese_zen_shrine_asian_temple"
+      },
+      "physics": {
+        "body_type": "static",
+        "collider": "japanese_zen_shrine_asian_temple.default",
+        "friction": 0.8,
+        "restitution": 0.05
+      }
+    },
+    {
+      "id": "hero_plant",
+      "kind": "asset",
+      "frame": "world",
+      "pose": {
+        "position_m": [-4, 0, -1.5],
+        "orientation_xyzw": [0, 0, 0, 1],
+        "scale_xyz": [1, 1, 1]
+      },
+      "motion": {
+        "linear_velocity_m_s": [0, 0, 0],
+        "angular_velocity_rad_s": [0, 0, 0]
+      },
+      "asset": {
+        "asset_id": "plant"
+      },
+      "physics": {
+        "body_type": "static",
+        "collider": "trunk_capsules",
+        "friction": 0.9,
+        "restitution": 0
+      }
+    },
+    {
+      "id": "falling_crate",
+      "kind": "asset",
+      "frame": "world",
+      "pose": {
+        "position_m": [0.5, 6, -1],
+        "orientation_xyzw": [0, 0, 0, 1],
+        "scale_xyz": [1, 1, 1]
+      },
+      "motion": {
+        "linear_velocity_m_s": [0, -0.5, 0.2],
+        "angular_velocity_rad_s": [0, 0.7853981634, 0.1745329252]
+      },
+      "asset": {
+        "asset_id": "medieval_prop_crate"
+      },
+      "physics": {
+        "body_type": "dynamic",
+        "collider": "medieval_prop_crate.default",
+        "density_kg_m3": 600,
+        "friction": 0.65,
+        "restitution": 0.05
+      }
+    },
+    {
+      "id": "hero_camera",
+      "kind": "camera",
+      "frame": "world",
+      "pose": {
+        "position_m": [5, 4, 6],
+        "orientation_xyzw": [-0.1816654028, 0.3340110944, 0.0657719473, 0.9225553215],
+        "scale_xyz": [1, 1, 1]
+      },
+      "motion": {
+        "linear_velocity_m_s": [-0.25, 0, -0.3],
+        "angular_velocity_rad_s": [0, 0.04, 0]
+      },
+      "camera": {
+        "focal_length_mm": 50,
+        "sensor_width_mm": 36,
+        "focus_distance_m": 8.4403791384,
+        "aperture_fstop": 2.8,
+        "exposure_stops": -0.7,
+        "look_at": {
+          "target_position_m": [0, 0.8, 0],
+          "up_direction_xyz": [0, 1, 0]
+        }
+      }
+    }
+  ]
+}

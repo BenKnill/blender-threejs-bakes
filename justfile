@@ -14,6 +14,11 @@ lint:
     npx prettier --check 'editor/**/*.{js,css,html}'
     {{ruff}} check scripts
 
+# Dependency-light compiler contracts for the Box3D scene bridge.
+test:
+    python3 scripts/test_scene_compile.py
+    python3 scripts/test_compile_physics.py
+
 # Format everything in place — JS + Python
 format:
     npx prettier --write 'editor/**/*.{js,css,html}'

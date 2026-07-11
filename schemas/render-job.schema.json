@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.blender-threejs-bakes/schemas/render-job.schema.json",
+  "title": "Scene render job",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "name", "active_camera", "fps", "duration_s", "output"],
+  "properties": {
+    "schema": { "const": "render-job/1" },
+    "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "active_camera": { "type": "string", "minLength": 1 },
+    "fps": { "type": "number", "exclusiveMinimum": 0 },
+    "duration_s": { "type": "number", "minimum": 0 },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width_px", "height_px", "samples"],
+      "properties": {
+        "width_px": { "type": "integer", "minimum": 1 },
+        "height_px": { "type": "integer", "minimum": 1 },
+        "samples": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

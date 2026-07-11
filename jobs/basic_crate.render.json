@@ -1,0 +1,12 @@
+{
+  "schema": "render-job/1",
+  "name": "box3d_crate_drop",
+  "active_camera": "hero_camera",
+  "fps": 24,
+  "duration_s": 4,
+  "output": {
+    "width_px": 960,
+    "height_px": 540,
+    "samples": 32
+  }
+}

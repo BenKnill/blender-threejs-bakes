@@ -45,6 +45,22 @@ This writes `assets/glb/*.glb` and refreshes `assets/manifest.json`.
 
 Output lands in `renders/<layout-name>.png` with a matching receipt JSON.
 
+## Bake a Box3D motion clip
+
+The first native-physics slice compiles a readable scene into Box3D, records and
+replays the simulation, then uses Blender to render the sampled transforms. The
+scene, simulation, and render cadence are separate JSON contracts; Blender does
+not re-simulate the motion.
+
+```sh
+BOX3D_SOURCE_DIR=/Users/boxer/box3d bash scripts/build_basic_animation.sh
+```
+
+This produces a crate-drop MP4, a Blender render receipt, a sampled
+`motion-clip/1`, and a native event receipt under gitignored `renders/` and
+`physics/outputs/`. See [the Box3D animation guide](docs/BOX3D_ANIMATION.md)
+for the exact boundary and deliberate first-pass limits.
+
 ## Place compute effect cards
 
 The repo includes portable compute-effect placeholders for final Blender renders.
