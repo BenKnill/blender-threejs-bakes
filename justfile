@@ -10,8 +10,8 @@ default:
 
 # Lint everything (no changes) — JS + Python
 lint:
-    npx eslint editor
-    npx prettier --check 'editor/**/*.{js,css,html}'
+    npx eslint editor physics/labs/contact_shell/demo/main.js
+    npx prettier --check 'editor/**/*.{js,css,html}' 'physics/labs/contact_shell/demo/**/*.{js,css,html,json}'
     {{ruff}} check scripts
 
 # Dependency-light compiler contracts for the Box3D scene bridge.
@@ -21,6 +21,7 @@ test:
     python3 scripts/test_compile_tree_assembly.py
     python3 scripts/test_bake_telemetry.py
     python3 scripts/test_wind_canopy_math.py
+    python3 scripts/test_contact_shell_demo.py
 
 # Native Box3D crate proof: compile, replay-validate, and bake 97 frames.
 box3d-basic:
@@ -64,7 +65,7 @@ seedthree-wind: wind-garden
 
 # Format everything in place — JS + Python
 format:
-    npx prettier --write 'editor/**/*.{js,css,html}'
+    npx prettier --write 'editor/**/*.{js,css,html}' 'physics/labs/contact_shell/demo/**/*.{js,css,html,json}'
     {{ruff}} format scripts
 
 # Install / refresh git hooks

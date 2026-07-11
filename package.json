@@ -6,8 +6,8 @@
   "scripts": {
     "prepare": "lefthook install",
     "serve": "./scripts/serve.sh",
-    "lint": "eslint editor && prettier --check 'editor/**/*.{js,css,html}'",
-    "format": "prettier --write 'editor/**/*.{js,css,html}'"
+    "lint": "eslint editor physics/labs/contact_shell/demo/main.js && prettier --check 'editor/**/*.{js,css,html}' 'physics/labs/contact_shell/demo/**/*.{js,css,html,json}'",
+    "format": "prettier --write 'editor/**/*.{js,css,html}' 'physics/labs/contact_shell/demo/**/*.{js,css,html,json}'"
   },
   "devDependencies": {
     "eslint": "^9",

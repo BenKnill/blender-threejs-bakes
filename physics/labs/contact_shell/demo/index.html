@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Interactive Box3D contact-shell laboratory: energy injection, restitution threshold, and friction projection."
+    />
+    <title>Contact Shell Laboratory</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="lab-shell">
+      <header class="masthead">
+        <div>
+          <p class="eyebrow">BOX3D / CONTACT SHELL 01</p>
+          <h1>Contact is a small machine.</h1>
+          <p class="dek">
+            Three experiments expose what happens inside one discrete response: a resting overlap
+            wakes up, a two-millimetre-per-second difference flips a bounce, and friction finds the
+            edge of a disk.
+          </p>
+        </div>
+        <div class="specimen-mark" aria-label="Contact shell specimen 01">
+          <span>CS</span>
+          <strong>01</strong>
+        </div>
+      </header>
+
+      <nav class="experiment-tabs" aria-label="Contact experiments">
+        <button class="experiment-tab is-active" type="button" data-experiment="energy">
+          <span>01</span> Energy lift
+        </button>
+        <button class="experiment-tab" type="button" data-experiment="threshold">
+          <span>02</span> Threshold twins
+        </button>
+        <button class="experiment-tab" type="button" data-experiment="friction">
+          <span>03</span> Friction disk
+        </button>
+      </nav>
+
+      <section class="experiment-stage" aria-live="polite">
+        <div class="stage-copy">
+          <p class="stage-kicker" id="stage-kicker">PUBLIC BOX3D PROBE · P1</p>
+          <h2 id="stage-title">Overlap becomes motion.</h2>
+          <p id="stage-description">
+            With gravity disabled, the solver pushes an interpenetrating cube away from the floor.
+            Its translational kinetic energy rises from exactly zero.
+          </p>
+          <dl class="readout" id="readout"></dl>
+          <div class="stage-actions" id="stage-actions"></div>
+        </div>
+
+        <div class="stage-visual">
+          <svg
+            id="contact-visual"
+            viewBox="0 0 760 460"
+            role="img"
+            aria-labelledby="visual-title visual-description"
+          >
+            <title id="visual-title">Energetic overlap recovery</title>
+            <desc id="visual-description">
+              A cube begins overlapped with a floor and gains upward velocity after one Box3D step.
+            </desc>
+            <defs>
+              <linearGradient id="floor-glow" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="var(--cyan)" stop-opacity="0.35" />
+                <stop offset="1" stop-color="var(--cyan)" stop-opacity="0" />
+              </linearGradient>
+              <linearGradient id="cube-face" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="var(--paper)" />
+                <stop offset="1" stop-color="var(--muted-paper)" />
+              </linearGradient>
+              <marker
+                id="arrow-cyan"
+                markerWidth="8"
+                markerHeight="8"
+                refX="5"
+                refY="3"
+                orient="auto"
+              >
+                <path d="M0,0 L0,6 L6,3 z" fill="var(--cyan)" />
+              </marker>
+              <marker
+                id="arrow-coral"
+                markerWidth="8"
+                markerHeight="8"
+                refX="5"
+                refY="3"
+                orient="auto"
+              >
+                <path d="M0,0 L0,6 L6,3 z" fill="var(--coral)" />
+              </marker>
+            </defs>
+            <g id="visual-content"></g>
+          </svg>
+          <p class="visual-caption" id="visual-caption">
+            Scrub the measured 33.33 ms substep or replay it.
+          </p>
+        </div>
+      </section>
+
+      <footer class="evidence-strip">
+        <button class="evidence-key" type="button" data-evidence="native">
+          <span class="evidence-swatch is-native"></span>
+          <span><strong>Native observation</strong><small>public Box3D API</small></span>
+        </button>
+        <button class="evidence-key" type="button" data-evidence="model">
+          <span class="evidence-swatch is-model"></span>
+          <span><strong>Executable model</strong><small>standalone equations</small></span>
+        </button>
+        <button class="evidence-key" type="button" data-evidence="hol">
+          <span class="evidence-swatch is-hol"></span>
+          <span><strong>HOL observation</strong><small>exact real · warm profile</small></span>
+        </button>
+        <p class="evidence-note" id="evidence-note">
+          Select an evidence class to see its claim boundary.
+        </p>
+      </footer>
+    </main>
+    <script type="module" src="main.js"></script>
+  </body>
+</html>

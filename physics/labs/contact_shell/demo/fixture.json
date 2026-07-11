@@ -1,0 +1,58 @@
+{
+  "schema": "contact-shell-demo/1",
+  "box3d_commit": "ef8ef0187a6fb7d93fc847872a538096b4a5833d",
+  "probe_sha256": "b5e30f263c6ebfffc69b346aee93e5035957f45f841c9cc3b54ffed69849e705",
+  "evidence": {
+    "native": "Measured by the public Box3D API against the pinned checkout.",
+    "model": "Computed by the standalone contact-shell equations.",
+    "hol": "Exact-real theorem observed in a warm HOL Light profile; final cold audit pending."
+  },
+  "energy": {
+    "case": "energetic_penetrator",
+    "dt": 0.033333335071802139,
+    "energy_before": 0,
+    "energy_after": 0.024870797991752625,
+    "post_vy": 0.22302824258804321,
+    "normal_impulse": 0.22302806377410889,
+    "total_normal_impulse": 3.2993293404579163,
+    "contact_points": 4
+  },
+  "threshold": {
+    "speed": 1,
+    "slow": {
+      "case": "threshold_twin_slow",
+      "pre_vy": -0.99900001287460327,
+      "post_vy": -0.033781155943870544,
+      "saved_vn": -0.99900001287460327,
+      "normal_impulse": 0.96521890163421631,
+      "contact_points": 4
+    },
+    "fast": {
+      "case": "threshold_twin_fast",
+      "pre_vy": -1.0010000467300415,
+      "post_vy": 0.96670287847518921,
+      "saved_vn": -1.0010000467300415,
+      "normal_impulse": 1.9677028954029083,
+      "contact_points": 4
+    }
+  },
+  "friction": {
+    "case": "friction_disk",
+    "mu": 0.69999998807907104,
+    "friction_impulse": 0.71261114625524336,
+    "normal_impulse": 1.0180160999298096,
+    "radius": 0.7126112578151691,
+    "within": true,
+    "contact_points": 4
+  },
+  "oracle": {
+    "case": "pure_oracle",
+    "mass_scale": 0.98643174729118621,
+    "impulse_scale": 0.013568252708813802,
+    "softness_sum": 1,
+    "normal_impulse": 1.25,
+    "friction_demand": [3, 4],
+    "friction_response": [1.2000000000000002, 1.6000000000000001],
+    "friction_norm": 2
+  }
+}
