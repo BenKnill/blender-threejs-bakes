@@ -58,7 +58,7 @@ function clamp01(value) {
   return Math.max(0, Math.min(1, value));
 }
 
-export function segmentSegmentDistanceSquared(left, right) {
+export function closestSegmentPoints(left, right) {
   const directionLeft = subtract3(left.b, left.a);
   const directionRight = subtract3(right.b, right.a);
   const offset = subtract3(left.a, right.a);
@@ -70,9 +70,9 @@ export function segmentSegmentDistanceSquared(left, right) {
   let rightParameter;
 
   if (lengthLeftSquared <= degenerateEpsilon && lengthRightSquared <= degenerateEpsilon) {
-    return dot3(offset, offset);
-  }
-  if (lengthLeftSquared <= degenerateEpsilon) {
+    leftParameter = 0;
+    rightParameter = 0;
+  } else if (lengthLeftSquared <= degenerateEpsilon) {
     leftParameter = 0;
     rightParameter = clamp01(rightProjection / lengthRightSquared);
   } else {
@@ -101,11 +101,21 @@ export function segmentSegmentDistanceSquared(left, right) {
     }
   }
 
-  const separation = [0, 1, 2].map(
-    (axis) =>
-      offset[axis] + directionLeft[axis] * leftParameter - directionRight[axis] * rightParameter
-  );
-  return Math.max(0, dot3(separation, separation));
+  const leftPoint = [0, 1, 2].map((axis) => left.a[axis] + directionLeft[axis] * leftParameter);
+  const rightPoint = [0, 1, 2].map((axis) => right.a[axis] + directionRight[axis] * rightParameter);
+  const separation = subtract3(leftPoint, rightPoint);
+  return {
+    left_parameter: leftParameter,
+    right_parameter: rightParameter,
+    left_point: leftPoint,
+    right_point: rightPoint,
+    separation,
+    distance_squared: Math.max(0, dot3(separation, separation)),
+  };
+}
+
+export function segmentSegmentDistanceSquared(left, right) {
+  return closestSegmentPoints(left, right).distance_squared;
 }
 
 export function quantizeSquaredRisk(value, scale = 1e8) {

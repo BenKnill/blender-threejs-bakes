@@ -166,6 +166,23 @@ let HAIR_CONTACT_CHURN_CURRENT_PARTITION = prove
     MESON_TAC[];
     REWRITE_TAC[EXTENSION; IN_UNION; IN_INTER; IN_DIFF] THEN MESON_TAC[]]);;
 
+(** A segment contact distributes one correction over each pair of endpoints.
+    When both barycentric weight pairs sum to one, equal-and-opposite contact
+    corrections preserve the four-endpoint velocity sum.  Nonnegativity is
+    included because the implementation clamps closest parameters to [0,1]. *)
+let HAIR_BARYCENTRIC_ENDPOINT_EXCHANGE_PRESERVES_SUM = prove
+ (`!a0 a1 b0 b1 wa0 wa1 wb0 wb1 correction:real.
+      &0 <= wa0 /\ &0 <= wa1 /\ wa0 + wa1 = &1 /\
+      &0 <= wb0 /\ &0 <= wb1 /\ wb0 + wb1 = &1
+      ==> (a0 + wa0 * correction) + (a1 + wa1 * correction) +
+          (b0 - wb0 * correction) + (b1 - wb1 * correction) =
+          a0 + a1 + b0 + b1`,
+  REPEAT STRIP_TAC THEN
+  SUBGOAL_THEN `wa1 = &1 - wa0` SUBST1_TAC THENL
+   [ASM_REAL_ARITH_TAC;
+    SUBGOAL_THEN `wb1 = &1 - wb0` SUBST1_TAC THENL
+     [ASM_REAL_ARITH_TAC; CONV_TAC REAL_RING]]);;
+
 (** A quarter-turn of the horizontal wind vector preserves squared magnitude.
     The browser uses continuous sine/cosine directions; this is a narrow
     algebraic rotation sanity contract, not a proof of JavaScript trig. *)
