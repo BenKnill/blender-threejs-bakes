@@ -991,9 +991,9 @@ function applyQueryConfiguration() {
               peakStep: 90,
               holdEndStep: 170,
               endStep: 255,
-              section: Math.max(0, Math.min(7, Number(params.get("poseSection") ?? 6))),
+              section: Math.max(0, Math.min(7, Number(params.get("poseSection") ?? 7))),
               lift: Math.max(0, Math.min(1.4, Number(params.get("poseLift") ?? 0.32))),
-              sweep: Math.max(-1.4, Math.min(1.4, Number(params.get("poseSweep") ?? -0.34))),
+              sweep: Math.max(-1.4, Math.min(1.4, Number(params.get("poseSweep") ?? 0.34))),
             }
           : undefined,
       comb:

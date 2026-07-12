@@ -60,9 +60,11 @@ proof boundaries must remain explicit.
 - [x] Add the first artist-directed section pose: one deterministic eighth-scalp
       group drives a weighted three-point mid-shaft tube with lift plus signed
       tangential sweep, while the rest of the guides and dense three-parent
-      fibers remain simulation-driven. The 256-guide comb/cut replay selects 30
-      guides, repeats at digest `0a6325fc2d861d5c`, completes all 256 cuts, and
-      peaks at 3.4999% stretch; the disabled baseline stays
+      fibers remain simulation-driven. A narrow browser A/B corrected the
+      authored recipe from a face-crossing front lock to an outward side volume
+      (section 7, +0.34 m sweep). The 256-guide comb/cut replay selects 35
+      guides, repeats at digest `e72b5a6c17a20c57`, completes all 256 cuts, and
+      peaks at 3.4982% stretch; the disabled baseline stays
       `6a0294d4bf085310`. This is a Tonic-like control primitive, not production
       groom or Disney parity.
 - [x] Build a small explicit-guide rod/reference fixture before raising guide

@@ -748,19 +748,19 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
       peakStep: 90,
       holdEndStep: 170,
       endStep: 255,
-      section: 6,
+      section: 7,
       lift: 0.32,
-      sweep: -0.34,
+      sweep: 0.34,
     },
   };
   const baseline = runHairReplay({ ...poseConfig, sectionPoseCycle: undefined }).result;
   const held = runHairReplay({ ...poseConfig, steps: 100 }).result;
   assert.equal(held.receipt.section_pose.phase, "hold");
-  assert.equal(held.receipt.section_pose.selected_section, 6);
-  assert.equal(held.receipt.section_pose.affected_guides, 7);
+  assert.equal(held.receipt.section_pose.selected_section, 7);
+  assert.equal(held.receipt.section_pose.affected_guides, 9);
   nearlyEqual(held.receipt.section_pose.lift_meters, 0.32);
-  nearlyEqual(held.receipt.section_pose.tangential_sweep_meters, -0.34);
-  assert.equal(held.receipt.section_pose.active_guides_last_step, 7);
+  nearlyEqual(held.receipt.section_pose.tangential_sweep_meters, 0.34);
+  assert.equal(held.receipt.section_pose.active_guides_last_step, 9);
   assert.ok(held.receipt.section_pose.corrections_last_step > 0);
   assert.ok(held.receipt.section_pose.correction_distance_last_step > 0);
   const released = runHairReplay(poseConfig).result;

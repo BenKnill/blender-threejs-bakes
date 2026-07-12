@@ -14,9 +14,9 @@ const poseCycle = Object.freeze({
   peakStep: 90,
   holdEndStep: 170,
   endStep: 255,
-  section: 6,
+  section: 7,
   lift: 0.32,
-  sweep: -0.34,
+  sweep: 0.34,
 });
 
 const config = Object.freeze({
@@ -91,11 +91,11 @@ assert.deepEqual(treatment.receipt, repeated.receipt);
 assert.equal(baseline.state_digest, "6a0294d4bf085310");
 assert.equal(snapshots[30].phase, "idle");
 assert.equal(snapshots[91].phase, "hold");
-assert.equal(snapshots[91].selected_section, 6);
-assert.equal(snapshots[91].affected_guides, 30);
-assert.equal(snapshots[91].active_guides, 30);
+assert.equal(snapshots[91].selected_section, 7);
+assert.equal(snapshots[91].affected_guides, 35);
+assert.equal(snapshots[91].active_guides, 35);
 assert.equal(snapshots[91].lift_meters, 0.32);
-assert.equal(snapshots[91].tangential_sweep_meters, -0.34);
+assert.equal(snapshots[91].tangential_sweep_meters, 0.34);
 assert.ok(snapshots[91].corrections > 0);
 assert.equal(snapshots[171].phase, "release");
 assert.equal(snapshots[256].phase, "released");
