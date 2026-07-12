@@ -46,6 +46,75 @@ export function segmentAabbGapSquared(left, right) {
   return gapSquared;
 }
 
+function dot3(left, right) {
+  return left[0] * right[0] + left[1] * right[1] + left[2] * right[2];
+}
+
+function subtract3(left, right) {
+  return [left[0] - right[0], left[1] - right[1], left[2] - right[2]];
+}
+
+function clamp01(value) {
+  return Math.max(0, Math.min(1, value));
+}
+
+export function segmentSegmentDistanceSquared(left, right) {
+  const directionLeft = subtract3(left.b, left.a);
+  const directionRight = subtract3(right.b, right.a);
+  const offset = subtract3(left.a, right.a);
+  const lengthLeftSquared = dot3(directionLeft, directionLeft);
+  const lengthRightSquared = dot3(directionRight, directionRight);
+  const rightProjection = dot3(directionRight, offset);
+  const degenerateEpsilon = 1e-24;
+  let leftParameter;
+  let rightParameter;
+
+  if (lengthLeftSquared <= degenerateEpsilon && lengthRightSquared <= degenerateEpsilon) {
+    return dot3(offset, offset);
+  }
+  if (lengthLeftSquared <= degenerateEpsilon) {
+    leftParameter = 0;
+    rightParameter = clamp01(rightProjection / lengthRightSquared);
+  } else {
+    const leftProjection = dot3(directionLeft, offset);
+    if (lengthRightSquared <= degenerateEpsilon) {
+      rightParameter = 0;
+      leftParameter = clamp01(-leftProjection / lengthLeftSquared);
+    } else {
+      const directionDot = dot3(directionLeft, directionRight);
+      const denominator = lengthLeftSquared * lengthRightSquared - directionDot * directionDot;
+      const parallelThreshold = Number.EPSILON * 16 * lengthLeftSquared * lengthRightSquared;
+      leftParameter =
+        denominator > parallelThreshold
+          ? clamp01(
+              (directionDot * rightProjection - leftProjection * lengthRightSquared) / denominator
+            )
+          : 0;
+      rightParameter = (directionDot * leftParameter + rightProjection) / lengthRightSquared;
+      if (rightParameter < 0) {
+        rightParameter = 0;
+        leftParameter = clamp01(-leftProjection / lengthLeftSquared);
+      } else if (rightParameter > 1) {
+        rightParameter = 1;
+        leftParameter = clamp01((directionDot - leftProjection) / lengthLeftSquared);
+      }
+    }
+  }
+
+  const separation = [0, 1, 2].map(
+    (axis) =>
+      offset[axis] + directionLeft[axis] * leftParameter - directionRight[axis] * rightParameter
+  );
+  return Math.max(0, dot3(separation, separation));
+}
+
+export function quantizeSquaredRisk(value, scale = 1e8) {
+  if (!(value >= 0) || !Number.isFinite(value) || !(scale > 0)) {
+    throw new Error("risk must be finite and nonnegative");
+  }
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.floor(value * scale));
+}
+
 export function segmentAabbCellKeys(segment, cellSize, padding = 0) {
   if (!(cellSize > 0) || !(padding >= 0)) throw new Error("invalid spatial hash scale");
   const bounds = [0, 1, 2].map((axis) => [
@@ -178,8 +247,16 @@ export function rankSpatialCandidates(
   segments,
   discoveredPairs,
   persistentPairs,
-  { maxPairs = 20000, maxNewPairsPerSegment = 16, riskScale = 1e8 } = {}
+  {
+    maxPairs = 20000,
+    maxNewPairsPerSegment = 16,
+    riskScale = 1e8,
+    riskMetric = "segment_distance_squared",
+  } = {}
 ) {
+  if (!["aabb_gap_squared", "segment_distance_squared"].includes(riskMetric)) {
+    throw new Error(`unknown spatial risk metric: ${riskMetric}`);
+  }
   const byId = new Map(segments.map((segment) => [segment.id, segment]));
   const persistentKeys = [...new Set(persistentPairs.map((pair) => pairKey(pair.a, pair.b)))].sort(
     comparePairKeys
@@ -205,7 +282,12 @@ export function rankSpatialCandidates(
       a: Math.min(pair.a, pair.b),
       b: Math.max(pair.a, pair.b),
       source: "spatial",
-      risk_q: Math.floor(segmentAabbGapSquared(left, right) * riskScale),
+      risk_q: quantizeSquaredRisk(
+        riskMetric === "aabb_gap_squared"
+          ? segmentAabbGapSquared(left, right)
+          : segmentSegmentDistanceSquared(left, right),
+        riskScale
+      ),
     });
   }
   rankedSpatial.sort(
@@ -218,21 +300,27 @@ export function rankSpatialCandidates(
   let bestGlobalDropRisk = null;
   let bestPerSegmentDropRisk = null;
   let worstAdmittedSpatialRisk = null;
+  let admittedSpatialZeroRisk = 0;
+  let droppedGlobalZeroRisk = 0;
+  let droppedPerSegmentZeroRisk = 0;
   for (const pair of rankedSpatial) {
     if (
       (newCounts.get(pair.a) ?? 0) >= maxNewPairsPerSegment ||
       (newCounts.get(pair.b) ?? 0) >= maxNewPairsPerSegment
     ) {
       droppedPerSegment += 1;
+      if (pair.risk_q === 0) droppedPerSegmentZeroRisk += 1;
       bestPerSegmentDropRisk = Math.min(bestPerSegmentDropRisk ?? pair.risk_q, pair.risk_q);
       continue;
     }
     if (admitted.length >= maxPairs) {
       droppedGlobal += 1;
+      if (pair.risk_q === 0) droppedGlobalZeroRisk += 1;
       bestGlobalDropRisk = Math.min(bestGlobalDropRisk ?? pair.risk_q, pair.risk_q);
       continue;
     }
     admitted.push(pair);
+    if (pair.risk_q === 0) admittedSpatialZeroRisk += 1;
     newCounts.set(pair.a, (newCounts.get(pair.a) ?? 0) + 1);
     newCounts.set(pair.b, (newCounts.get(pair.b) ?? 0) + 1);
     worstAdmittedSpatialRisk = Math.max(worstAdmittedSpatialRisk ?? pair.risk_q, pair.risk_q);
@@ -243,12 +331,17 @@ export function rankSpatialCandidates(
   return {
     admitted_pairs: admitted,
     admitted_pair_digest: digestOrderedPairs(admitted),
+    risk_metric: riskMetric,
+    risk_scale: riskScale,
     discovered_pair_count: discoveredPairs.length,
     persistent_pair_count: persistentKeys.length,
     admitted_persistent_count: admittedPersistent,
     admitted_spatial_count: admittedSpatial,
     dropped_global_count: droppedGlobal,
     dropped_per_segment_count: droppedPerSegment,
+    admitted_spatial_zero_risk_count: admittedSpatialZeroRisk,
+    dropped_global_zero_risk_count: droppedGlobalZeroRisk,
+    dropped_per_segment_zero_risk_count: droppedPerSegmentZeroRisk,
     maximum_pairs: maxPairs,
     maximum_new_pairs_per_segment: maxNewPairsPerSegment,
     persistent_capacity_saturated: persistentOverflow,

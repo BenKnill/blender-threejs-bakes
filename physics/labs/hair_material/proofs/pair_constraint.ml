@@ -140,6 +140,17 @@ let HAIR_BOUNDED_PREFIX_CAPACITY = prove
       (count <= capacity ==> MIN capacity count = count)`,
   ARITH_TAC);;
 
+(** Closest-segment ranking uses the squared norm of a separation vector, so
+    its real-arithmetic idealization is nonnegative.  This does not verify the
+    JavaScript parameter clamping, degeneracy branches, or quantization. *)
+let HAIR_SQUARED_SEPARATION_NONNEGATIVE = prove
+ (`!dx dy dz:real. &0 <= dx pow 2 + dy pow 2 + dz pow 2`,
+  REPEAT GEN_TAC THEN REWRITE_TAC[REAL_POW_2] THEN
+  MP_TAC(SPEC `dx:real` REAL_LE_SQUARE) THEN
+  MP_TAC(SPEC `dy:real` REAL_LE_SQUARE) THEN
+  MP_TAC(SPEC `dz:real` REAL_LE_SQUARE) THEN
+  REAL_ARITH_TAC);;
+
 (** A quarter-turn of the horizontal wind vector preserves squared magnitude.
     The browser uses continuous sine/cosine directions; this is a narrow
     algebraic rotation sanity contract, not a proof of JavaScript trig. *)
