@@ -125,15 +125,17 @@ production grooming or Disney parity claim.
 
 Use the **Section pose**, **Pose lift**, and **Pose sweep** controls for a static
 pose. The hands-off replay uses `poseCycle=1`; `poseSection`, `poseLift`, and
-`poseSweep` default to section 6, 0.32 m, and -0.34 m. `just
+`poseSweep` default to section 7, 0.32 m, and +0.34 m. This side-section
+orientation was selected in a narrow browser A/B because the original section
+6 / negative-sweep recipe pulled a front lock across the face. `just
 hair-section-pose-showcase` prints the dense autonomous recipe and `just
 hair-section-pose-ab` runs the fixed 256-guide acceptance gate.
 
 The pose applies 0.12 total step stiffness across three weighted control points
 at 36%, 50%, and 64% strand length, distributed over solver iterations. At six
-iterations the per-iteration blend is 0.02108. The 420-step replay selects 30
-guides, repeats at digest `0a6325fc2d861d5c`, completes all 256 cuts, and peaks
-at 3.4999% stretch. The unchanged disabled baseline remains
+iterations the per-iteration blend is 0.02108. The 420-step replay selects 35
+guides, repeats at digest `e72b5a6c17a20c57`, completes all 256 cuts, and peaks
+at 3.4982% stretch. The unchanged disabled baseline remains
 `6a0294d4bf085310`. Receipts expose field identity, phase, section, guide counts,
 targets, stiffness, corrections, and summed correction-distance proxy.
 

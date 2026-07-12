@@ -199,9 +199,9 @@ function applySectionPoseCycle(solver, config, state) {
   const cycle = config.sectionPoseCycle;
   const envelope = sectionPoseEnvelopeAtStep(state.step, cycle);
   solver.setSectionPose({
-    section: cycle.section ?? 6,
+    section: cycle.section ?? 7,
     lift: Math.max(0, cycle.lift ?? 0.32) * envelope.weight,
-    sweep: (cycle.sweep ?? -0.34) * envelope.weight,
+    sweep: (cycle.sweep ?? 0.34) * envelope.weight,
     phase: envelope.phase,
   });
 }
