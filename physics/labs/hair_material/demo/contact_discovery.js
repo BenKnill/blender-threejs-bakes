@@ -2,12 +2,6 @@ const FNV_OFFSET = 0xcbf29ce484222325n;
 const FNV_PRIME = 0x100000001b3n;
 const MASK_64 = 0xffffffffffffffffn;
 
-function compareCellKeys(left, right) {
-  const a = left.split(",").map(Number);
-  const b = right.split(",").map(Number);
-  return a[0] - b[0] || a[1] - b[1] || a[2] - b[2];
-}
-
 function pairKey(left, right) {
   return left < right ? `${left}:${right}` : `${right}:${left}`;
 }
@@ -171,26 +165,30 @@ export function discoverSegmentPairs(
     }
   }
 
-  const unboundedPairs = new Set();
-  for (const key of [...cells.keys()].sort(compareCellKeys)) {
-    const ids = cells.get(key).sort((left, right) => left - right);
+  const unboundedPairsByLeft = new Map();
+  for (const ids of cells.values()) {
     for (let leftIndex = 0; leftIndex < ids.length; leftIndex += 1) {
       for (let rightIndex = leftIndex + 1; rightIndex < ids.length; rightIndex += 1) {
         const left = byId.get(ids[leftIndex]);
         const right = byId.get(ids[rightIndex]);
         if (left.guide === right.guide) continue;
         if (!paddedSegmentAabbsOverlap(left, right, padding)) continue;
-        unboundedPairs.add(pairKey(left.id, right.id));
+        if (!unboundedPairsByLeft.has(left.id)) unboundedPairsByLeft.set(left.id, new Set());
+        unboundedPairsByLeft.get(left.id).add(right.id);
       }
     }
   }
+  const unboundedPairs = [];
+  for (const [a, rightIds] of unboundedPairsByLeft) {
+    for (const b of rightIds) unboundedPairs.push({ a, b });
+  }
+  unboundedPairs.sort((left, right) => left.a - right.a || left.b - right.b);
 
   const counts = new Map();
   const saturatedSegments = new Set();
   const pairs = [];
   let globalSaturated = false;
-  for (const key of [...unboundedPairs].sort(comparePairKeys)) {
-    const [a, b] = key.split(":").map(Number);
+  for (const { a, b } of unboundedPairs) {
     if ((counts.get(a) ?? 0) >= maxPairsPerSegment || (counts.get(b) ?? 0) >= maxPairsPerSegment) {
       saturatedSegments.add((counts.get(a) ?? 0) >= maxPairsPerSegment ? a : b);
       continue;
@@ -210,7 +208,7 @@ export function discoverSegmentPairs(
     segment_count: orderedSegments.length,
     occupied_cell_count: cells.size,
     cell_insertions: cellInsertions,
-    unbounded_candidate_count: unboundedPairs.size,
+    unbounded_candidate_count: unboundedPairs.length,
     emitted_candidate_count: pairs.length,
     max_pairs_per_segment: maxPairsPerSegment,
     max_pairs: maxPairs,

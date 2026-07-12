@@ -109,6 +109,18 @@ export function createSpatialFrictionState({
     friction_impulse_proxy_total: 0,
     refresh_ms_last: 0,
     refresh_ms_total: 0,
+    segment_build_ms_last: 0,
+    segment_build_ms_total: 0,
+    discovery_ms_last: 0,
+    discovery_ms_total: 0,
+    graph_filter_ms_last: 0,
+    graph_filter_ms_total: 0,
+    retention_ms_last: 0,
+    retention_ms_total: 0,
+    ranking_ms_last: 0,
+    ranking_ms_total: 0,
+    selection_ms_last: 0,
+    selection_ms_total: 0,
     apply_ms_last: 0,
     apply_ms_total: 0,
   };
@@ -141,6 +153,12 @@ export function resetSpatialFrictionWindow(state) {
   state.minimum_active_jaccard = null;
   state.maximum_active_churn = 0;
   state.refresh_ms_total = 0;
+  state.segment_build_ms_total = 0;
+  state.discovery_ms_total = 0;
+  state.graph_filter_ms_total = 0;
+  state.retention_ms_total = 0;
+  state.ranking_ms_total = 0;
+  state.selection_ms_total = 0;
   state.apply_ms_total = 0;
 }
 
@@ -150,12 +168,15 @@ function refreshPairs(solver, state) {
   const fixedGuidePairs = new Set(
     solver.neighborPairs.map(([left, right]) => guidePairKey(left, right))
   );
+  state.segment_build_ms_last = performance.now() - started;
   const spatial = discoverSegmentPairs(segments, {
     cellSize: 0.24,
     padding: 0.04,
     maxPairsPerSegment: 100000,
     maxPairs: 100000,
   });
+  const discoveryFinished = performance.now();
+  state.discovery_ms_last = discoveryFinished - started - state.segment_build_ms_last;
   let graphOverlapSkips = 0;
   const candidates = spatial.pairs.filter((pair) => {
     const leftGuide = segmentGuide(pair.a, solver.segments);
@@ -164,6 +185,8 @@ function refreshPairs(solver, state) {
     graphOverlapSkips += 1;
     return false;
   });
+  const graphFilterFinished = performance.now();
+  state.graph_filter_ms_last = graphFilterFinished - discoveryFinished;
   const contactRadius = 0.14 + solver.material.clump * 0.3;
   const contactRadiusSquared = contactRadius * contactRadius;
   const byId = new Map(segments.map((segment) => [segment.id, segment]));
@@ -181,6 +204,8 @@ function refreshPairs(solver, state) {
     usedSegments.add(pair.a);
     usedSegments.add(pair.b);
   }
+  const retentionFinished = performance.now();
+  state.retention_ms_last = retentionFinished - graphFilterFinished;
   const fillCandidates = candidates.filter(
     (pair) => !usedSegments.has(pair.a) && !usedSegments.has(pair.b)
   );
@@ -189,6 +214,8 @@ function refreshPairs(solver, state) {
     maxNewPairsPerSegment: 1,
     riskMetric: "segment_distance_squared",
   });
+  const rankingFinished = performance.now();
+  state.ranking_ms_last = rankingFinished - retentionFinished;
   const added = ranking.admitted_pairs
     .filter(
       (pair) =>
@@ -224,8 +251,15 @@ function refreshPairs(solver, state) {
   state.added_total += added.length;
   state.removed_last_refresh = removed;
   state.removed_total += removed;
+  state.selection_ms_last = performance.now() - rankingFinished;
   state.refresh_ms_last = performance.now() - started;
   state.refresh_ms_total += state.refresh_ms_last;
+  state.segment_build_ms_total += state.segment_build_ms_last;
+  state.discovery_ms_total += state.discovery_ms_last;
+  state.graph_filter_ms_total += state.graph_filter_ms_last;
+  state.retention_ms_total += state.retention_ms_last;
+  state.ranking_ms_total += state.ranking_ms_last;
+  state.selection_ms_total += state.selection_ms_last;
 }
 
 function applyEndpointCorrection(solver, left, right, parameter, correction) {
@@ -376,6 +410,18 @@ export function spatialFrictionPerformanceReceipt(state) {
   return {
     refresh_ms_last: state.refresh_ms_last,
     refresh_ms_total: state.refresh_ms_total,
+    segment_build_ms_last: state.segment_build_ms_last,
+    segment_build_ms_total: state.segment_build_ms_total,
+    discovery_ms_last: state.discovery_ms_last,
+    discovery_ms_total: state.discovery_ms_total,
+    graph_filter_ms_last: state.graph_filter_ms_last,
+    graph_filter_ms_total: state.graph_filter_ms_total,
+    retention_ms_last: state.retention_ms_last,
+    retention_ms_total: state.retention_ms_total,
+    ranking_ms_last: state.ranking_ms_last,
+    ranking_ms_total: state.ranking_ms_total,
+    selection_ms_last: state.selection_ms_last,
+    selection_ms_total: state.selection_ms_total,
     apply_ms_last: state.apply_ms_last,
     apply_ms_total: state.apply_ms_total,
   };

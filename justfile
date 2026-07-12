@@ -10,7 +10,7 @@ default:
 
 # Lint everything (no changes) — JS + Python
 lint:
-    npx eslint editor physics/labs/contact_shell/demo/main.js physics/labs/hair_material/demo/*.js scripts/test_hair_material_solver.mjs scripts/run_hair_operator_ab.mjs scripts/run_hair_comb_benchmark.mjs scripts/run_hair_comb_cycle.mjs scripts/run_hair_contact_discovery_ab.mjs scripts/run_hair_contact_churn.mjs scripts/run_hair_spatial_friction_ab.mjs scripts/run_hair_rod_reference.mjs
+    npx eslint editor physics/labs/contact_shell/demo/main.js physics/labs/hair_material/demo/*.js scripts/test_hair_material_solver.mjs scripts/run_hair_operator_ab.mjs scripts/run_hair_comb_benchmark.mjs scripts/run_hair_comb_cycle.mjs scripts/run_hair_contact_discovery_ab.mjs scripts/run_hair_contact_churn.mjs scripts/run_hair_spatial_friction_ab.mjs scripts/run_hair_rod_reference.mjs scripts/run_hair_spatial_step_benchmark.mjs
     npx prettier --check 'editor/**/*.{js,css,html}' 'physics/labs/contact_shell/demo/**/*.{js,css,html,json}' 'physics/labs/hair_material/demo/**/*.{js,css,html}'
     {{ruff}} check scripts
 
@@ -110,6 +110,10 @@ hair-spatial-friction-ab:
 # Small deterministic guide and pair-operator calibration fixture.
 hair-rod-reference:
     node scripts/run_hair_rod_reference.mjs
+
+# Per-step refresh/steady timing and exact digest stream for spatial friction.
+hair-spatial-step-benchmark:
+    node scripts/run_hair_spatial_step_benchmark.mjs
 
 # Format everything in place — JS + Python
 format:
