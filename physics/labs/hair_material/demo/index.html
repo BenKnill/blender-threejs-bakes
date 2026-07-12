@@ -126,6 +126,18 @@
             <dd id="metric-contacts">—</dd>
           </div>
           <div>
+            <dt>Spatial active / selected</dt>
+            <dd id="metric-spatial-contacts">off</dd>
+          </div>
+          <div>
+            <dt>Spatial minimum Jaccard</dt>
+            <dd id="metric-spatial-jaccard">—</dd>
+          </div>
+          <div>
+            <dt>Spatial impulse*</dt>
+            <dd id="metric-spatial-impulse">0</dd>
+          </div>
+          <div>
             <dt>Cohesion moves</dt>
             <dd id="metric-cohesion">—</dd>
           </div>
@@ -205,14 +217,15 @@
       </section>
 
       <p class="boundary">
-        <strong>Boundary:</strong> CPU Verlet plus constraint projection; no strand self-contact or
-        continuum claim. Up to 21 visible fibers can interpolate each mechanical guide. Anisotropic
-        drag, hysteretic clumps, and crowd pressure use a bounded root-neighbor graph, not general
-        self-contact. *Comb force/work are unit-mass projection proxies, not calibrated N/J.
+        <strong>Boundary:</strong> CPU Verlet plus constraint projection; no continuum claim. Up to
+        21 visible fibers can interpolate each mechanical guide. Default anisotropic drag,
+        hysteretic clumps, and crowd pressure use a bounded root-neighbor graph. The opt-in k=1
+        spatial lane adds sparse discovered friction only, not pressure or cohesion. *Comb
+        force/work and spatial impulse are unit-mass solver proxies, not calibrated N/J.
       </p>
       <div id="status" role="status">Running deterministic wavy preset.</div>
     </aside>
     <div id="cut-cursor" aria-hidden="true"></div>
-    <script type="module" src="./main.js?v=105"></script>
+    <script type="module" src="./main.js?v=106"></script>
   </body>
 </html>

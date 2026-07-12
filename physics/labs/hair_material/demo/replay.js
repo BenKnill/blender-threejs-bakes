@@ -1,4 +1,4 @@
-import { HairSolver } from "./solver.js?v=105";
+import { HairSolver } from "./solver.js?v=106";
 
 export const COMB_MATERIAL_CONDITIONS = Object.freeze({
   dry: Object.freeze({ label: "Dry", moisture: 0.05, product: 0 }),

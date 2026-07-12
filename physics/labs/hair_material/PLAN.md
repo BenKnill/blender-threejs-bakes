@@ -61,6 +61,11 @@ Decision: the next gain should be visible. Reuse the small guide fixture as a
 debug card while making spatial friction opt-in in the browser or improving
 strand rendering; do not add another many-hair operator first.
 
+- [x] Expose k=1 spatial friction through an explicit browser query parameter
+      with live contact/churn/impulse telemetry and a hands-off autoplay URL.
+      Default remains off; the 256-guide preview's roughly 86 ms solver cost is
+      a visible performance blocker, not a hidden success.
+
 ## Later: prettier and more ambitious hair
 
 - [ ] Groom interpolation and rendering that preserve the measured guide motion.
