@@ -13,6 +13,11 @@ import {
   segmentAabbCellKeys,
   segmentSegmentDistanceSquared,
 } from "../physics/labs/hair_material/demo/contact_discovery.js";
+import {
+  digestContactTrace,
+  snapshotRankedContacts,
+  summarizeContactTransition,
+} from "../physics/labs/hair_material/demo/contact_churn.js";
 
 import {
   blendPairAnisotropicFriction,
@@ -67,6 +72,58 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   const reversed = { a: [...parallel.b], b: [...parallel.a] };
   nearlyEqual(segmentSegmentDistanceSquared(line, reversed), 1);
   assert.ok(quantizeSquaredRisk(0.1) <= quantizeSquaredRisk(0.2));
+}
+
+{
+  function snapshot(step, pairs, activeSegmentIds = [0, 1, 2, 3]) {
+    return snapshotRankedContacts({
+      step,
+      stateDigest: `state-${step}`,
+      cutCount: step > 0 ? 1 : 0,
+      activeSegmentIds: new Set(activeSegmentIds),
+      ranking: {
+        admitted_pairs: pairs,
+        admitted_pair_digest: `pairs-${step}`,
+        all_persistent_retained: true,
+        admitted_spatial_zero_risk_count: 0,
+        dropped_global_count: 0,
+        dropped_per_segment_count: 0,
+        dropped_global_zero_risk_count: 0,
+        dropped_per_segment_zero_risk_count: 0,
+        worst_admitted_spatial_risk_q: 10,
+        best_global_drop_risk_q: null,
+        best_per_segment_drop_risk_q: null,
+        spatial_force_integration: false,
+      },
+    });
+  }
+  const first = snapshot(0, [
+    { a: 0, b: 1, source: "persistent" },
+    { a: 1, b: 2, source: "spatial", risk_q: 10 },
+  ]);
+  const second = snapshot(
+    1,
+    [
+      { a: 1, b: 2, source: "spatial", risk_q: 10 },
+      { a: 2, b: 3, source: "spatial", risk_q: 10 },
+    ],
+    [1, 2, 3]
+  );
+  const transition = summarizeContactTransition(first, second);
+  assert.equal(transition.step_delta, 1);
+  assert.equal(transition.intersection_count, 1);
+  assert.equal(transition.union_count, 3);
+  assert.equal(transition.additions_count, 1);
+  assert.equal(transition.removals_count, 1);
+  assert.equal(transition.symmetric_difference_count, 2);
+  nearlyEqual(transition.jaccard, 1 / 3);
+  assert.equal(transition.removals_incident_to_inactive_segments, 1);
+  assert.equal(transition.removals_with_both_segments_active, 0);
+  assert.equal(transition.rank_frontier_crossing_count, 1);
+  assert.equal(
+    digestContactTrace([first.receipt, second.receipt], [transition]),
+    digestContactTrace([first.receipt, second.receipt], [transition])
+  );
 }
 
 {

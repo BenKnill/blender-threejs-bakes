@@ -38,9 +38,13 @@ proof boundaries must remain explicit.
 - [x] Replace AABB-gap ties with deterministic segment–segment closest-distance
       risk. The AABB ranker dropped 6/5/40 risk-zero pairs in dry/wet/product;
       closest-distance ranking drops zero while retaining every persistent bond.
-- [ ] Measure admitted spatial-pair churn across repeated frames and a bounded
-      comb/cut transition. Keep forces disabled until the ranked frontier is
-      temporally stable enough for a controlled low-count force A/B.
+- [x] Measure admitted spatial-pair churn across repeated frames and a bounded
+      comb/cut transition. Adjacent-frame minimum Jaccard is 0.933/0.948/0.968
+      for dry/wet/product and 0.959 through the product-heavy cut fixture;
+      rerun digests and discovery-only gates all pass.
+- [ ] Run a controlled low-count spatial-force A/B well inside the admitted
+      frontier. Keep it mechanically instrumented and reversible; dry hair's
+      6.7% worst adjacent churn is the yellow edge to watch.
 - [ ] Add a repeated pass, section lift, or simple grab only when it answers a
       concrete material question.
 - [ ] Keep a small explicit-guide reference scene before raising guide count.

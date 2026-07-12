@@ -10,7 +10,7 @@ default:
 
 # Lint everything (no changes) — JS + Python
 lint:
-    npx eslint editor physics/labs/contact_shell/demo/main.js physics/labs/hair_material/demo/*.js scripts/test_hair_material_solver.mjs scripts/run_hair_operator_ab.mjs scripts/run_hair_comb_benchmark.mjs scripts/run_hair_comb_cycle.mjs scripts/run_hair_contact_discovery_ab.mjs
+    npx eslint editor physics/labs/contact_shell/demo/main.js physics/labs/hair_material/demo/*.js scripts/test_hair_material_solver.mjs scripts/run_hair_operator_ab.mjs scripts/run_hair_comb_benchmark.mjs scripts/run_hair_comb_cycle.mjs scripts/run_hair_contact_discovery_ab.mjs scripts/run_hair_contact_churn.mjs
     npx prettier --check 'editor/**/*.{js,css,html}' 'physics/labs/contact_shell/demo/**/*.{js,css,html,json}' 'physics/labs/hair_material/demo/**/*.{js,css,html}'
     {{ruff}} check scripts
 
@@ -98,6 +98,10 @@ hair-comb-cycle:
 # Compare deterministic spatial broadphase candidates with the fixed root graph.
 hair-contact-discovery:
     node scripts/run_hair_contact_discovery_ab.mjs
+
+# Measure sparse frame-to-frame churn in the closest-ranked spatial contact set.
+hair-contact-churn:
+    node scripts/run_hair_contact_churn.mjs
 
 # Format everything in place — JS + Python
 format:
