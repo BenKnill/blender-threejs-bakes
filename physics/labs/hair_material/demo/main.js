@@ -1,14 +1,14 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-import { HairSolver } from "./solver.js?v=106";
+import { HairSolver } from "./solver.js?v=109";
 import {
   advanceHairReplay,
   COMB_MATERIAL_CONDITIONS,
   createReplayState,
   digestHairState,
   summarizeCombReceipt,
-} from "./replay.js?v=106";
+} from "./replay.js?v=109";
 import {
   fatlineColorScale,
   fatlineHalfWidthAt,
@@ -27,6 +27,8 @@ let hairRenderMode = "lines";
 let groomMode = "radial_xz";
 let groomBindings = null;
 let groomBindingBuildCount = 0;
+let rootDirectorEnabled = false;
+let rootDirectorStrength = 0.22;
 let renderReceiptEnabled = false;
 const FATLINE_DYNAMIC_ATTRIBUTES = Object.freeze([
   "instanceStart",
@@ -334,6 +336,8 @@ function rebuildSolver() {
     renderFibersPerGuide,
     collectiveRulesEnabled: deterministicReplay.collectiveRulesEnabled,
     spatialFrictionEnabled: deterministicReplay.spatialFrictionEnabled,
+    rootDirectorEnabled,
+    rootDirectorStrength,
   });
   groomBindings =
     groomMode === "section_interp"
@@ -346,7 +350,11 @@ function rebuildSolver() {
   deterministicReplay.state = createReplayState();
   applyMaterialControls();
   rebuildHairObject();
-  status.textContent = `Running deterministic ${preset} preset${solver.spatialFriction.enabled ? " with experimental spatial friction" : ""}.`;
+  const activeExperiments = [
+    solver.spatialFriction.enabled ? "spatial friction" : null,
+    solver.rootDirector.enabled ? "root director" : null,
+  ].filter(Boolean);
+  status.textContent = `Running deterministic ${preset} preset${activeExperiments.length ? ` with experimental ${activeExperiments.join(" + ")}` : ""}.`;
 }
 
 function startCombPass(condition, cycle = false) {
@@ -681,6 +689,11 @@ function updateTelemetry(now) {
   const geometryTiming = summarizeGeometryTimings(hairGeometryTimings);
   document.querySelector("#metric-render-mode").textContent = hairRenderMode;
   document.querySelector("#metric-groom-mode").textContent = groomMode;
+  document.querySelector("#metric-root-director").textContent = receipt.root_director.enabled
+    ? `${receipt.root_director.strength.toFixed(2)} · ${receipt.root_director.zone_segments} seg`
+    : "off";
+  document.querySelector("#metric-root-alignment").textContent =
+    `${receipt.root_director.minimum_first_segment_normal_dot.toFixed(3)} / ${receipt.root_director.mean_first_segment_normal_dot.toFixed(3)}`;
   document.querySelector("#metric-geometry").textContent =
     geometryTiming.p99_ms === null
       ? "warming"
@@ -859,6 +872,8 @@ function applyQueryConfiguration() {
       `Hair phase film · ${params.get("scenario")}`;
   }
   deterministicReplay.spatialFrictionEnabled = params.get("spatialFriction") === "1";
+  rootDirectorEnabled = params.get("rootDirector") === "1";
+  rootDirectorStrength = Math.max(0, Math.min(1, Number(params.get("rootStrength") ?? 0.22)));
   if (deterministicReplay.spatialFrictionEnabled && !params.has("scenario")) {
     document.querySelector("#scenario-label").textContent =
       "Hair material study · experimental k=1 spatial friction";
@@ -1031,6 +1046,7 @@ function createRenderReceipt() {
     hair_render_mode: hairRenderMode,
     groom_mode: groomMode,
     groom_interpolation: groomInterpolationReceipt(groomBindings, groomBindingBuildCount),
+    root_director: solver.receipt().root_director,
     guide_count: solver.guideCount,
     fiber_copies: renderFibersPerGuide,
     segments_per_guide: solver.segments,

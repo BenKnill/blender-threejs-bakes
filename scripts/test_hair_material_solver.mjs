@@ -31,6 +31,10 @@ import {
   interpolateGroomScalar,
 } from "../physics/labs/hair_material/demo/groom_interpolation.js";
 import {
+  bakeRootDirectorTarget,
+  projectRootDirectorPoint,
+} from "../physics/labs/hair_material/demo/root_director.js";
+import {
   digestContactTrace,
   snapshotRankedContacts,
   summarizeContactTransition,
@@ -79,6 +83,23 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     p99_ms: 4,
     mean_ms: 2.5,
   });
+}
+
+{
+  const target = new Float64Array(3);
+  bakeRootDirectorTarget(1, 0, 0, 0, -1, 0, 0.75, target);
+  nearlyEqual(Math.hypot(...target), 1);
+  assert.ok(target[0] > 0);
+  const projection = new Float64Array(6);
+  projectRootDirectorPoint(0, 0, 0, 0, -1, 0, ...target, 1, 0.25, projection);
+  nearlyEqual(Math.hypot(projection[0], projection[1], projection[2]), 1);
+  assert.ok(projection[3] > projection[5]);
+  assert.ok(projection[4] > 0);
+  const unchanged = new Float64Array(6);
+  projectRootDirectorPoint(0, 0, 0, 0, -1, 0, ...target, 1, 0, unchanged);
+  nearlyEqual(unchanged[0], 0);
+  nearlyEqual(unchanged[1], -1);
+  nearlyEqual(unchanged[2], 0);
 }
 
 {
@@ -607,6 +628,47 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.equal(rotating.state_digest, repeated.state_digest);
   assert.equal(rotating.receipt.wind.mode, "directional");
   nearlyEqual(rotating.receipt.wind.angle_radians, 0.2 + (119 / 60) * 0.7);
+}
+
+{
+  const base = {
+    solver: {
+      guideCount: 24,
+      segments: 8,
+      preset: "wavy",
+      iterations: 6,
+      collectiveRulesEnabled: false,
+    },
+    steps: 90,
+    dt: 1 / 60,
+    baseWind: 0.24,
+    gust: 0.35,
+    windAngle: 0.2,
+    windRotationRate: 0.65,
+  };
+  const control = runHairReplay(base).result;
+  const treatment = runHairReplay({
+    ...base,
+    solver: { ...base.solver, rootDirectorEnabled: true, rootDirectorStrength: 0.22 },
+  }).result;
+  const repeated = runHairReplay({
+    ...base,
+    solver: { ...base.solver, rootDirectorEnabled: true, rootDirectorStrength: 0.22 },
+  }).result;
+  assert.equal(treatment.state_digest, repeated.state_digest);
+  assert.deepEqual(treatment.receipt, repeated.receipt);
+  assert.notEqual(treatment.state_digest, control.state_digest);
+  assert.equal(control.receipt.root_director.enabled, false);
+  assert.equal(treatment.receipt.root_director.enabled, true);
+  assert.ok(treatment.receipt.root_director.corrections_last_step > 0);
+  assert.ok(
+    treatment.receipt.root_director.mean_first_segment_normal_dot >
+      control.receipt.root_director.mean_first_segment_normal_dot
+  );
+  assert.ok(
+    treatment.receipt.peak_relative_stretch_error <= control.receipt.peak_relative_stretch_error
+  );
+  assert.ok(treatment.receipt.max_relative_stretch_error <= 0.035);
 }
 
 {

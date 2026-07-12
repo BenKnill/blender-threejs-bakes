@@ -88,6 +88,9 @@ strand rendering; do not add another many-hair operator first.
       remains stable, and geometry update is 0.60 ms mean / 1.20 ms p99 /
       1.90 ms max over 538 measured frames.
 - [ ] Cutting plus combing in one deterministic scenario.
+- [ ] Add an opt-in two-segment scalp-normal root director with receipt-backed
+      alignment and stretch A/B gates; promote it only if the silhouette gain
+      outweighs solver cost and does not create a rigid helmet.
 - [ ] Better scalp/strand contact and a clearer calibration path.
 - [ ] Video variants only after the underlying receipt distinguishes them.
 

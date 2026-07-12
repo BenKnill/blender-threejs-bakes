@@ -6,6 +6,15 @@ import {
   spatialFrictionReceipt,
   stepSpatialFriction,
 } from "./spatial_friction.js";
+import {
+  bakeRootDirectorTarget,
+  projectRootDirectorPoint,
+  ROOT_DIRECTOR_DEFAULT_STRENGTH,
+  ROOT_DIRECTOR_FALLOFF,
+  ROOT_DIRECTOR_NORMAL_BIASES,
+  ROOT_DIRECTOR_ZONE_SEGMENTS,
+  summarizeRootAlignment,
+} from "./root_director.js";
 
 export { blendPairAnisotropicFriction } from "./friction.js";
 
@@ -227,6 +236,8 @@ export class HairSolver {
     spatialFrictionEnabled = false,
     spatialFrictionRefreshSteps = 8,
     spatialFrictionScale = 0.5,
+    rootDirectorEnabled = false,
+    rootDirectorStrength = ROOT_DIRECTOR_DEFAULT_STRENGTH,
   } = {}) {
     if (!(preset in MATERIAL_PRESETS)) throw new Error(`unknown material preset: ${preset}`);
     if (guideCount < 8 || segments < 4) throw new Error("hair solver resolution is too small");
@@ -248,6 +259,9 @@ export class HairSolver {
     this.previous = new Float64Array(this.particleCount * 3);
     this.rest = new Float64Array(this.particleCount * 3);
     this.roots = new Float64Array(guideCount * 3);
+    this.rootNormals = new Float64Array(guideCount * 3);
+    this.rootDirectorTargets = new Float64Array(guideCount * ROOT_DIRECTOR_ZONE_SEGMENTS * 3);
+    this.rootDirectorProjection = new Float64Array(6);
     this.activeSegments = new Uint16Array(guideCount);
     this.restLengths = new Float64Array(guideCount * segments);
     this.cutCount = 0;
@@ -257,6 +271,17 @@ export class HairSolver {
     this.windAngle = Math.atan2(0.45, 1);
     this.directionalWind = false;
     this.sectionLift = 0;
+    this.rootDirector = {
+      enabled: Boolean(rootDirectorEnabled),
+      strength: Math.max(0, Math.min(1, rootDirectorStrength)),
+      zoneSegments: ROOT_DIRECTOR_ZONE_SEGMENTS,
+      falloff: ROOT_DIRECTOR_FALLOFF,
+      normalBiases: [...ROOT_DIRECTOR_NORMAL_BIASES],
+      correctionsLastStep: 0,
+      correctionDistanceLastStep: 0,
+      minimumNormalDot: 0,
+      meanNormalDot: 0,
+    };
     this.maxStretchError = 0;
     this.moisture = 0;
     this.product = 0;
@@ -300,6 +325,7 @@ export class HairSolver {
     this.combMeasurementStep = 0;
     this.measurementWindow = "full_simulation";
     this.#initialize();
+    this.#updateRootAlignment();
     this.neighborPairs = this.#buildNeighborPairs(3);
   }
 
@@ -311,7 +337,10 @@ export class HairSolver {
     for (let strand = 0; strand < this.guideCount; strand += 1) {
       const frame = rootFrame(strand, this.guideCount);
       this.activeSegments[strand] = this.segments;
-      for (let axis = 0; axis < 3; axis += 1) this.roots[strand * 3 + axis] = frame.root[axis];
+      for (let axis = 0; axis < 3; axis += 1) {
+        this.roots[strand * 3 + axis] = frame.root[axis];
+        this.rootNormals[strand * 3 + axis] = frame.normal[axis];
+      }
       for (let particle = 0; particle <= this.segments; particle += 1) {
         const point = restPoint(frame, this.material, particle, this.segments);
         for (let axis = 0; axis < 3; axis += 1) {
@@ -328,6 +357,28 @@ export class HairSolver {
             this.rest[current + 1] - this.rest[prior + 1],
             this.rest[current + 2] - this.rest[prior + 2]
           );
+        }
+      }
+      for (
+        let segment = 0;
+        segment < Math.min(ROOT_DIRECTOR_ZONE_SEGMENTS, this.segments);
+        segment += 1
+      ) {
+        const prior = this.index(strand, segment);
+        const next = this.index(strand, segment + 1);
+        bakeRootDirectorTarget(
+          frame.normal[0],
+          frame.normal[1],
+          frame.normal[2],
+          this.rest[next] - this.rest[prior],
+          this.rest[next + 1] - this.rest[prior + 1],
+          this.rest[next + 2] - this.rest[prior + 2],
+          ROOT_DIRECTOR_NORMAL_BIASES[segment],
+          this.rootDirectorProjection
+        );
+        const target = (strand * ROOT_DIRECTOR_ZONE_SEGMENTS + segment) * 3;
+        for (let axis = 0; axis < 3; axis += 1) {
+          this.rootDirectorTargets[target + axis] = this.rootDirectorProjection[axis];
         }
       }
     }
@@ -369,6 +420,7 @@ export class HairSolver {
     this.measurementWindow = "full_simulation";
     this.comb.enabled = false;
     this.#initialize();
+    this.#updateRootAlignment();
     this.#refreshMaterial();
   }
 
@@ -474,6 +526,8 @@ export class HairSolver {
     const step = Math.max(1 / 240, Math.min(1 / 30, dt));
     this.time += step;
     this.simulationStep += 1;
+    this.rootDirector.correctionsLastStep = 0;
+    this.rootDirector.correctionDistanceLastStep = 0;
     const damping = this.material.damping;
     for (let strand = 0; strand < this.guideCount; strand += 1) {
       for (let particle = 1; particle <= this.activeSegments[strand]; particle += 1) {
@@ -515,6 +569,10 @@ export class HairSolver {
       if (this.collectiveRulesEnabled) this.#projectCollectivePairs();
       this.#projectSectionLift();
       this.#projectScalp();
+      if (this.rootDirector.enabled) {
+        this.#projectRootDirector();
+        this.#projectScalp();
+      }
       this.#pinRoots();
     }
     // Curvature and collision projections can reintroduce small length errors.
@@ -535,6 +593,7 @@ export class HairSolver {
       this.maxStretchError = this.measureMaxStretchError();
     }
     this.peakStretchError = Math.max(this.peakStretchError, this.maxStretchError);
+    this.#updateRootAlignment();
     this.#recordCombSample();
   }
 
@@ -823,6 +882,48 @@ export class HairSolver {
     }
   }
 
+  #projectRootDirector() {
+    for (let strand = 0; strand < this.guideCount; strand += 1) {
+      const active = Math.min(this.rootDirector.zoneSegments, this.activeSegments[strand]);
+      for (let segment = 0; segment < active; segment += 1) {
+        const anchor = this.index(strand, segment);
+        const point = this.index(strand, segment + 1);
+        const target = (strand * this.rootDirector.zoneSegments + segment) * 3;
+        const strength = this.rootDirector.strength * this.rootDirector.falloff ** segment;
+        const projection = projectRootDirectorPoint(
+          this.positions[anchor],
+          this.positions[anchor + 1],
+          this.positions[anchor + 2],
+          this.positions[point],
+          this.positions[point + 1],
+          this.positions[point + 2],
+          this.rootDirectorTargets[target],
+          this.rootDirectorTargets[target + 1],
+          this.rootDirectorTargets[target + 2],
+          this.restLengths[strand * this.segments + segment],
+          strength,
+          this.rootDirectorProjection
+        );
+        this.positions[point] = projection[0];
+        this.positions[point + 1] = projection[1];
+        this.positions[point + 2] = projection[2];
+        if (projection[4] > 1e-12) this.rootDirector.correctionsLastStep += 1;
+        this.rootDirector.correctionDistanceLastStep += projection[4];
+      }
+    }
+  }
+
+  #updateRootAlignment() {
+    const alignment = summarizeRootAlignment(
+      this.positions,
+      this.roots,
+      this.rootNormals,
+      this.particlesPerGuide
+    );
+    this.rootDirector.minimumNormalDot = alignment.minimum;
+    this.rootDirector.meanNormalDot = alignment.mean;
+  }
+
   #projectSectionLift() {
     if (this.sectionLift <= 0) return;
     const targetParticle = Math.max(2, Math.round(this.segments * 0.48));
@@ -916,6 +1017,18 @@ export class HairSolver {
         mode: this.directionalWind ? "directional" : "legacy_scalar",
         angle_radians: this.windAngle,
         direction: [...this.windDirection],
+      },
+      root_director: {
+        enabled: this.rootDirector.enabled,
+        strength: this.rootDirector.strength,
+        zone_segments: this.rootDirector.zoneSegments,
+        falloff: this.rootDirector.falloff,
+        normal_biases: [...this.rootDirector.normalBiases],
+        corrections_last_step: this.rootDirector.correctionsLastStep,
+        correction_distance_last_step: this.rootDirector.correctionDistanceLastStep,
+        minimum_first_segment_normal_dot: this.rootDirector.minimumNormalDot,
+        mean_first_segment_normal_dot: this.rootDirector.meanNormalDot,
+        exact_antipodal_boundary: "tangent_correction_zero",
       },
       iterations: this.iterations,
       max_relative_stretch_error: this.maxStretchError,
