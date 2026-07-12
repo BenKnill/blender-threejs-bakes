@@ -227,3 +227,17 @@ let HAIR_TWO_PARENT_INTERPOLATION_BETWEEN_ORDERED_SAMPLES = prove
     SUBGOAL_THEN `&0 <= (&1 - weight) * (upper - lower)` ASSUME_TAC THENL
      [MATCH_MP_TAC REAL_LE_MUL THEN ASM_REAL_ARITH_TAC;
       CONJ_TAC THEN ASM_REAL_ARITH_TAC]]);;
+
+(** The root director adds a scaled tangent-plane target component to a unit
+    segment direction.  If dot is the current target alignment, the unnormalized
+    next alignment is dot + strength * (1 - dot^2), so nonnegative strength
+    cannot reduce it while |dot| <= 1.  This does not verify normalization,
+    JavaScript floating point, solve ordering, or the full hair simulation. *)
+let HAIR_ROOT_DIRECTOR_UNNORMALIZED_ALIGNMENT_MONOTONE = prove
+ (`!strength dot:real.
+      &0 <= strength /\ dot pow 2 <= &1
+      ==> dot <= dot + strength * (&1 - dot pow 2)`,
+  REPEAT STRIP_TAC THEN
+  SUBGOAL_THEN `&0 <= strength * (&1 - dot pow 2)` ASSUME_TAC THENL
+   [MATCH_MP_TAC REAL_LE_MUL THEN ASM_REAL_ARITH_TAC;
+    ASM_REAL_ARITH_TAC]);;
