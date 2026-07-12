@@ -42,12 +42,17 @@ proof boundaries must remain explicit.
       comb/cut transition. Adjacent-frame minimum Jaccard is 0.933/0.948/0.968
       for dry/wet/product and 0.959 through the product-heavy cut fixture;
       rerun digests and discovery-only gates all pass.
-- [ ] Run a controlled low-count spatial-force A/B well inside the admitted
-      frontier. Keep it mechanically instrumented and reversible; dry hair's
-      6.7% worst adjacent churn is the yellow edge to watch.
+- [x] Run a controlled k=1 spatial-friction A/B inside the admitted frontier.
+      The feature is off by default, excludes fixed-graph guide pairs, and
+      applies no spatial pressure or cohesion. Retaining still-valid contacts
+      before filling unmatched segments raises minimum active Jaccard to
+      0.903/0.940/0.981 for dry/wet/product while every deterministic comb and
+      stretch gate passes. The cut fixture remains a separately reported
+      baseline stretch failure and is not relabeled as a pass.
 - [ ] Add a repeated pass, section lift, or simple grab only when it answers a
       concrete material question.
-- [ ] Keep a small explicit-guide reference scene before raising guide count.
+- [ ] Build a small explicit-guide rod/reference scene before raising guide
+      count or enabling spatial friction in the browser by default.
 
 Decision point: after two useful instruments, decide whether the best next gain
 is a better solver operator, a prettier haircut interaction, or a low-count rod

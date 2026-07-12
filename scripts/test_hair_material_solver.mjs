@@ -3,6 +3,7 @@
 import assert from "node:assert/strict";
 
 import {
+  closestSegmentPoints,
   discoverSegmentPairs,
   hairSolverPersistentPairs,
   hairSolverSegments,
@@ -13,6 +14,7 @@ import {
   segmentAabbCellKeys,
   segmentSegmentDistanceSquared,
 } from "../physics/labs/hair_material/demo/contact_discovery.js";
+import { barycentricEndpointWeights } from "../physics/labs/hair_material/demo/friction.js";
 import {
   digestContactTrace,
   snapshotRankedContacts,
@@ -53,6 +55,11 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   nearlyEqual(segmentAabbGapSquared(crossing[0], crossing[1]), 0);
   nearlyEqual(segmentSegmentDistanceSquared(crossing[0], crossing[1]), 0);
   nearlyEqual(segmentSegmentDistanceSquared(crossing[1], crossing[0]), 0);
+  const closest = closestSegmentPoints(crossing[0], crossing[1]);
+  nearlyEqual(closest.distance_squared, 0);
+  nearlyEqual(closest.left_parameter, 0.5);
+  nearlyEqual(closest.right_parameter, 0.5);
+  assert.deepEqual(closest.left_point, closest.right_point);
   const forward = discoverSegmentPairs(crossing, { cellSize: 0.25, maxPairs: 10 });
   const reverse = discoverSegmentPairs([...crossing].reverse(), { cellSize: 0.25, maxPairs: 10 });
   assert.deepEqual(forward.pairs, [{ a: 10, b: 21 }]);
@@ -71,7 +78,18 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   nearlyEqual(segmentSegmentDistanceSquared(parallel, line), 1);
   const reversed = { a: [...parallel.b], b: [...parallel.a] };
   nearlyEqual(segmentSegmentDistanceSquared(line, reversed), 1);
+  const pointLineClosest = closestSegmentPoints(pointB, line);
+  nearlyEqual(pointLineClosest.left_parameter, 0);
+  nearlyEqual(pointLineClosest.right_parameter, 1);
+  const forwardClosest = closestSegmentPoints(line, parallel);
+  const swappedClosest = closestSegmentPoints(parallel, line);
+  nearlyEqual(forwardClosest.distance_squared, swappedClosest.distance_squared);
+  nearlyEqual(forwardClosest.left_parameter, swappedClosest.right_parameter);
+  nearlyEqual(forwardClosest.right_parameter, swappedClosest.left_parameter);
   assert.ok(quantizeSquaredRisk(0.1) <= quantizeSquaredRisk(0.2));
+  assert.deepEqual(barycentricEndpointWeights(-1), [1, 0]);
+  assert.deepEqual(barycentricEndpointWeights(0.25), [0.75, 0.25]);
+  assert.deepEqual(barycentricEndpointWeights(2), [0, 1]);
 }
 
 {
@@ -501,6 +519,59 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.equal(rotating.state_digest, repeated.state_digest);
   assert.equal(rotating.receipt.wind.mode, "directional");
   nearlyEqual(rotating.receipt.wind.angle_radians, 0.2 + (119 / 60) * 0.7);
+}
+
+{
+  const base = {
+    solver: {
+      guideCount: 32,
+      segments: 8,
+      preset: "wavy",
+      iterations: 5,
+      spatialFrictionRefreshSteps: 4,
+      spatialFrictionScale: 0.5,
+    },
+    steps: 80,
+    dt: 1 / 60,
+    moisture: 0.35,
+    product: 0.5,
+    baseWind: 0.18,
+    gust: 0.3,
+    comb: { startStep: 15, endStep: 65, startX: -1.2, endX: 1.2 },
+  };
+  const control = runHairReplay({
+    ...base,
+    solver: { ...base.solver, spatialFrictionEnabled: false },
+  }).result;
+  const treatment = runHairReplay({
+    ...base,
+    solver: { ...base.solver, spatialFrictionEnabled: true },
+  }).result;
+  const repeated = runHairReplay({
+    ...base,
+    solver: { ...base.solver, spatialFrictionEnabled: true },
+  }).result;
+  assert.equal(treatment.state_digest, repeated.state_digest);
+  assert.deepEqual(treatment.receipt, repeated.receipt);
+  assert.notEqual(treatment.state_digest, control.state_digest);
+  assert.equal(control.receipt.spatial_friction.enabled, false);
+  assert.equal(control.receipt.spatial_friction.friction_impulse_proxy_total, 0);
+  assert.equal(treatment.receipt.spatial_friction.enabled, true);
+  assert.equal(treatment.receipt.spatial_friction.maximum_pairs_per_segment, 1);
+  assert.equal(
+    treatment.receipt.spatial_friction.retention_policy,
+    "narrowphase_contact_radius"
+  );
+  assert.ok(treatment.receipt.spatial_friction.refresh_count > 0);
+  assert.ok(treatment.receipt.spatial_friction.candidates_last_refresh > 0);
+  assert.ok(treatment.receipt.spatial_friction.selected_last_refresh > 0);
+  assert.ok(treatment.receipt.spatial_friction.graph_overlap_skips_last_refresh > 0);
+  assert.ok(treatment.receipt.spatial_friction.retained_total > 0);
+  assert.ok(treatment.receipt.spatial_friction.added_total > 0);
+  assert.ok(treatment.receipt.spatial_friction.minimum_active_jaccard >= 0);
+  assert.ok(treatment.receipt.spatial_friction.friction_impulse_proxy_total > 0);
+  assert.equal(treatment.receipt.spatial_friction.spatial_cohesion, false);
+  assert.equal(treatment.receipt.spatial_friction.spatial_pressure, false);
 }
 
 {

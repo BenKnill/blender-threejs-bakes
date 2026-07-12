@@ -160,3 +160,48 @@ semantics, hashing, ranking, floating point, or contact physics. Grok's
 interrupted inspection and successfully resumed final review are archived
 together at `attachments/20260712T144729Z-grok-issue-113-review.md`. Fable
 remains paused while the user repairs its account access.
+
+## K=1 spatial-friction follow-up
+
+Issue #115 turns only anisotropic friction on for a strict one-contact-per-
+segment matching. The feature is off by default, fixed-graph guide pairs are
+excluded to avoid double service, and spatial pressure and cohesion remain
+disabled. Contact-point velocities and equal-and-opposite corrections use the
+closest-point barycentric coordinates on the two finite segments.
+
+A first global rerank every eight steps was deterministic and stretch-safe but
+failed the temporal gate: minimum active Jaccard was only 0.224/0.286/0.372 for
+dry/wet/product and 0.068 through the cut. The accepted policy retains prior
+contacts that remain active and inside the same narrowphase contact radius,
+then ranks new candidates only for unmatched segments. It adds no enlarged
+release radius. Broadphase discovery remains authoritative for births;
+narrowphase distance is authoritative for retaining an already serviced pair.
+
+Final M5 observation at 256 guides and 12 segments:
+
+| fixture       | minimum active Jaccard | retained / added / removed | impulse proxy | control / treatment |
+| ------------- | ---------------------: | -------------------------: | ------------: | ------------------: |
+| dry comb      |                  0.903 |      21,465 / 787 / 384 |        15.762 |       1.67 / 3.60 s |
+| wet comb      |                  0.940 |      22,780 / 411 / 159 |        19.847 |       2.01 / 4.35 s |
+| product comb  |                  0.981 |       24,340 / 178 / 67 |        17.128 |       2.75 / 5.73 s |
+| product cut   |                  0.789 |      32,752 / 1,705 / 977 |        29.190 |       3.67 / 7.19 s |
+
+Times are single observations, not thresholds. Explicit-off matches ordinary
+replay, treatment reruns are bit-identical, each treatment changes the
+mechanical digest and has nonzero impulse, and every comb treatment satisfies
+the existing stretch gate. The cut fixture has the same 31.742% peak stretch
+in control and treatment, so its pre-existing stretch failure remains red even
+though spatial friction adds exactly zero stretch delta.
+
+The runtime result is deliberately modest: the experiment roughly doubles
+wall time and spends about 1.7--2.2 s of each comb treatment in refreshes. This
+is acceptable for an off-default experiment, not evidence to enable it in the
+hero browser. The next useful comparison is a small explicit-guide rod oracle,
+not more contact operators.
+
+`HAIR_BARYCENTRIC_ENDPOINT_EXCHANGE_PRESERVES_SUM` proves the ideal real-
+arithmetic endpoint-distribution sum for one equal-and-opposite exchange. It
+does not verify JavaScript floating point, candidate discovery, graph overlap
+exclusion, temporal matching, cutting, or visual realism. Grok's Workbench and
+Issue #115 review is archived locally at
+`attachments/20260712T150647Z-grok-workbench-and-issue-115-review.md`.

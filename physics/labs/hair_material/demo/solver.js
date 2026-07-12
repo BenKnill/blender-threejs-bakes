@@ -1,3 +1,14 @@
+import { blendPairAnisotropicFriction } from "./friction.js";
+import {
+  createSpatialFrictionState,
+  resetSpatialFrictionState,
+  resetSpatialFrictionWindow,
+  spatialFrictionReceipt,
+  stepSpatialFriction,
+} from "./spatial_friction.js";
+
+export { blendPairAnisotropicFriction } from "./friction.js";
+
 export const MATERIAL_PRESETS = Object.freeze({
   straight: Object.freeze({
     label: "Straight / fine",
@@ -117,28 +128,6 @@ export function blendPairFriction(velocityA, velocityB, friction) {
   return [nextA, nextB];
 }
 
-export function blendPairAnisotropicFriction(
-  velocityA,
-  velocityB,
-  tangent,
-  axialFriction,
-  transverseFriction
-) {
-  const direction = normalize3(...tangent);
-  const axialBlend = Math.max(0, Math.min(1, axialFriction));
-  const transverseBlend = Math.max(0, Math.min(1, transverseFriction));
-  const relative = velocityB.map((value, axis) => value - velocityA[axis]);
-  const axialMagnitude = relative.reduce((sum, value, axis) => sum + value * direction[axis], 0);
-  const axial = direction.map((value) => value * axialMagnitude);
-  const correction = relative.map(
-    (value, axis) => 0.5 * (axial[axis] * axialBlend + (value - axial[axis]) * transverseBlend)
-  );
-  return [
-    velocityA.map((value, axis) => value + correction[axis]),
-    velocityB.map((value, axis) => value - correction[axis]),
-  ];
-}
-
 export function updateClumpBond(bonded, distance, captureRadius, releaseRadius) {
   if (releaseRadius <= captureRadius) throw new Error("release radius must exceed capture radius");
   return bonded ? distance < releaseRadius : distance < captureRadius;
@@ -235,6 +224,9 @@ export class HairSolver {
     iterations = 5,
     renderFibersPerGuide = 9,
     collectiveRulesEnabled = true,
+    spatialFrictionEnabled = false,
+    spatialFrictionRefreshSteps = 8,
+    spatialFrictionScale = 0.5,
   } = {}) {
     if (!(preset in MATERIAL_PRESETS)) throw new Error(`unknown material preset: ${preset}`);
     if (guideCount < 8 || segments < 4) throw new Error("hair solver resolution is too small");
@@ -244,6 +236,11 @@ export class HairSolver {
     this.iterations = iterations;
     this.renderFibersPerGuide = Math.max(1, Math.floor(renderFibersPerGuide));
     this.collectiveRulesEnabled = Boolean(collectiveRulesEnabled);
+    this.spatialFriction = createSpatialFrictionState({
+      enabled: spatialFrictionEnabled,
+      refreshPeriodSteps: spatialFrictionRefreshSteps,
+      scale: spatialFrictionScale,
+    });
     this.preset = preset;
     this.material = { ...MATERIAL_PRESETS[preset] };
     this.particleCount = guideCount * this.particlesPerGuide;
@@ -349,9 +346,11 @@ export class HairSolver {
     this.clumpBonds.clear();
     this.clumpBondAges.clear();
     this.contactLastServiced.clear();
+    resetSpatialFrictionState(this.spatialFriction);
     this.contactServicesLastStep = 0;
     this.windowContactServices = 0;
     this.maxContactServiceGap = 0;
+    resetSpatialFrictionWindow(this.spatialFriction);
     this.clumpCaptures = 0;
     this.clumpReleases = 0;
     this.windowClumpCaptures = 0;
@@ -441,6 +440,7 @@ export class HairSolver {
     this.combMeasurementStep = 0;
     this.windowContactServices = 0;
     this.maxContactServiceGap = 0;
+    resetSpatialFrictionWindow(this.spatialFriction);
   }
 
   prepareMeasurementWindow(name) {
@@ -498,9 +498,13 @@ export class HairSolver {
     this.#projectComb(step);
     if (this.collectiveRulesEnabled) {
       this.#applyNeighborFriction();
+      stepSpatialFriction(this, this.spatialFriction);
       this.#updateClumpBonds();
     } else {
       this.activeNeighborContacts = 0;
+      this.spatialFriction.active_contacts_last_step = 0;
+      this.spatialFriction.stale_rejects_last_step = 0;
+      this.spatialFriction.friction_impulse_proxy_last_step = 0;
       this.clumpCaptures = 0;
       this.clumpReleases = 0;
       this.contactServicesLastStep = 0;
@@ -938,6 +942,7 @@ export class HairSolver {
         service_gap_bound_steps: 1,
         satisfied: contactServiceSatisfied,
       },
+      spatial_friction: spatialFrictionReceipt(this.spatialFriction, this.material),
       clump_captures_last_step: this.clumpCaptures,
       clump_releases_last_step: this.clumpReleases,
       comb: {
