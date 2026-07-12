@@ -35,9 +35,12 @@ proof boundaries must remain explicit.
 - [x] Rank and cap spatial candidates while keeping active persistent bonds hot.
       All persistent bonds survive and the global frontier is ordered, but the
       per-segment quota still drops AABB-overlap risk-zero pairs.
-- [ ] Replace AABB-gap ties with deterministic segment–segment closest-distance
-      risk. Keep spatial forces disabled until dense-clump quota drops no longer
-      discard the geometrically closest pairs.
+- [x] Replace AABB-gap ties with deterministic segment–segment closest-distance
+      risk. The AABB ranker dropped 6/5/40 risk-zero pairs in dry/wet/product;
+      closest-distance ranking drops zero while retaining every persistent bond.
+- [ ] Measure admitted spatial-pair churn across repeated frames and a bounded
+      comb/cut transition. Keep forces disabled until the ranked frontier is
+      temporally stable enough for a controlled low-count force A/B.
 - [ ] Add a repeated pass, section lift, or simple grab only when it answers a
       concrete material question.
 - [ ] Keep a small explicit-guide reference scene before raising guide count.

@@ -83,3 +83,40 @@ explicit `spatial_force_integration: false` gate. Grok's complete Issue #109
 review is archived locally at
 `attachments/20260712T143038Z-grok-issue-109-review.md`. Fable was not retried
 after the user confirmed they would repair its account access later.
+
+## Closest-segment ranking follow-up
+
+Issue #111 replaces the AABB-gap ranking key with the squared closest distance
+between the two finite guide segments. The implementation handles degenerate
+point segments, parallel and nearly parallel segments, and clamped endpoint
+solutions before quantizing the squared distance. Canonical segment-pair ids
+remain the final deterministic tie-breaker. The old and new rankers consume
+the same unbounded discovery result in one dual-pass receipt; spatial forces
+remain disabled.
+
+Initial M5 observation:
+
+| lane          | candidates | persistent retained | AABB zero-risk quota drops | closest zero-risk quota drops | discovery | AABB rank | closest rank |
+| ------------- | ---------: | ------------------: | -------------------------: | ----------------------------: | --------: | --------: | -----------: |
+| dry           |     34,702 |           610 / 610 |                          6 |                             0 |    114 ms |     35 ms |        36 ms |
+| wet           |     40,699 |       3,455 / 3,455 |                          5 |                             0 |    106 ms |     29 ms |        33 ms |
+| product-heavy |     47,880 |       4,576 / 4,576 |                         40 |                             0 |    114 ms |     58 ms |        41 ms |
+
+Times are single observations, not thresholds. Closest-distance ranking clears
+the stated tie falsifier in all three lanes while retaining every persistent
+bond. Mechanical replay digests remain `30f2ac632a582b7d`,
+`fcb9bcfb1123a02a`, and `8d3a5a2be7d13fbc`, confirming that the experiment is
+still discovery-only. This is enough to adopt the better ranking metric, but
+not enough to enable forces: the admitted set could still flicker around the
+capacity frontier as the hair moves.
+
+Tests cover crossing, point-point, point-segment, parallel and reversed
+segments, quantization monotonicity, symmetry, and a quota fixture that must
+retain the three nearest neighbors. `HAIR_SQUARED_SEPARATION_NONNEGATIVE`
+proves only the real-arithmetic nonnegativity of the squared separation used by
+the ideal metric; it does not verify JavaScript floating point, clamping,
+degeneracy handling, quantization, or physical contact completeness.
+
+Grok's full Issue #111 review is archived locally at
+`attachments/20260712T143738Z-grok-issue-111-review.md`. Fable was not retried
+after the user asked us to continue while they repair its access.

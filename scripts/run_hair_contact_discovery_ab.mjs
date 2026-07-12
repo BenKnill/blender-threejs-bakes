@@ -34,16 +34,31 @@ for (const [name, condition] of Object.entries(COMB_MATERIAL_CONDITIONS)) {
     maxPairsPerSegment: 100000,
     maxPairs: 100000,
   });
-  const ranked = rankSpatialCandidates(segments, spatial.pairs, hairSolverPersistentPairs(hair), {
+  const discoveryMilliseconds = performance.now() - started;
+  const persistent = hairSolverPersistentPairs(hair);
+  const aabbStarted = performance.now();
+  const rankedAabb = rankSpatialCandidates(segments, spatial.pairs, persistent, {
     maxPairs: 20000,
     maxNewPairsPerSegment: 16,
+    riskMetric: "aabb_gap_squared",
   });
+  const aabbRankingMilliseconds = performance.now() - aabbStarted;
+  const closestStarted = performance.now();
+  const rankedClosest = rankSpatialCandidates(segments, spatial.pairs, persistent, {
+    maxPairs: 20000,
+    maxNewPairsPerSegment: 16,
+    riskMetric: "segment_distance_squared",
+  });
+  const closestRankingMilliseconds = performance.now() - closestStarted;
   lanes[name] = {
     mechanical_state_digest: result.state_digest,
     fixed_graph_candidates_per_step: result.receipt.contact_service.candidate_capacity,
-    spatial_discovery_ms: performance.now() - started,
+    spatial_discovery_ms: discoveryMilliseconds,
+    aabb_ranking_ms: aabbRankingMilliseconds,
+    closest_ranking_ms: closestRankingMilliseconds,
     spatial,
-    ranked,
+    ranked_aabb: rankedAabb,
+    ranked_closest: rankedClosest,
   };
 }
 

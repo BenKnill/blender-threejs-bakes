@@ -7,9 +7,11 @@ import {
   hairSolverPersistentPairs,
   hairSolverSegments,
   paddedSegmentAabbsOverlap,
+  quantizeSquaredRisk,
   rankSpatialCandidates,
   segmentAabbGapSquared,
   segmentAabbCellKeys,
+  segmentSegmentDistanceSquared,
 } from "../physics/labs/hair_material/demo/contact_discovery.js";
 
 import {
@@ -44,11 +46,48 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.ok(segmentAabbCellKeys(crossing[0], 0.25).length > 2);
   assert.equal(paddedSegmentAabbsOverlap(crossing[0], crossing[1]), true);
   nearlyEqual(segmentAabbGapSquared(crossing[0], crossing[1]), 0);
+  nearlyEqual(segmentSegmentDistanceSquared(crossing[0], crossing[1]), 0);
+  nearlyEqual(segmentSegmentDistanceSquared(crossing[1], crossing[0]), 0);
   const forward = discoverSegmentPairs(crossing, { cellSize: 0.25, maxPairs: 10 });
   const reverse = discoverSegmentPairs([...crossing].reverse(), { cellSize: 0.25, maxPairs: 10 });
   assert.deepEqual(forward.pairs, [{ a: 10, b: 21 }]);
   assert.equal(forward.pair_digest, reverse.pair_digest);
   assert.equal(forward.global_saturated, false);
+}
+
+{
+  const pointA = { a: [0, 0, 0], b: [0, 0, 0] };
+  const pointB = { a: [1, 2, 2], b: [1, 2, 2] };
+  nearlyEqual(segmentSegmentDistanceSquared(pointA, pointB), 9);
+  const line = { a: [-1, 0, 0], b: [1, 0, 0] };
+  nearlyEqual(segmentSegmentDistanceSquared(pointB, line), 8);
+  const parallel = { a: [-1, 1, 0], b: [1, 1, 0] };
+  nearlyEqual(segmentSegmentDistanceSquared(line, parallel), 1);
+  nearlyEqual(segmentSegmentDistanceSquared(parallel, line), 1);
+  const reversed = { a: [...parallel.b], b: [...parallel.a] };
+  nearlyEqual(segmentSegmentDistanceSquared(line, reversed), 1);
+  assert.ok(quantizeSquaredRisk(0.1) <= quantizeSquaredRisk(0.2));
+}
+
+{
+  const center = { id: 0, guide: 0, a: [-1, 0, 0], b: [1, 0, 0] };
+  const neighbors = Array.from({ length: 6 }, (_value, index) => ({
+    id: index + 1,
+    guide: index + 1,
+    a: [-1, (index + 1) * 0.01, 0],
+    b: [1, (index + 1) * 0.01, 0],
+  }));
+  const ranked = rankSpatialCandidates(
+    [center, ...neighbors],
+    neighbors.map((neighbor) => ({ a: 0, b: neighbor.id })),
+    [],
+    { maxPairs: 3, maxNewPairsPerSegment: 3, riskMetric: "segment_distance_squared" }
+  );
+  assert.deepEqual(
+    ranked.admitted_pairs.map((pair) => pair.b),
+    [1, 2, 3]
+  );
+  assert.equal(ranked.dropped_per_segment_zero_risk_count, 0);
 }
 
 {
