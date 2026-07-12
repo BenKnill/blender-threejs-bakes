@@ -1,7 +1,8 @@
 # Interactive hair material bench
 
 Issues: [#79](https://github.com/BenKnill/blender-threejs-bakes/issues/79),
-[#86](https://github.com/BenKnill/blender-threejs-bakes/issues/86)
+[#86](https://github.com/BenKnill/blender-threejs-bakes/issues/86),
+[#130](https://github.com/BenKnill/blender-threejs-bakes/issues/130)
 
 This laboratory is the first interactive step beyond the rendered mannequin
 cut. It runs hundreds of 3D mechanical guides in the browser, couples nearby
@@ -39,6 +40,25 @@ the guide-line button applies a reproducible horizontal cut.
 8. capped equal-and-opposite cohesion for bonded particles;
 9. equal-and-opposite crowd pressure below a minimum pore gap;
 10. final distance passes so telemetry describes the rendered state.
+
+## Scalp root fields
+
+The root constraint has three explicit identities: `free`, `scalp_normal`, and
+`styled_side_part`. The styled field divides the scalp azimuth into eight
+sections, separates roots around a left side part, projects an authored lateral
+sweep into each root tangent plane, and adds bounded crown lift. It then mixes
+that direction with the original rest direction over the same two-segment root
+zone used by the scalp-normal director.
+
+Use `rootField=styled-side-part` in a demo URL or select **Styled side part +
+sweep** in the panel. The legacy `rootDirector=1` query still resolves to
+`scalp_normal`. Receipts identify the exact field, section count, part location,
+target outward dot, target tangential magnitude, actual normal alignment, and
+actual field alignment.
+
+`just hair-root-field-ab` runs free, scalp-normal, and styled modes through one
+330-step cut/comb/rotating-wind replay. `just hair-styled-showcase` prints the
+dense 256-guide × 15-fiber hands-off narrow-preview URL.
 
 ## Anisotropic-fluid rules
 
@@ -90,8 +110,8 @@ node scripts/test_hair_material_solver.mjs
 
 ## HOL Light Workbench lane
 
-The pair correction, anisotropic exchange, clump-envelope ordering, and crowd
-pressure have deliberately narrow componentwise HOL Light theorems at
+The pair correction, anisotropic exchange, clump-envelope ordering, crowd
+pressure, and root-field decomposition have deliberately narrow componentwise HOL Light theorems at
 `physics/labs/hair_material/proofs/pair_constraint.ml`.
 
 ```sh
@@ -100,11 +120,11 @@ hol-workbench/bin/prove \
   --profile light --run-root /tmp/hair-material-hol-runs
 ```
 
-On the primary Mac this routed automatically through the live OrbStack CRIU
-`light` shelf. Restore/reuse took 0.000 seconds and the warm semantic attempt
-covering all seven theorems succeeded in 0.3 seconds. This is warm development
-evidence, not a cold audit or a proof that the JavaScript implementation refines
-the HOL statements.
+On the primary Mac this routes automatically through the live OrbStack CRIU
+`light` shelf. The styled-root addition reused the shelf in 0.000 seconds and
+the full source succeeded in 0.6 seconds. This is warm development evidence,
+not a cold audit or a proof that the JavaScript implementation refines the HOL
+statements.
 
 The pressure suite now also pins the production coefficient `0.36 = 9 / 25`.
 `HAIR_PRESSURE_STRENGTH_036_PREVENTS_GAP_OVERSHOOT` proves that the symmetric
@@ -143,6 +163,15 @@ fresh-start exercise observed both bond capture and release in live telemetry.
 These are interactive observations on the primary M5 Mac, not a portable
 benchmark. The tracked compact receipt is
 `docs/receipts/hair_material_bench.json`.
+
+The styled-root narrow gate uses a 560×720 viewport, 256 guides, 15 fat-line
+fibers per guide, section-local two-parent interpolation, rotating wind, a
+two-pass comb, and the diagonal cut. After the choreography completed, one
+browser observation reported 3.03% stretch, 43 fps, 23.21 ms solver time, and
+0.50 ms p99 / 1.70 ms maximum geometry update over 518 measured frames. The
+same recipe's scalp-normal observation formed a smooth cap over the face; the
+styled field retained a visible part and lateral sweep. These are visual and
+single-run performance observations, not a pixel-identical or portable A/B.
 
 ## Claim boundary
 

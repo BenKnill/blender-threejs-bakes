@@ -87,7 +87,10 @@ strand rendering; do not add another many-hair operator first.
       physics digest matches the radial baseline, binding digest `74bfb34c`
       remains stable, and geometry update is 0.60 ms mean / 1.20 ms p99 /
       1.90 ms max over 538 measured frames.
-- [ ] Cutting plus combing in one deterministic scenario.
+- [x] Cutting plus combing in one deterministic scenario. The 330-step styled
+      root-field replay combines a two-pass comb, rotating wind, and diagonal
+      cut; its repeated digest is `e63a053332f3b265` and it stays inside the
+      3.5% stretch gate.
 - [x] Add an opt-in two-segment scalp-normal root director with receipt-backed
       alignment and stretch A/B gates; promote it only if the silhouette gain
       outweighs solver cost and does not create a rigid helmet. At 256 guides,
@@ -96,6 +99,13 @@ strand rendering; do not add another many-hair operator first.
       under 3.1% stretch. Strength 0.22 remains opt-in because it approaches a
       smooth crown cap. The scalar alignment contract is observed through the
       refreshed OrbStack/CRIU `light` shelf as warm development evidence.
+- [x] Add an eight-section styled scalp root field with a side part, lateral
+      sweep, and crown lift while retaining positive outward target growth.
+      Free and scalp-normal modes remain available. In the 256-guide A/B, the
+      styled target has 0.820 mean tangential magnitude and 0.462 minimum
+      outward dot versus 0.260 tangential magnitude for scalp-normal. The
+      finished 560x720 fat-line showcase reads as a swept part instead of the
+      scalp-normal cap, holds 3.03% stretch, and observes 0.50 ms geometry p99.
 - [ ] Better scalp/strand contact and a clearer calibration path.
 - [ ] Video variants only after the underlying receipt distinguishes them.
 

@@ -35,6 +35,12 @@ import {
   projectRootDirectorPoint,
 } from "../physics/labs/hair_material/demo/root_director.js";
 import {
+  bakeStyledRootDirection,
+  ROOT_STYLE_FIELD_ID,
+  ROOT_STYLE_MIN_OUTWARD_DOT,
+  summarizeRootTargets,
+} from "../physics/labs/hair_material/demo/root_style_field.js";
+import {
   digestContactTrace,
   snapshotRankedContacts,
   summarizeContactTransition,
@@ -100,6 +106,17 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   nearlyEqual(unchanged[0], 0);
   nearlyEqual(unchanged[1], -1);
   nearlyEqual(unchanged[2], 0);
+}
+
+{
+  const field = new Float64Array(6);
+  bakeStyledRootDirection(-0.18, 2.42, 0.12, 0, 1, 0, field);
+  nearlyEqual(Math.hypot(field[0], field[1], field[2]), 1);
+  const outwardDot = field[1];
+  assert.ok(outwardDot >= ROOT_STYLE_MIN_OUTWARD_DOT - 1e-10);
+  assert.ok(field[3] >= 0 && field[3] < 8);
+  nearlyEqual(field[4], outwardDot);
+  nearlyEqual(field[5], Math.sqrt(1 - outwardDot * outwardDot));
 }
 
 {
@@ -669,6 +686,62 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     treatment.receipt.peak_relative_stretch_error <= control.receipt.peak_relative_stretch_error
   );
   assert.ok(treatment.receipt.max_relative_stretch_error <= 0.035);
+}
+
+{
+  const base = {
+    solver: {
+      guideCount: 32,
+      segments: 8,
+      preset: "wavy",
+      iterations: 6,
+      collectiveRulesEnabled: false,
+      rootDirectorStrength: 0.22,
+    },
+    steps: 90,
+    dt: 1 / 60,
+    baseWind: 0.24,
+    gust: 0.35,
+    windAngle: 0.2,
+    windRotationRate: 0.65,
+  };
+  const normal = runHairReplay({
+    ...base,
+    solver: { ...base.solver, rootDirectorMode: "scalp_normal" },
+  }).result;
+  const styled = runHairReplay({
+    ...base,
+    solver: { ...base.solver, rootDirectorMode: "styled_side_part" },
+  }).result;
+  const repeated = runHairReplay({
+    ...base,
+    solver: { ...base.solver, rootDirectorMode: "styled_side_part" },
+  }).result;
+  assert.equal(styled.state_digest, repeated.state_digest);
+  assert.deepEqual(styled.receipt, repeated.receipt);
+  assert.notEqual(styled.state_digest, normal.state_digest);
+  assert.equal(styled.receipt.root_director.mode, "styled_side_part");
+  assert.equal(styled.receipt.root_director.field_identity, ROOT_STYLE_FIELD_ID);
+  assert.equal(styled.receipt.root_director.section_count, 8);
+  assert.ok(styled.receipt.root_director.minimum_target_outward_dot > 0);
+  assert.ok(styled.receipt.root_director.mean_target_tangential_magnitude > 0.4);
+  assert.ok(styled.receipt.root_director.mean_first_segment_target_dot > 0.5);
+  assert.ok(styled.receipt.max_relative_stretch_error <= 0.035);
+  assert.ok(
+    styled.receipt.root_director.mean_target_tangential_magnitude >
+      normal.receipt.root_director.mean_target_tangential_magnitude
+  );
+  const styledSolver = new HairSolver({
+    guideCount: 32,
+    segments: 8,
+    rootDirectorMode: "styled_side_part",
+  });
+  const targetSummary = summarizeRootTargets(
+    styledSolver.rootDirectorTargets,
+    styledSolver.rootNormals,
+    styledSolver.rootDirector.zoneSegments
+  );
+  assert.ok(targetSummary.minimumOutwardDot > 0);
 }
 
 {

@@ -17,7 +17,7 @@
   <body>
     <main id="viewport" aria-label="Interactive hair material simulation"></main>
     <div id="showcase-hud" aria-live="polite">
-      <strong>Rotating-wind groom</strong>
+      <strong id="showcase-groom">Rotating-wind groom</strong>
       <span id="showcase-phase">settling</span>
       <span id="showcase-wind">wind —</span>
       <span id="showcase-stretch">stretch —</span>
@@ -37,6 +37,15 @@
           <option value="wavy" selected>Wavy / medium</option>
           <option value="curly">Curly / springy</option>
           <option value="coily">Coily / high recovery</option>
+        </select>
+      </label>
+
+      <label>
+        Scalp root field
+        <select id="root-field">
+          <option value="free" selected>Free / gravity-led</option>
+          <option value="scalp_normal">Scalp-normal</option>
+          <option value="styled_side_part">Styled side part + sweep</option>
         </select>
       </label>
 
@@ -128,6 +137,14 @@
           <div>
             <dt>Root normal min / mean</dt>
             <dd id="metric-root-alignment">—</dd>
+          </div>
+          <div>
+            <dt>Root field min / mean</dt>
+            <dd id="metric-root-field-alignment">—</dd>
+          </div>
+          <div>
+            <dt>Target outward min / tangent mean</dt>
+            <dd id="metric-root-field-outward">—</dd>
           </div>
           <div>
             <dt>Geometry p99 / max</dt>
@@ -246,6 +263,6 @@
       <div id="status" role="status">Running deterministic wavy preset.</div>
     </aside>
     <div id="cut-cursor" aria-hidden="true"></div>
-    <script type="module" src="./main.js?v=109"></script>
+    <script type="module" src="./main.js?v=111"></script>
   </body>
 </html>

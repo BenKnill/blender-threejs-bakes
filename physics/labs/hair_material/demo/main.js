@@ -1,14 +1,14 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-import { HairSolver } from "./solver.js?v=109";
+import { HairSolver } from "./solver.js?v=111";
 import {
   advanceHairReplay,
   COMB_MATERIAL_CONDITIONS,
   createReplayState,
   digestHairState,
   summarizeCombReceipt,
-} from "./replay.js?v=109";
+} from "./replay.js?v=110";
 import {
   fatlineColorScale,
   fatlineHalfWidthAt,
@@ -27,7 +27,7 @@ let hairRenderMode = "lines";
 let groomMode = "radial_xz";
 let groomBindings = null;
 let groomBindingBuildCount = 0;
-let rootDirectorEnabled = false;
+let rootDirectorMode = "free";
 let rootDirectorStrength = 0.22;
 let renderReceiptEnabled = false;
 const FATLINE_DYNAMIC_ATTRIBUTES = Object.freeze([
@@ -336,7 +336,7 @@ function rebuildSolver() {
     renderFibersPerGuide,
     collectiveRulesEnabled: deterministicReplay.collectiveRulesEnabled,
     spatialFrictionEnabled: deterministicReplay.spatialFrictionEnabled,
-    rootDirectorEnabled,
+    rootDirectorMode,
     rootDirectorStrength,
   });
   groomBindings =
@@ -352,7 +352,7 @@ function rebuildSolver() {
   rebuildHairObject();
   const activeExperiments = [
     solver.spatialFriction.enabled ? "spatial friction" : null,
-    solver.rootDirector.enabled ? "root director" : null,
+    solver.rootDirector.enabled ? solver.rootDirector.mode.replaceAll("_", " ") : null,
   ].filter(Boolean);
   status.textContent = `Running deterministic ${preset} preset${activeExperiments.length ? ` with experimental ${activeExperiments.join(" + ")}` : ""}.`;
 }
@@ -690,10 +690,14 @@ function updateTelemetry(now) {
   document.querySelector("#metric-render-mode").textContent = hairRenderMode;
   document.querySelector("#metric-groom-mode").textContent = groomMode;
   document.querySelector("#metric-root-director").textContent = receipt.root_director.enabled
-    ? `${receipt.root_director.strength.toFixed(2)} · ${receipt.root_director.zone_segments} seg`
+    ? `${receipt.root_director.mode.replaceAll("_", " ")} · ${receipt.root_director.strength.toFixed(2)}`
     : "off";
   document.querySelector("#metric-root-alignment").textContent =
     `${receipt.root_director.minimum_first_segment_normal_dot.toFixed(3)} / ${receipt.root_director.mean_first_segment_normal_dot.toFixed(3)}`;
+  document.querySelector("#metric-root-field-alignment").textContent =
+    `${receipt.root_director.minimum_first_segment_target_dot.toFixed(3)} / ${receipt.root_director.mean_first_segment_target_dot.toFixed(3)}`;
+  document.querySelector("#metric-root-field-outward").textContent =
+    `${receipt.root_director.minimum_target_outward_dot.toFixed(3)} / ${receipt.root_director.mean_target_tangential_magnitude.toFixed(3)}`;
   document.querySelector("#metric-geometry").textContent =
     geometryTiming.p99_ms === null
       ? "warming"
@@ -726,7 +730,7 @@ function updateTelemetry(now) {
   assumptionMetric.textContent = receipt.assumption_receipt.status;
   assumptionMetric.dataset.status = receipt.assumption_receipt.status;
   drawCombTrace(receipt.comb.force_displacement_trace);
-  document.querySelector("#showcase-phase").textContent = receipt.comb.enabled
+  document.querySelector("#showcase-phase").textContent = solver.comb.enabled
     ? `${solver.comb.phase} comb pass`
     : receipt.assumption_receipt.measurement_window === "comb_cycle"
       ? "two-pass complete · wind orbit continues"
@@ -827,7 +831,7 @@ function animate(now) {
   }
   updateHairGeometry();
   updateWindVisual();
-  comb.visible = Boolean(deterministicReplay.config.comb);
+  comb.visible = Boolean(deterministicReplay.config.comb && solver.comb.enabled);
   comb.position.x = solver.comb.currentX;
   controls.update();
   renderer.render(scene, camera);
@@ -872,7 +876,15 @@ function applyQueryConfiguration() {
       `Hair phase film · ${params.get("scenario")}`;
   }
   deterministicReplay.spatialFrictionEnabled = params.get("spatialFriction") === "1";
-  rootDirectorEnabled = params.get("rootDirector") === "1";
+  const requestedRootField = params.get("rootField")?.replaceAll("-", "_");
+  rootDirectorMode = ["free", "scalp_normal", "styled_side_part"].includes(requestedRootField)
+    ? requestedRootField
+    : params.get("rootDirector") === "1"
+      ? "scalp_normal"
+      : "free";
+  document.querySelector("#root-field").value = rootDirectorMode;
+  document.querySelector("#showcase-groom").textContent =
+    rootDirectorMode === "styled_side_part" ? "Styled side-part groom" : "Rotating-wind groom";
   rootDirectorStrength = Math.max(0, Math.min(1, Number(params.get("rootStrength") ?? 0.22)));
   if (deterministicReplay.spatialFrictionEnabled && !params.has("scenario")) {
     document.querySelector("#scenario-label").textContent =
@@ -958,6 +970,10 @@ for (const [id, output, format] of [
 }
 
 document.querySelector("#preset").addEventListener("change", rebuildSolver);
+document.querySelector("#root-field").addEventListener("change", (event) => {
+  rootDirectorMode = event.currentTarget.value;
+  rebuildSolver();
+});
 document.querySelector("#reset").addEventListener("click", rebuildSolver);
 document.querySelector("#pause").addEventListener("click", (event) => {
   paused = !paused;
