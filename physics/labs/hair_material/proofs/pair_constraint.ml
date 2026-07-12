@@ -116,6 +116,20 @@ let HAIR_EXHAUSTIVE_CONTACT_SERVICE_GAP = prove
       current = previous + &1 ==> current - previous = &1`,
   REAL_ARITH_TAC);;
 
+(** Real-interval support for multi-cell AABB insertion.  If a point lies in a
+    segment's coordinate interval, and that interval is covered by the declared
+    low/high cell boundaries, then the point is covered too.  This does not
+    prove JavaScript floor semantics or the budgeted pair emitter. *)
+let HAIR_SPATIAL_AABB_CELL_INTERVAL_COVERS_POINT = prove
+ (`!cell_low cell_high width low point high:real.
+      &0 < width /\
+      cell_low * width <= low /\
+      low <= point /\ point <= high /\
+      high < (cell_high + &1) * width
+      ==> cell_low * width <= point /\
+          point < (cell_high + &1) * width`,
+  REAL_ARITH_TAC);;
+
 (** A quarter-turn of the horizontal wind vector preserves squared magnitude.
     The browser uses continuous sine/cosine directions; this is a narrow
     algebraic rotation sanity contract, not a proof of JavaScript trig. *)

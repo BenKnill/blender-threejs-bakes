@@ -29,9 +29,11 @@ proof boundaries must remain explicit.
       7.5x the final bonds and 3.2x the releases of dry hair while shifting 56%
       of reaction into the final travel third. Contact-age/service telemetry
       now checks the bounded exhaustive scheduler at runtime.
-- [ ] Prototype a fair sparse discovery schedule while keeping active bonds hot:
-      all lanes currently service 763,950 candidates per measured pass, while
-      mean final bond age ranges from 84 dry to 174 product-heavy steps.
+- [x] A/B deterministic multi-cell spatial discovery against the fixed graph
+      without changing forces. It finds 35k–48k padded-AABB candidates and
+      honestly saturates the provisional 20k budget in every material lane.
+- [ ] Rank and cap spatial candidates while keeping active persistent bonds hot;
+      only then let spatial discovery drive a force/operator A/B.
 - [ ] Add a repeated pass, section lift, or simple grab only when it answers a
       concrete material question.
 - [ ] Keep a small explicit-guide reference scene before raising guide count.

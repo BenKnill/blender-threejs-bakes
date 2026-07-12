@@ -10,7 +10,7 @@ default:
 
 # Lint everything (no changes) — JS + Python
 lint:
-    npx eslint editor physics/labs/contact_shell/demo/main.js physics/labs/hair_material/demo/*.js scripts/test_hair_material_solver.mjs scripts/run_hair_operator_ab.mjs scripts/run_hair_comb_benchmark.mjs scripts/run_hair_comb_cycle.mjs
+    npx eslint editor physics/labs/contact_shell/demo/main.js physics/labs/hair_material/demo/*.js scripts/test_hair_material_solver.mjs scripts/run_hair_operator_ab.mjs scripts/run_hair_comb_benchmark.mjs scripts/run_hair_comb_cycle.mjs scripts/run_hair_contact_discovery_ab.mjs
     npx prettier --check 'editor/**/*.{js,css,html}' 'physics/labs/contact_shell/demo/**/*.{js,css,html,json}' 'physics/labs/hair_material/demo/**/*.{js,css,html}'
     {{ruff}} check scripts
 
@@ -94,6 +94,10 @@ hair-comb-benchmark:
 # Run the visible wet outward/return comb cycle and hysteresis trace.
 hair-comb-cycle:
     node scripts/run_hair_comb_cycle.mjs
+
+# Compare deterministic spatial broadphase candidates with the fixed root graph.
+hair-contact-discovery:
+    node scripts/run_hair_contact_discovery_ab.mjs
 
 # Format everything in place — JS + Python
 format:
