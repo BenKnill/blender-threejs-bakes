@@ -24,6 +24,7 @@ import {
   ROOT_STYLE_SECTION_COUNT,
   summarizeRootTargets,
 } from "./root_style_field.js";
+import { groomSectionId } from "./groom_interpolation.js";
 
 export { blendPairAnisotropicFriction } from "./friction.js";
 
@@ -78,6 +79,10 @@ const HEAD = Object.freeze({ center: [0, 1.35, 0], radii: [0.9, 1.12, 0.82] });
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 const ROOT_DIRECTOR_MODES = new Set(["free", "scalp_normal", "styled_side_part"]);
 const SECTION_LIFT_STEP_STRENGTH = 0.18;
+const SECTION_POSE_FIELD_ID = "eight_section_tangent_tube_v1";
+const SECTION_POSE_STEP_STRENGTH = 0.12;
+const SECTION_POSE_CONTROL_FRACTIONS = Object.freeze([0.36, 0.5, 0.64]);
+const SECTION_POSE_CONTROL_WEIGHTS = Object.freeze([0.55, 1, 0.62]);
 
 function length3(x, y, z) {
   return Math.hypot(x, y, z);
@@ -275,6 +280,7 @@ export class HairSolver {
     this.rootDirectorTargets = new Float64Array(guideCount * ROOT_DIRECTOR_ZONE_SEGMENTS * 3);
     this.rootDirectorProjection = new Float64Array(6);
     this.rootStyleProjection = new Float64Array(6);
+    this.guideSections = new Uint8Array(guideCount);
     this.activeSegments = new Uint16Array(guideCount);
     this.restLengths = new Float64Array(guideCount * segments);
     this.cutCount = 0;
@@ -287,6 +293,16 @@ export class HairSolver {
     this.sectionLiftPhase = "static";
     this.sectionLiftCorrections = 0;
     this.sectionLiftCorrectionDistance = 0;
+    this.sectionPose = {
+      section: -1,
+      lift: 0,
+      sweep: 0,
+      phase: "off",
+      affectedGuideCount: 0,
+      activeGuideCountLastStep: 0,
+      correctionsLastStep: 0,
+      correctionDistanceLastStep: 0,
+    };
     const resolvedRootDirectorMode =
       rootDirectorMode ?? (rootDirectorEnabled ? "scalp_normal" : "free");
     if (!ROOT_DIRECTOR_MODES.has(resolvedRootDirectorMode)) {
@@ -368,6 +384,11 @@ export class HairSolver {
         this.roots[strand * 3 + axis] = frame.root[axis];
         this.rootNormals[strand * 3 + axis] = frame.normal[axis];
       }
+      this.guideSections[strand] = groomSectionId(
+        frame.root[0],
+        frame.root[2],
+        ROOT_STYLE_SECTION_COUNT
+      );
       for (let particle = 0; particle <= this.segments; particle += 1) {
         const point = restPoint(frame, this.material, particle, this.segments);
         for (let axis = 0; axis < 3; axis += 1) {
@@ -503,6 +524,24 @@ export class HairSolver {
     this.sectionLiftPhase = phase;
   }
 
+  setSectionPose({ section = -1, lift = 0, sweep = 0, phase = "static" } = {}) {
+    const resolvedSection = Number.isInteger(section)
+      ? Math.max(-1, Math.min(ROOT_STYLE_SECTION_COUNT - 1, section))
+      : -1;
+    this.sectionPose.section = resolvedSection;
+    this.sectionPose.lift = Math.max(0, Math.min(1.4, lift));
+    const resolvedSweep = Math.max(-1.4, Math.min(1.4, sweep));
+    this.sectionPose.sweep = Object.is(resolvedSweep, -0) ? 0 : resolvedSweep;
+    this.sectionPose.phase = resolvedSection < 0 ? "off" : phase;
+    let affectedGuideCount = 0;
+    if (resolvedSection >= 0) {
+      for (const guideSection of this.guideSections) {
+        if (guideSection === resolvedSection) affectedGuideCount += 1;
+      }
+    }
+    this.sectionPose.affectedGuideCount = affectedGuideCount;
+  }
+
   setWindDirection(angle) {
     this.windAngle = angle;
     this.windDirection = [Math.cos(angle), 0, Math.sin(angle)];
@@ -578,6 +617,9 @@ export class HairSolver {
     this.rootDirector.correctionDistanceLastStep = 0;
     this.sectionLiftCorrections = 0;
     this.sectionLiftCorrectionDistance = 0;
+    this.sectionPose.activeGuideCountLastStep = 0;
+    this.sectionPose.correctionsLastStep = 0;
+    this.sectionPose.correctionDistanceLastStep = 0;
     const damping = this.material.damping;
     for (let strand = 0; strand < this.guideCount; strand += 1) {
       for (let particle = 1; particle <= this.activeSegments[strand]; particle += 1) {
@@ -618,6 +660,7 @@ export class HairSolver {
       this.#projectRestCurvature();
       if (this.collectiveRulesEnabled) this.#projectCollectivePairs();
       this.#projectSectionLift();
+      this.#projectSectionPose();
       this.#projectScalp();
       if (this.rootDirector.enabled) {
         this.#projectRootDirector();
@@ -1006,6 +1049,43 @@ export class HairSolver {
     }
   }
 
+  #projectSectionPose() {
+    const pose = this.sectionPose;
+    if (pose.section < 0 || (pose.lift <= 0 && Math.abs(pose.sweep) <= 1e-12)) return;
+    const angle = -Math.PI + ((pose.section + 0.5) * Math.PI * 2) / ROOT_STYLE_SECTION_COUNT;
+    const tangentX = -Math.sin(angle);
+    const tangentZ = Math.cos(angle);
+    const strength = 1 - (1 - SECTION_POSE_STEP_STRENGTH) ** (1 / this.iterations);
+    let activeGuideCount = 0;
+    for (let strand = 0; strand < this.guideCount; strand += 1) {
+      if (this.guideSections[strand] !== pose.section) continue;
+      let active = false;
+      for (let control = 0; control < SECTION_POSE_CONTROL_FRACTIONS.length; control += 1) {
+        const targetParticle = Math.max(
+          2,
+          Math.round(this.segments * SECTION_POSE_CONTROL_FRACTIONS[control])
+        );
+        if (targetParticle > this.activeSegments[strand]) continue;
+        const weight = SECTION_POSE_CONTROL_WEIGHTS[control];
+        const index = this.index(strand, targetParticle);
+        const targetX = this.rest[index] + tangentX * pose.sweep * weight;
+        const targetY = this.rest[index + 1] + pose.lift * weight;
+        const targetZ = this.rest[index + 2] + tangentZ * pose.sweep * weight;
+        const dx = (targetX - this.positions[index]) * strength;
+        const dy = (targetY - this.positions[index + 1]) * strength;
+        const dz = (targetZ - this.positions[index + 2]) * strength;
+        this.positions[index] += dx;
+        this.positions[index + 1] += dy;
+        this.positions[index + 2] += dz;
+        pose.correctionsLastStep += 1;
+        pose.correctionDistanceLastStep += length3(dx, dy, dz);
+        active = true;
+      }
+      if (active) activeGuideCount += 1;
+    }
+    pose.activeGuideCountLastStep = activeGuideCount;
+  }
+
   #projectScalp() {
     const center = HEAD.center;
     const radii = HEAD.radii.map((radius) => radius + 0.035);
@@ -1120,6 +1200,26 @@ export class HairSolver {
         per_iteration_strength: 1 - (1 - SECTION_LIFT_STEP_STRENGTH) ** (1 / this.iterations),
         corrections_last_step: this.sectionLiftCorrections,
         correction_distance_last_step: this.sectionLiftCorrectionDistance,
+        correction_distance_unit: "summed_solver_position",
+      },
+      section_pose: {
+        enabled:
+          this.sectionPose.section >= 0 &&
+          (this.sectionPose.lift > 0 || Math.abs(this.sectionPose.sweep) > 1e-12),
+        field_identity: SECTION_POSE_FIELD_ID,
+        phase: this.sectionPose.phase,
+        selected_section: this.sectionPose.section >= 0 ? this.sectionPose.section : null,
+        section_count: ROOT_STYLE_SECTION_COUNT,
+        lift_meters: this.sectionPose.lift,
+        tangential_sweep_meters: this.sectionPose.sweep,
+        control_fractions: [...SECTION_POSE_CONTROL_FRACTIONS],
+        control_weights: [...SECTION_POSE_CONTROL_WEIGHTS],
+        affected_guides: this.sectionPose.affectedGuideCount,
+        active_guides_last_step: this.sectionPose.activeGuideCountLastStep,
+        step_strength: SECTION_POSE_STEP_STRENGTH,
+        per_iteration_strength: 1 - (1 - SECTION_POSE_STEP_STRENGTH) ** (1 / this.iterations),
+        corrections_last_step: this.sectionPose.correctionsLastStep,
+        correction_distance_last_step: this.sectionPose.correctionDistanceLastStep,
         correction_distance_unit: "summed_solver_position",
       },
       iterations: this.iterations,

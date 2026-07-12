@@ -65,6 +65,7 @@ import {
   digestHairState,
   runHairReplay,
   sectionLiftEnvelopeAtStep,
+  sectionPoseEnvelopeAtStep,
   summarizeCombReceipt,
 } from "../physics/labs/hair_material/demo/replay.js";
 
@@ -123,14 +124,8 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
 
 {
   const roots = new Float64Array([
-    1, 1, 0,
-    0.8, 1.1, 0.2,
-    0.5, 1.2, 0.5,
-    -0.5, 1.2, 0.5,
-    -0.8, 1.1, 0.2,
-    -1, 1, 0,
-    -0.5, 0.9, -0.5,
-    0.5, 0.9, -0.5,
+    1, 1, 0, 0.8, 1.1, 0.2, 0.5, 1.2, 0.5, -0.5, 1.2, 0.5, -0.8, 1.1, 0.2, -1, 1, 0, -0.5, 0.9,
+    -0.5, 0.5, 0.9, -0.5,
   ]);
   const bindings = buildGroomInterpolationBindings(roots, 8, 5);
   const repeated = buildGroomInterpolationBindings(roots, 8, 5);
@@ -193,8 +188,7 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
       );
     }
     const ownerSection = volumeBindings.sections[volumeBindings.owners[binding]];
-    const secondarySection =
-      volumeBindings.sections[volumeBindings.secondaryNeighbors[binding]];
+    const secondarySection = volumeBindings.sections[volumeBindings.secondaryNeighbors[binding]];
     const direct = Math.abs(ownerSection - secondarySection);
     assert.ok(Math.min(direct, 8 - direct) <= 1);
   }
@@ -564,6 +558,27 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
 }
 
 {
+  const cycle = { startStep: 30, peakStep: 90, holdEndStep: 170, endStep: 255 };
+  assert.deepEqual(sectionPoseEnvelopeAtStep(0, cycle), { phase: "idle", weight: 0 });
+  assert.equal(sectionPoseEnvelopeAtStep(60, cycle).phase, "pose");
+  nearlyEqual(sectionPoseEnvelopeAtStep(60, cycle).weight, 0.5);
+  assert.deepEqual(sectionPoseEnvelopeAtStep(90, cycle), { phase: "hold", weight: 1 });
+  assert.equal(sectionPoseEnvelopeAtStep(200, cycle).phase, "release");
+  assert.ok(sectionPoseEnvelopeAtStep(200, cycle).weight < 1);
+  assert.deepEqual(sectionPoseEnvelopeAtStep(255, cycle), { phase: "released", weight: 0 });
+  assert.throws(
+    () =>
+      sectionPoseEnvelopeAtStep(0, {
+        startStep: 10,
+        peakStep: 10,
+        holdEndStep: 20,
+        endStep: 30,
+      }),
+    /start < peak <= hold < end/
+  );
+}
+
+{
   const config = {
     solver: {
       guideCount: 96,
@@ -707,6 +722,56 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.equal(released.receipt.section_lift.phase, "released");
   assert.equal(released.receipt.section_lift.target_meters, 0);
   assert.equal(released.receipt.section_lift.corrections_last_step, 0);
+  assert.ok(released.receipt.max_relative_stretch_error <= 0.035);
+}
+
+{
+  const poseConfig = {
+    solver: {
+      guideCount: 64,
+      segments: 8,
+      preset: "wavy",
+      iterations: 6,
+      collectiveRulesEnabled: true,
+      rootDirectorMode: "styled_side_part",
+      rootDirectorStrength: 0.22,
+    },
+    steps: 270,
+    dt: 1 / 60,
+    moisture: 0.35,
+    product: 0.45,
+    baseWind: 0.28,
+    gust: 0.38,
+    windRotationRate: 0.58,
+    sectionPoseCycle: {
+      startStep: 30,
+      peakStep: 90,
+      holdEndStep: 170,
+      endStep: 255,
+      section: 6,
+      lift: 0.32,
+      sweep: -0.34,
+    },
+  };
+  const baseline = runHairReplay({ ...poseConfig, sectionPoseCycle: undefined }).result;
+  const held = runHairReplay({ ...poseConfig, steps: 100 }).result;
+  assert.equal(held.receipt.section_pose.phase, "hold");
+  assert.equal(held.receipt.section_pose.selected_section, 6);
+  assert.equal(held.receipt.section_pose.affected_guides, 7);
+  nearlyEqual(held.receipt.section_pose.lift_meters, 0.32);
+  nearlyEqual(held.receipt.section_pose.tangential_sweep_meters, -0.34);
+  assert.equal(held.receipt.section_pose.active_guides_last_step, 7);
+  assert.ok(held.receipt.section_pose.corrections_last_step > 0);
+  assert.ok(held.receipt.section_pose.correction_distance_last_step > 0);
+  const released = runHairReplay(poseConfig).result;
+  const repeated = runHairReplay(poseConfig).result;
+  assert.equal(released.state_digest, repeated.state_digest);
+  assert.deepEqual(released.receipt, repeated.receipt);
+  assert.notEqual(released.state_digest, baseline.state_digest);
+  assert.equal(released.receipt.section_pose.phase, "released");
+  assert.equal(released.receipt.section_pose.lift_meters, 0);
+  assert.equal(released.receipt.section_pose.tangential_sweep_meters, 0);
+  assert.equal(released.receipt.section_pose.corrections_last_step, 0);
   assert.ok(released.receipt.max_relative_stretch_error <= 0.035);
 }
 
@@ -908,10 +973,7 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.equal(control.receipt.spatial_friction.friction_impulse_proxy_total, 0);
   assert.equal(treatment.receipt.spatial_friction.enabled, true);
   assert.equal(treatment.receipt.spatial_friction.maximum_pairs_per_segment, 1);
-  assert.equal(
-    treatment.receipt.spatial_friction.retention_policy,
-    "narrowphase_contact_radius"
-  );
+  assert.equal(treatment.receipt.spatial_friction.retention_policy, "narrowphase_contact_radius");
   assert.ok(treatment.receipt.spatial_friction.refresh_count > 0);
   assert.ok(treatment.receipt.spatial_friction.candidates_last_refresh > 0);
   assert.ok(treatment.receipt.spatial_friction.selected_last_refresh > 0);

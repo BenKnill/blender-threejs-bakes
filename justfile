@@ -10,7 +10,7 @@ default:
 
 # Lint everything (no changes) — JS + Python
 lint:
-    npx eslint editor physics/labs/contact_shell/demo/main.js physics/labs/hair_material/demo/*.js scripts/test_hair_material_solver.mjs scripts/run_hair_operator_ab.mjs scripts/run_hair_comb_benchmark.mjs scripts/run_hair_comb_cycle.mjs scripts/run_hair_contact_discovery_ab.mjs scripts/run_hair_contact_churn.mjs scripts/run_hair_spatial_friction_ab.mjs scripts/run_hair_rod_reference.mjs scripts/run_hair_spatial_step_benchmark.mjs scripts/run_hair_root_field_ab.mjs scripts/run_hair_section_lift_ab.mjs
+    npx eslint editor physics/labs/contact_shell/demo/main.js physics/labs/hair_material/demo/*.js scripts/test_hair_material_solver.mjs scripts/run_hair_operator_ab.mjs scripts/run_hair_comb_benchmark.mjs scripts/run_hair_comb_cycle.mjs scripts/run_hair_contact_discovery_ab.mjs scripts/run_hair_contact_churn.mjs scripts/run_hair_spatial_friction_ab.mjs scripts/run_hair_rod_reference.mjs scripts/run_hair_spatial_step_benchmark.mjs scripts/run_hair_root_field_ab.mjs scripts/run_hair_section_lift_ab.mjs scripts/run_hair_section_pose_ab.mjs
     npx prettier --check 'editor/**/*.{js,css,html}' 'physics/labs/contact_shell/demo/**/*.{js,css,html,json}' 'physics/labs/hair_material/demo/**/*.{js,css,html}'
     {{ruff}} check scripts
 
@@ -101,6 +101,15 @@ hair-lift-showcase:
 # Run the fixed 256-guide lift-cycle acceptance gate.
 hair-section-lift-ab:
     node scripts/run_hair_section_lift_ab.mjs
+
+# Start the first artist-directed section pose showcase.
+hair-section-pose-showcase:
+    ./scripts/serve.sh start
+    @echo "http://127.0.0.1:8091/physics/labs/hair_material/demo/?replay=1&showcase=1&comb=1&cycle=1&poseCycle=1&poseSection=6&poseLift=0.32&poseSweep=-0.34&cut=diagonal&cutAt=5.5&cutDuration=1.2&guides=256&iterations=6&preset=wavy&wetness=0.35&product=0.45&wind=0.28&gust=0.38&windRotation=0.58&orbit=0.18&hairRender=fatline&fibers=15&groomVolume=1&rootField=styled-side-part&rootStrength=0.22&renderReceipt=1&scenario=section-pose-hold-release"
+
+# Run the fixed 256-guide section-pose acceptance gate.
+hair-section-pose-ab:
+    node scripts/run_hair_section_pose_ab.mjs
 
 # Package hair frames, then prune source frames and non-selected scenario clips.
 hair-phase-videos output_root:
