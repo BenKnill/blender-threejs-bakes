@@ -1,5 +1,11 @@
 import { HairSolver } from "./solver.js";
 
+export const COMB_MATERIAL_CONDITIONS = Object.freeze({
+  dry: Object.freeze({ label: "Dry", moisture: 0.05, product: 0 }),
+  wet: Object.freeze({ label: "Wet", moisture: 0.85, product: 0 }),
+  product: Object.freeze({ label: "Product-heavy", moisture: 0.35, product: 0.85 }),
+});
+
 const FNV_OFFSET = 0xcbf29ce484222325n;
 const FNV_PRIME = 0x100000001b3n;
 const MASK_64 = 0xffffffffffffffffn;
@@ -29,6 +35,39 @@ export function digestHairState(solver) {
     hash = mixByte(hash, 0xff);
   }
   return hash.toString(16).padStart(16, "0");
+}
+
+export function summarizeCombReceipt(receipt) {
+  const trace = receipt.comb.force_displacement_trace;
+  const travel = Math.max(receipt.comb.accumulated_travel, Number.EPSILON);
+  const bands = [0, 0, 0];
+  let reactionTotal = 0;
+  let weightedDisplacement = 0;
+  let peak = null;
+  for (const sample of trace) {
+    const reaction = Math.max(0, sample.reaction_proxy);
+    const fraction = Math.max(0, Math.min(1, sample.displacement / travel));
+    reactionTotal += reaction;
+    weightedDisplacement += reaction * fraction;
+    bands[Math.min(2, Math.floor(fraction * 3))] += reaction;
+    if (!peak || reaction > peak.reaction_proxy) peak = sample;
+  }
+  return {
+    peak_reaction_proxy: receipt.comb.peak_reaction_proxy,
+    accumulated_work_proxy: receipt.comb.accumulated_work_proxy,
+    clump_captures: receipt.comb.clump_captures_during_window,
+    clump_releases: receipt.comb.clump_releases_during_window,
+    persistent_clump_bonds: receipt.persistent_clump_bonds,
+    peak_relative_stretch_error: receipt.peak_relative_stretch_error,
+    assumption_status: receipt.assumption_receipt.status,
+    trace_shape: {
+      sample_count: trace.length,
+      peak_position: peak?.x ?? null,
+      reaction_centroid_fraction: reactionTotal > 0 ? weightedDisplacement / reactionTotal : null,
+      reaction_fraction_by_travel_third:
+        reactionTotal > 0 ? bands.map((value) => value / reactionTotal) : [0, 0, 0],
+    },
+  };
 }
 
 export function createReplayState() {

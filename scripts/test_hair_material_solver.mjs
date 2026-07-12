@@ -15,9 +15,11 @@ import {
 } from "../physics/labs/hair_material/demo/solver.js";
 import {
   advanceHairReplay,
+  COMB_MATERIAL_CONDITIONS,
   createReplayState,
   digestHairState,
   runHairReplay,
+  summarizeCombReceipt,
 } from "../physics/labs/hair_material/demo/replay.js";
 
 function nearlyEqual(actual, expected, tolerance = 1e-10) {
@@ -214,6 +216,27 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     dry.receipt.comb.force_displacement_trace.map((sample) => sample.displacement),
     wet.receipt.comb.force_displacement_trace.map((sample) => sample.displacement)
   );
+
+  const summary = summarizeCombReceipt(dry.receipt);
+  assert.equal(summary.assumption_status, "satisfied");
+  assert.equal(summary.peak_reaction_proxy, dry.receipt.comb.peak_reaction_proxy);
+  assert.equal(summary.trace_shape.sample_count, dry.receipt.comb.force_displacement_trace.length);
+  assert.ok(summary.trace_shape.reaction_centroid_fraction >= 0);
+  assert.ok(summary.trace_shape.reaction_centroid_fraction <= 1);
+  nearlyEqual(
+    summary.trace_shape.reaction_fraction_by_travel_third.reduce(
+      (sum, fraction) => sum + fraction,
+      0
+    ),
+    1
+  );
+}
+
+{
+  assert.deepEqual(Object.keys(COMB_MATERIAL_CONDITIONS), ["dry", "wet", "product"]);
+  assert.equal(COMB_MATERIAL_CONDITIONS.dry.product, 0);
+  assert.equal(COMB_MATERIAL_CONDITIONS.wet.product, 0);
+  assert.ok(COMB_MATERIAL_CONDITIONS.product.product > COMB_MATERIAL_CONDITIONS.product.moisture);
 }
 
 {
