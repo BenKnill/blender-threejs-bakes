@@ -205,3 +205,25 @@ does not verify JavaScript floating point, candidate discovery, graph overlap
 exclusion, temporal matching, cutting, or visual realism. Grok's Workbench and
 Issue #115 review is archived locally at
 `attachments/20260712T150647Z-grok-workbench-and-issue-115-review.md`.
+
+## Opt-in browser lane
+
+Issue #119 exposes the measured operator without changing the default demo.
+Add `spatialFriction=1` to construct the solver with the k=1 treatment. A
+hands-off narrow-preview URL is:
+
+```text
+http://127.0.0.1:8195/physics/labs/hair_material/demo/?replay=1&autoplay=1&comb=1&cycle=1&guides=256&iterations=6&wetness=0.85&product=0.2&wind=0.08&windRotation=0.7&spatialFriction=1&scenario=spatial-friction-cycle
+```
+
+Live telemetry shows active/selected pairs, minimum active Jaccard, and the
+accumulated impulse proxy. Browser smoke observed about 1,300 active contacts,
+0.978 minimum Jaccard, satisfied assumptions, and accumulating nonzero impulse.
+The same replay without the parameter reports `off`, no Jaccard, and zero
+impulse.
+
+This is a visual experiment, not a new default. The 256-guide treatment took
+about 86 ms of solver time in the narrow in-app preview, so its current refresh
+cost misses a 60 fps budget even though the animation remains usable. Any
+default enablement must first reduce or amortize discovery cost and repeat the
+mechanical gates.

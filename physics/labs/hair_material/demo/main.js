@@ -1,14 +1,14 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-import { HairSolver } from "./solver.js?v=105";
+import { HairSolver } from "./solver.js?v=106";
 import {
   advanceHairReplay,
   COMB_MATERIAL_CONDITIONS,
   createReplayState,
   digestHairState,
   summarizeCombReceipt,
-} from "./replay.js?v=105";
+} from "./replay.js?v=106";
 
 let renderFibersPerGuide = 9;
 
@@ -155,6 +155,7 @@ const deterministicReplay = {
   autoplay: false,
   targetStep: 0,
   collectiveRulesEnabled: true,
+  spatialFrictionEnabled: false,
   state: createReplayState(),
   config: { dt: 1 / 60, baseWind: 0.18, gust: 0, cut: "none", cutAt: 2.5, cutDuration: 1.4 },
 };
@@ -207,6 +208,7 @@ function rebuildSolver() {
     preset,
     renderFibersPerGuide,
     collectiveRulesEnabled: deterministicReplay.collectiveRulesEnabled,
+    spatialFrictionEnabled: deterministicReplay.spatialFrictionEnabled,
   });
   filmDirection.startTime = null;
   filmDirection.cutDone = false;
@@ -214,7 +216,7 @@ function rebuildSolver() {
   deterministicReplay.state = createReplayState();
   applyMaterialControls();
   rebuildHairObject();
-  status.textContent = `Running deterministic ${preset} preset.`;
+  status.textContent = `Running deterministic ${preset} preset${solver.spatialFriction.enabled ? " with experimental spatial friction" : ""}.`;
 }
 
 function startCombPass(condition, cycle = false) {
@@ -413,6 +415,15 @@ function updateTelemetry(now) {
     receipt.root_neighbor_pairs.toLocaleString();
   document.querySelector("#metric-contacts").textContent =
     receipt.active_neighbor_contacts.toLocaleString();
+  document.querySelector("#metric-spatial-contacts").textContent = receipt.spatial_friction.enabled
+    ? `${receipt.spatial_friction.active_contacts_last_step.toLocaleString()} / ${receipt.spatial_friction.selected_pairs.toLocaleString()}`
+    : "off";
+  document.querySelector("#metric-spatial-jaccard").textContent =
+    receipt.spatial_friction.minimum_active_jaccard === null
+      ? "—"
+      : receipt.spatial_friction.minimum_active_jaccard.toFixed(3);
+  document.querySelector("#metric-spatial-impulse").textContent =
+    receipt.spatial_friction.friction_impulse_proxy_total.toFixed(3);
   document.querySelector("#metric-cohesion").textContent =
     receipt.cohesion_corrections_last_iteration.toLocaleString();
   document.querySelector("#metric-bonds").textContent =
@@ -592,6 +603,11 @@ function applyQueryConfiguration() {
   if (params.has("scenario")) {
     document.querySelector("#scenario-label").textContent =
       `Hair phase film · ${params.get("scenario")}`;
+  }
+  deterministicReplay.spatialFrictionEnabled = params.get("spatialFriction") === "1";
+  if (deterministicReplay.spatialFrictionEnabled && !params.has("scenario")) {
+    document.querySelector("#scenario-label").textContent =
+      "Hair material study · experimental k=1 spatial friction";
   }
   if (params.has("fibers")) {
     renderFibersPerGuide = Math.max(1, Math.min(21, Number(params.get("fibers")) || 9));
