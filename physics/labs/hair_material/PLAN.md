@@ -51,12 +51,15 @@ proof boundaries must remain explicit.
       baseline stretch failure and is not relabeled as a pass.
 - [ ] Add a repeated pass, section lift, or simple grab only when it answers a
       concrete material question.
-- [ ] Build a small explicit-guide rod/reference scene before raising guide
-      count or enabling spatial friction in the browser by default.
+- [x] Build a small explicit-guide rod/reference fixture before raising guide
+      count or enabling spatial friction in the browser by default. The
+      settled axial/transverse lanes reproduce exactly, remain under 1.9%
+      stretch, and expose the calibration boundary without claiming a
+      continuous-rod validation.
 
-Decision point: after two useful instruments, decide whether the best next gain
-is a better solver operator, a prettier haircut interaction, or a low-count rod
-reference comparison.
+Decision: the next gain should be visible. Reuse the small guide fixture as a
+debug card while making spatial friction opt-in in the browser or improving
+strand rendering; do not add another many-hair operator first.
 
 ## Later: prettier and more ambitious hair
 

@@ -15,6 +15,7 @@ import {
   segmentSegmentDistanceSquared,
 } from "../physics/labs/hair_material/demo/contact_discovery.js";
 import { barycentricEndpointWeights } from "../physics/labs/hair_material/demo/friction.js";
+import { runHairRodReference } from "../physics/labs/hair_material/demo/rod_reference.js";
 import {
   digestContactTrace,
   snapshotRankedContacts,
@@ -572,6 +573,24 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.ok(treatment.receipt.spatial_friction.friction_impulse_proxy_total > 0);
   assert.equal(treatment.receipt.spatial_friction.spatial_cohesion, false);
   assert.equal(treatment.receipt.spatial_friction.spatial_pressure, false);
+}
+
+{
+  const first = runHairRodReference({ settlingSteps: 60, steps: 60, sampleStride: 10 });
+  const second = runHairRodReference({ settlingSteps: 60, steps: 60, sampleStride: 10 });
+  assert.deepEqual(first.receipt, second.receipt);
+  assert.equal(first.receipt.axial.guide_count, 8);
+  assert.equal(first.receipt.axial.collective_rules_enabled, false);
+  assert.notEqual(first.receipt.axial.state_digest, first.receipt.transverse.state_digest);
+  assert.ok(first.receipt.axial.peak_relative_stretch_error < 0.035);
+  assert.ok(first.receipt.transverse.peak_relative_stretch_error < 0.035);
+  assert.ok(
+    first.receipt.transverse.peak_tip_delta_from_control >
+      first.receipt.axial.peak_tip_delta_from_control
+  );
+  assert.deepEqual(first.receipt.pair_operator.velocity_sum_residual, [0, 0, 0]);
+  assert.deepEqual(first.receipt.pair_operator.swap_symmetry_residual, [0, 0, 0, 0, 0, 0]);
+  assert.ok(first.receipt.pair_operator.contraction_ratio < 1);
 }
 
 {

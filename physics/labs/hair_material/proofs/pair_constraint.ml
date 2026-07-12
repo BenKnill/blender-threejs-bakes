@@ -35,6 +35,25 @@ let HAIR_ANISOTROPIC_PAIR_EXCHANGE_PRESERVES_SUM = prove
       velocity_a + velocity_b`,
   REPEAT GEN_TAC THEN LET_TAC THEN REAL_ARITH_TAC);;
 
+(** One scalar axial or transverse relative-velocity component is multiplied
+    by (1 - friction) after the symmetric pair blend.  A blend coefficient in
+    [0,1] therefore cannot increase that component's squared magnitude. *)
+let HAIR_PAIR_FRICTION_COMPONENT_NONEXPANSIVE = prove
+ (`!difference friction:real.
+      &0 <= friction /\ friction <= &1
+      ==> ((&1 - friction) * difference) pow 2 <= difference pow 2`,
+  REPEAT STRIP_TAC THEN
+  SUBGOAL_THEN
+   `&0 <= (difference * difference) * (friction * (&2 - friction))`
+  ASSUME_TAC THENL
+   [MATCH_MP_TAC REAL_LE_MUL THEN CONJ_TAC THENL
+     [MATCH_ACCEPT_TAC (SPEC `difference:real` REAL_LE_SQUARE);
+      MATCH_MP_TAC REAL_LE_MUL THEN ASM_REAL_ARITH_TAC];
+    SUBGOAL_THEN
+     `difference pow 2 - ((&1 - friction) * difference) pow 2 =
+      (difference * difference) * (friction * (&2 - friction))`
+    ASSUME_TAC THENL [CONV_TAC REAL_RING; ASM_REAL_ARITH_TAC]]);;
+
 (** A larger release radius creates a genuine memory band: a newly capturable
     pair is necessarily still inside the release envelope. *)
 let HAIR_CLUMP_CAPTURE_LIES_INSIDE_RELEASE_ENVELOPE = prove
