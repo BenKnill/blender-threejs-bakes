@@ -102,6 +102,20 @@ let HAIR_COMB_CYCLE_WORK_NONNEGATIVE = prove
       &0 <= outward /\ &0 <= return ==> &0 <= outward + return`,
   REAL_ARITH_TAC);;
 
+(** A persistent contact's age advances by one nonnegative step whenever the
+    bond survives.  Release deletes the age entry in the implementation. *)
+let HAIR_PERSISTENT_CONTACT_AGE_MONOTONE = prove
+ (`!age:real. &0 <= age ==> age <= age + &1`,
+  REAL_ARITH_TAC);;
+
+(** The current exhaustive bounded-neighbor scheduler visits each extant
+    candidate once per simulation step.  Consecutive visits therefore have a
+    one-step gap.  This does not yet justify a future sparse scheduler. *)
+let HAIR_EXHAUSTIVE_CONTACT_SERVICE_GAP = prove
+ (`!previous current:real.
+      current = previous + &1 ==> current - previous = &1`,
+  REAL_ARITH_TAC);;
+
 (** A quarter-turn of the horizontal wind vector preserves squared magnitude.
     The browser uses continuous sine/cosine directions; this is a narrow
     algebraic rotation sanity contract, not a proof of JavaScript trig. *)

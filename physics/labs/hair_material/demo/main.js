@@ -1,14 +1,14 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-import { HairSolver } from "./solver.js";
+import { HairSolver } from "./solver.js?v=105";
 import {
   advanceHairReplay,
   COMB_MATERIAL_CONDITIONS,
   createReplayState,
   digestHairState,
   summarizeCombReceipt,
-} from "./replay.js";
+} from "./replay.js?v=105";
 
 let renderFibersPerGuide = 9;
 
@@ -257,7 +257,7 @@ function updateMaterialStudyTable() {
         condition === materialStudy.conditions[materialStudy.index] ? "running" : "—";
       continue;
     }
-    row.textContent = `${summary.peak_reaction_proxy.toFixed(0)} · ${summary.accumulated_work_proxy.toFixed(0)} · ${summary.clump_releases} · ${summary.persistent_clump_bonds} · ${(summary.peak_relative_stretch_error * 100).toFixed(2)}%`;
+    row.textContent = `${summary.peak_reaction_proxy.toFixed(0)} · ${summary.accumulated_work_proxy.toFixed(0)} · ${summary.clump_releases} · ${summary.persistent_clump_bonds} · ${summary.maximum_clump_age_steps} · ${(summary.peak_relative_stretch_error * 100).toFixed(2)}%`;
   }
 }
 
@@ -417,6 +417,10 @@ function updateTelemetry(now) {
     receipt.cohesion_corrections_last_iteration.toLocaleString();
   document.querySelector("#metric-bonds").textContent =
     receipt.persistent_clump_bonds.toLocaleString();
+  document.querySelector("#metric-contact-age").textContent =
+    `${receipt.persistent_contact_memory.mean_age_steps.toFixed(1)} / ${receipt.persistent_contact_memory.maximum_age_steps}`;
+  document.querySelector("#metric-service-gap").textContent =
+    `${receipt.contact_service.maximum_observed_gap_steps} / ${receipt.contact_service.service_gap_bound_steps}`;
   document.querySelector("#metric-hysteresis").textContent =
     `${receipt.clump_captures_last_step} / ${receipt.clump_releases_last_step} · pass ${receipt.comb.clump_captures_during_window} / ${receipt.comb.clump_releases_during_window}`;
   document.querySelector("#metric-pressure").textContent =

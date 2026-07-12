@@ -120,6 +120,18 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     }
   }
   assert.ok(solver.maxStretchError < 0.08, `stretch error ${solver.maxStretchError}`);
+  const contactReceipt = solver.receipt();
+  assert.equal(solver.clumpBondAges.size, solver.clumpBonds.size);
+  assert.equal(contactReceipt.persistent_contact_memory.age_entries_match_active_bonds, true);
+  if (solver.clumpBonds.size > 0) {
+    assert.ok(contactReceipt.persistent_contact_memory.maximum_age_steps > 0);
+  }
+  assert.ok(
+    contactReceipt.contact_service.services_last_step <=
+      contactReceipt.contact_service.candidate_capacity
+  );
+  assert.equal(contactReceipt.contact_service.maximum_observed_gap_steps, 1);
+  assert.equal(contactReceipt.contact_service.satisfied, true);
 }
 
 {
@@ -205,6 +217,14 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     );
     assert.equal(result.receipt.assumption_receipt.comb_work_nonnegative, true);
     assert.equal(result.receipt.assumption_receipt.stretch.satisfied, true);
+    assert.equal(result.receipt.assumption_receipt.persistent_contact_service.satisfied, true);
+    assert.equal(result.receipt.contact_service.maximum_observed_gap_steps, 1);
+    assert.ok(result.receipt.persistent_contact_memory.maximum_age_steps > 0);
+    assert.ok(
+      result.receipt.comb.force_displacement_trace.every(
+        (sample) => sample.maximum_service_gap_steps <= 1
+      )
+    );
   }
   assert.notEqual(dry.state_digest, wet.state_digest);
   assert.notEqual(dry.receipt.comb.accumulated_work_proxy, wet.receipt.comb.accumulated_work_proxy);
@@ -221,6 +241,11 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.equal(summary.assumption_status, "satisfied");
   assert.equal(summary.peak_reaction_proxy, dry.receipt.comb.peak_reaction_proxy);
   assert.equal(summary.trace_shape.sample_count, dry.receipt.comb.force_displacement_trace.length);
+  assert.equal(
+    summary.maximum_clump_age_steps,
+    dry.receipt.persistent_contact_memory.maximum_age_steps
+  );
+  assert.equal(summary.maximum_service_gap_steps, 1);
   assert.ok(summary.trace_shape.reaction_centroid_fraction >= 0);
   assert.ok(summary.trace_shape.reaction_centroid_fraction <= 1);
   nearlyEqual(
