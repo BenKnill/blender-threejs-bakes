@@ -25,10 +25,13 @@ proof boundaries must remain explicit.
       trace shape, and runtime—not appearance alone.
 - [x] Choose one operator to improve from evidence: friction, cohesion, pressure,
       comb contact, or length enforcement.
-- [ ] Improve persistent contact/cohesion first: the product-heavy lane creates
+- [x] Instrument persistent contact/cohesion first: the product-heavy lane creates
       7.5x the final bonds and 3.2x the releases of dry hair while shifting 56%
-      of reaction into the final travel third. Add bounded contact-age/service
-      telemetry before changing the force law.
+      of reaction into the final travel third. Contact-age/service telemetry
+      now checks the bounded exhaustive scheduler at runtime.
+- [ ] Prototype a fair sparse discovery schedule while keeping active bonds hot:
+      all lanes currently service 763,950 candidates per measured pass, while
+      mean final bond age ranges from 84 dry to 174 product-heavy steps.
 - [ ] Add a repeated pass, section lift, or simple grab only when it answers a
       concrete material question.
 - [ ] Keep a small explicit-guide reference scene before raising guide count.

@@ -267,6 +267,12 @@ export class HairSolver {
     this.cohesionCorrections = 0;
     this.pressureCorrections = 0;
     this.clumpBonds = new Set();
+    this.clumpBondAges = new Map();
+    this.contactLastServiced = new Map();
+    this.simulationStep = 0;
+    this.contactServicesLastStep = 0;
+    this.windowContactServices = 0;
+    this.maxContactServiceGap = 0;
     this.clumpCaptures = 0;
     this.clumpReleases = 0;
     this.windowClumpCaptures = 0;
@@ -336,10 +342,16 @@ export class HairSolver {
     this.material = { ...MATERIAL_PRESETS[preset] };
     this.cutCount = 0;
     this.time = 0;
+    this.simulationStep = 0;
     this.windDirection = [1, 0, 0.45];
     this.windAngle = Math.atan2(0.45, 1);
     this.directionalWind = false;
     this.clumpBonds.clear();
+    this.clumpBondAges.clear();
+    this.contactLastServiced.clear();
+    this.contactServicesLastStep = 0;
+    this.windowContactServices = 0;
+    this.maxContactServiceGap = 0;
     this.clumpCaptures = 0;
     this.clumpReleases = 0;
     this.windowClumpCaptures = 0;
@@ -427,6 +439,8 @@ export class HairSolver {
     this.combTrace = [];
     this.combTraceStride = 1;
     this.combMeasurementStep = 0;
+    this.windowContactServices = 0;
+    this.maxContactServiceGap = 0;
   }
 
   prepareMeasurementWindow(name) {
@@ -441,7 +455,16 @@ export class HairSolver {
     for (const key of this.clumpBonds) {
       const [pairIndex, particle] = key.split(":").map(Number);
       if (particle <= next) continue;
-      if (this.neighborPairs[pairIndex].includes(strand)) this.clumpBonds.delete(key);
+      if (this.neighborPairs[pairIndex].includes(strand)) {
+        this.clumpBonds.delete(key);
+        this.clumpBondAges.delete(key);
+      }
+    }
+    for (const key of this.contactLastServiced.keys()) {
+      const [pairIndex, particle] = key.split(":").map(Number);
+      if (particle > next && this.neighborPairs[pairIndex].includes(strand)) {
+        this.contactLastServiced.delete(key);
+      }
     }
     this.cutCount += 1;
     return true;
@@ -450,6 +473,7 @@ export class HairSolver {
   step(dt = 1 / 60) {
     const step = Math.max(1 / 240, Math.min(1 / 30, dt));
     this.time += step;
+    this.simulationStep += 1;
     const damping = this.material.damping;
     for (let strand = 0; strand < this.guideCount; strand += 1) {
       for (let particle = 1; particle <= this.activeSegments[strand]; particle += 1) {
@@ -479,6 +503,7 @@ export class HairSolver {
       this.activeNeighborContacts = 0;
       this.clumpCaptures = 0;
       this.clumpReleases = 0;
+      this.contactServicesLastStep = 0;
     }
     for (let iteration = 0; iteration < this.iterations; iteration += 1) {
       this.#projectLengths();
@@ -528,6 +553,10 @@ export class HairSolver {
       contacts: this.combContacts,
       clump_captures: this.windowClumpCaptures,
       clump_releases: this.windowClumpReleases,
+      persistent_clump_bonds: this.clumpBonds.size,
+      maximum_clump_age_steps: Math.max(0, ...this.clumpBondAges.values()),
+      contact_services: this.contactServicesLastStep,
+      maximum_service_gap_steps: this.maxContactServiceGap,
     });
   }
 
@@ -655,6 +684,7 @@ export class HairSolver {
     const releaseRadius = captureRadius + 0.035 + this.material.clump * 0.035;
     let captures = 0;
     let releases = 0;
+    let services = 0;
     for (let pairIndex = 0; pairIndex < this.neighborPairs.length; pairIndex += 1) {
       const [strandA, strandB] = this.neighborPairs[pairIndex];
       const active = Math.min(this.activeSegments[strandA], this.activeSegments[strandB]);
@@ -667,19 +697,34 @@ export class HairSolver {
           this.positions[b + 2] - this.positions[a + 2]
         );
         const key = `${pairIndex}:${particle}`;
+        const priorServiceStep = this.contactLastServiced.get(key);
+        if (priorServiceStep !== undefined) {
+          this.maxContactServiceGap = Math.max(
+            this.maxContactServiceGap,
+            this.simulationStep - priorServiceStep
+          );
+        }
+        this.contactLastServiced.set(key, this.simulationStep);
+        services += 1;
         const wasBonded = this.clumpBonds.has(key);
         const isBonded = updateClumpBond(wasBonded, distance, captureRadius, releaseRadius);
         if (isBonded && !wasBonded) {
           this.clumpBonds.add(key);
+          this.clumpBondAges.set(key, 1);
           captures += 1;
+        } else if (isBonded) {
+          this.clumpBondAges.set(key, (this.clumpBondAges.get(key) ?? 0) + 1);
         } else if (!isBonded && wasBonded) {
           this.clumpBonds.delete(key);
+          this.clumpBondAges.delete(key);
           releases += 1;
         }
       }
     }
     this.clumpCaptures = captures;
     this.clumpReleases = releases;
+    this.contactServicesLastStep = services;
+    this.windowContactServices += services;
     this.windowClumpCaptures += captures;
     this.windowClumpReleases += releases;
   }
@@ -845,8 +890,17 @@ export class HairSolver {
   receipt() {
     const stretchSatisfied = this.peakStretchError <= this.stretchThreshold;
     const assumptionsPending = this.measurementWindow === "comb_settling";
+    const clumpAges = Array.from(this.clumpBondAges.values());
+    const maximumClumpAge = Math.max(0, ...clumpAges);
+    const meanClumpAge =
+      clumpAges.length > 0 ? clumpAges.reduce((sum, age) => sum + age, 0) / clumpAges.length : 0;
+    const contactCandidateCapacity = this.neighborPairs.length * Math.max(0, this.segments - 1);
+    const contactServiceSatisfied =
+      this.maxContactServiceGap <= 1 &&
+      this.contactServicesLastStep <= contactCandidateCapacity &&
+      this.clumpBondAges.size === this.clumpBonds.size;
     return {
-      schema: "hair-material-bench/2",
+      schema: "hair-material-bench/3",
       guide_count: this.guideCount,
       render_fiber_count: this.guideCount * this.renderFibersPerGuide,
       segments_per_guide: this.segments,
@@ -869,6 +923,21 @@ export class HairSolver {
       cohesion_corrections_last_iteration: this.cohesionCorrections,
       crowd_pressure_corrections_last_iteration: this.pressureCorrections,
       persistent_clump_bonds: this.clumpBonds.size,
+      persistent_contact_memory: {
+        active_bonds: this.clumpBonds.size,
+        mean_age_steps: meanClumpAge,
+        maximum_age_steps: maximumClumpAge,
+        age_entries_match_active_bonds: this.clumpBondAges.size === this.clumpBonds.size,
+      },
+      contact_service: {
+        scheduler: "exhaustive_bounded_root_neighbor_graph",
+        candidate_capacity: contactCandidateCapacity,
+        services_last_step: this.contactServicesLastStep,
+        services_during_window: this.windowContactServices,
+        maximum_observed_gap_steps: this.maxContactServiceGap,
+        service_gap_bound_steps: 1,
+        satisfied: contactServiceSatisfied,
+      },
       clump_captures_last_step: this.clumpCaptures,
       clump_releases_last_step: this.clumpReleases,
       comb: {
@@ -888,11 +957,11 @@ export class HairSolver {
         trace_sample_stride: this.combTraceStride,
       },
       assumption_receipt: {
-        schema: "hair-material-assumptions/1",
+        schema: "hair-material-assumptions/2",
         measurement_window: this.measurementWindow,
         status: assumptionsPending
           ? "not_measured"
-          : stretchSatisfied && this.combWork >= 0
+          : stretchSatisfied && this.combWork >= 0 && contactServiceSatisfied
             ? "satisfied"
             : "violated",
         stretch: {
@@ -901,6 +970,12 @@ export class HairSolver {
           satisfied: stretchSatisfied,
         },
         crowd_pressure_strength: { value: 0.36, upper_bound: 0.5, satisfied: true },
+        persistent_contact_service: {
+          maximum_observed_gap_steps: this.maxContactServiceGap,
+          bound_steps: 1,
+          age_entries_match_active_bonds: this.clumpBondAges.size === this.clumpBonds.size,
+          satisfied: contactServiceSatisfied,
+        },
         comb_work_nonnegative: this.combWork >= 0,
       },
       solver: "CPU Verlet plus distance and rest-curvature projections",

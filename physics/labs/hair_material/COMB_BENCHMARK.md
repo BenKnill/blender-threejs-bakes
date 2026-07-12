@@ -62,6 +62,27 @@ and shifts reaction later in the pass. The next operator target is therefore
 bounded persistent-contact/cohesion telemetry, followed by an evidence-driven
 force-law change if the contact-age trace supports one.
 
+## Persistent-contact service receipt
+
+Issue #105 adds bond ages and service accounting without changing the force
+law or the deterministic state digests. On the same M5 run, final mean/max bond
+ages were 84/170 steps dry, 157/180 wet, and 174/180 product-heavy. Age entries
+matched the active bond sets in all lanes.
+
+The current scheduler is exhaustive over a fixed bounded root-neighbor graph:
+5,093 candidates are serviced every step and 763,950 during each measured comb
+pass, with an observed service gap of exactly one step. The runtime receipt now
+checks candidate capacity, bond/age consistency, and the one-step gap. These
+facts make the next experiment concrete: retain every active persistent bond
+as a hot contact while fairly scheduling discovery among unbonded candidates.
+That future sparse schedule will require its own fairness theorem and A/B
+comparison; this receipt does not pre-certify it.
+
+`HAIR_PERSISTENT_CONTACT_AGE_MONOTONE` and
+`HAIR_EXHAUSTIVE_CONTACT_SERVICE_GAP` state the present scalar contracts in HOL
+Light. As elsewhere, the warm Workbench replay is development evidence rather
+than a cold audit of the JavaScript implementation.
+
 ## Trace and margin follow-up
 
 Issue #97 lowers the internal enforcement target to 3.5%, leaving a deliberate

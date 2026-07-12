@@ -1,4 +1,4 @@
-import { HairSolver } from "./solver.js";
+import { HairSolver } from "./solver.js?v=105";
 
 export const COMB_MATERIAL_CONDITIONS = Object.freeze({
   dry: Object.freeze({ label: "Dry", moisture: 0.05, product: 0 }),
@@ -58,6 +58,8 @@ export function summarizeCombReceipt(receipt) {
     clump_captures: receipt.comb.clump_captures_during_window,
     clump_releases: receipt.comb.clump_releases_during_window,
     persistent_clump_bonds: receipt.persistent_clump_bonds,
+    maximum_clump_age_steps: receipt.persistent_contact_memory.maximum_age_steps,
+    maximum_service_gap_steps: receipt.contact_service.maximum_observed_gap_steps,
     peak_relative_stretch_error: receipt.peak_relative_stretch_error,
     assumption_status: receipt.assumption_receipt.status,
     trace_shape: {
