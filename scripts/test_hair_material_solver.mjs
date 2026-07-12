@@ -3,6 +3,13 @@
 import assert from "node:assert/strict";
 
 import {
+  discoverSegmentPairs,
+  hairSolverSegments,
+  paddedSegmentAabbsOverlap,
+  segmentAabbCellKeys,
+} from "../physics/labs/hair_material/demo/contact_discovery.js";
+
+import {
   blendPairAnisotropicFriction,
   blendPairFriction,
   HairSolver,
@@ -24,6 +31,36 @@ import {
 
 function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} != ${expected}`);
+}
+
+{
+  const crossing = [
+    { id: 10, guide: 0, a: [-0.6, 0, 0], b: [0.6, 0, 0] },
+    { id: 21, guide: 1, a: [0, -0.6, 0], b: [0, 0.6, 0] },
+  ];
+  assert.ok(segmentAabbCellKeys(crossing[0], 0.25).length > 2);
+  assert.equal(paddedSegmentAabbsOverlap(crossing[0], crossing[1]), true);
+  const forward = discoverSegmentPairs(crossing, { cellSize: 0.25, maxPairs: 10 });
+  const reverse = discoverSegmentPairs([...crossing].reverse(), { cellSize: 0.25, maxPairs: 10 });
+  assert.deepEqual(forward.pairs, [{ a: 10, b: 21 }]);
+  assert.equal(forward.pair_digest, reverse.pair_digest);
+  assert.equal(forward.global_saturated, false);
+}
+
+{
+  const crowded = Array.from({ length: 5 }, (_value, id) => ({
+    id,
+    guide: id,
+    a: [0, 0, 0],
+    b: [0.1, 0.1, 0.1],
+  }));
+  const bounded = discoverSegmentPairs(crowded, {
+    cellSize: 0.5,
+    maxPairsPerSegment: 1,
+    maxPairs: 2,
+  });
+  assert.ok(bounded.unbounded_candidate_count > bounded.emitted_candidate_count);
+  assert.ok(bounded.saturated_segment_ids.length > 0);
 }
 
 {
@@ -144,6 +181,12 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.equal(solver.receipt().active_segments, before - 3);
   assert.ok(solver.clumpBonds.size <= bondsBeforeCut);
   assert.equal(solver.cutStrand(3, 6), false);
+  assert.equal(
+    hairSolverSegments(solver).some(
+      (segment) => segment.guide === 3 && segment.segment >= solver.activeSegments[3]
+    ),
+    false
+  );
 }
 
 {
