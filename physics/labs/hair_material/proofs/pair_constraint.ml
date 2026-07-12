@@ -241,3 +241,27 @@ let HAIR_ROOT_DIRECTOR_UNNORMALIZED_ALIGNMENT_MONOTONE = prove
   SUBGOAL_THEN `&0 <= strength * (&1 - dot pow 2)` ASSUME_TAC THENL
    [MATCH_MP_TAC REAL_LE_MUL THEN ASM_REAL_ARITH_TAC;
     ASM_REAL_ARITH_TAC]);;
+
+(** The styled root field combines a unit scalp normal with a unit tangent.
+    Under the explicit orthogonality assumptions, its scalp-normal dot is
+    exactly the chosen outward coefficient.  The JavaScript suite separately
+    checks normalization, coefficient bounds, and the baked finite field. *)
+let HAIR_STYLED_ROOT_FIELD_RETAINS_OUTWARD_COMPONENT = prove
+ (`!nx ny nz tx ty tz outward tangent:real.
+      nx pow 2 + ny pow 2 + nz pow 2 = &1 /\
+      nx * tx + ny * ty + nz * tz = &0
+      ==> nx * (outward * nx + tangent * tx) +
+          ny * (outward * ny + tangent * ty) +
+          nz * (outward * nz + tangent * tz) = outward`,
+  REPEAT STRIP_TAC THEN
+  SUBGOAL_THEN
+   `nx * (outward * nx + tangent * tx) +
+    ny * (outward * ny + tangent * ty) +
+    nz * (outward * nz + tangent * tz) =
+    outward * (nx pow 2 + ny pow 2 + nz pow 2) +
+    tangent * (nx * tx + ny * ty + nz * tz)`
+  ASSUME_TAC THENL
+   [CONV_TAC REAL_RING;
+    FIRST_X_ASSUM(fun theorem -> REWRITE_TAC[theorem]) THEN
+    ASM_REWRITE_TAC[] THEN
+    CONV_TAC REAL_RING]);;

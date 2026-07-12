@@ -2,6 +2,7 @@ export const ROOT_DIRECTOR_ZONE_SEGMENTS = 2;
 export const ROOT_DIRECTOR_DEFAULT_STRENGTH = 0.22;
 export const ROOT_DIRECTOR_FALLOFF = 0.42;
 export const ROOT_DIRECTOR_NORMAL_BIASES = Object.freeze([0.78, 0.35]);
+export const ROOT_DIRECTOR_STYLED_BIASES = Object.freeze([0.92, 0.66]);
 
 function clamp(value, lower, upper) {
   return Math.max(lower, Math.min(upper, value));
@@ -81,6 +82,35 @@ export function summarizeRootAlignment(positions, roots, rootNormals, particlesP
     const length = Math.hypot(dx, dy, dz) || 1;
     const alignment =
       (dx * rootNormals[root] + dy * rootNormals[root + 1] + dz * rootNormals[root + 2]) / length;
+    minimum = Math.min(minimum, alignment);
+    sum += alignment;
+  }
+  return { minimum, mean: sum / Math.max(1, guideCount) };
+}
+
+export function summarizeRootTargetAlignment(
+  positions,
+  roots,
+  rootDirectorTargets,
+  particlesPerGuide,
+  zoneSegments
+) {
+  const guideCount = roots.length / 3;
+  let minimum = 1;
+  let sum = 0;
+  for (let guide = 0; guide < guideCount; guide += 1) {
+    const root = guide * 3;
+    const particle = (guide * particlesPerGuide + 1) * 3;
+    const target = guide * zoneSegments * 3;
+    const dx = positions[particle] - roots[root];
+    const dy = positions[particle + 1] - roots[root + 1];
+    const dz = positions[particle + 2] - roots[root + 2];
+    const length = Math.hypot(dx, dy, dz) || 1;
+    const alignment =
+      (dx * rootDirectorTargets[target] +
+        dy * rootDirectorTargets[target + 1] +
+        dz * rootDirectorTargets[target + 2]) /
+      length;
     minimum = Math.min(minimum, alignment);
     sum += alignment;
   }

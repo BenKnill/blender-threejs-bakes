@@ -12,9 +12,18 @@ import {
   ROOT_DIRECTOR_DEFAULT_STRENGTH,
   ROOT_DIRECTOR_FALLOFF,
   ROOT_DIRECTOR_NORMAL_BIASES,
+  ROOT_DIRECTOR_STYLED_BIASES,
   ROOT_DIRECTOR_ZONE_SEGMENTS,
   summarizeRootAlignment,
+  summarizeRootTargetAlignment,
 } from "./root_director.js";
+import {
+  bakeStyledRootDirection,
+  ROOT_STYLE_FIELD_ID,
+  ROOT_STYLE_PART_X,
+  ROOT_STYLE_SECTION_COUNT,
+  summarizeRootTargets,
+} from "./root_style_field.js";
 
 export { blendPairAnisotropicFriction } from "./friction.js";
 
@@ -67,6 +76,7 @@ export const MATERIAL_PRESETS = Object.freeze({
 
 const HEAD = Object.freeze({ center: [0, 1.35, 0], radii: [0.9, 1.12, 0.82] });
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
+const ROOT_DIRECTOR_MODES = new Set(["free", "scalp_normal", "styled_side_part"]);
 
 function length3(x, y, z) {
   return Math.hypot(x, y, z);
@@ -237,6 +247,7 @@ export class HairSolver {
     spatialFrictionRefreshSteps = 8,
     spatialFrictionScale = 0.5,
     rootDirectorEnabled = false,
+    rootDirectorMode,
     rootDirectorStrength = ROOT_DIRECTOR_DEFAULT_STRENGTH,
   } = {}) {
     if (!(preset in MATERIAL_PRESETS)) throw new Error(`unknown material preset: ${preset}`);
@@ -262,6 +273,7 @@ export class HairSolver {
     this.rootNormals = new Float64Array(guideCount * 3);
     this.rootDirectorTargets = new Float64Array(guideCount * ROOT_DIRECTOR_ZONE_SEGMENTS * 3);
     this.rootDirectorProjection = new Float64Array(6);
+    this.rootStyleProjection = new Float64Array(6);
     this.activeSegments = new Uint16Array(guideCount);
     this.restLengths = new Float64Array(guideCount * segments);
     this.cutCount = 0;
@@ -271,8 +283,14 @@ export class HairSolver {
     this.windAngle = Math.atan2(0.45, 1);
     this.directionalWind = false;
     this.sectionLift = 0;
+    const resolvedRootDirectorMode =
+      rootDirectorMode ?? (rootDirectorEnabled ? "scalp_normal" : "free");
+    if (!ROOT_DIRECTOR_MODES.has(resolvedRootDirectorMode)) {
+      throw new Error(`unknown root director mode: ${resolvedRootDirectorMode}`);
+    }
     this.rootDirector = {
-      enabled: Boolean(rootDirectorEnabled),
+      enabled: resolvedRootDirectorMode !== "free",
+      mode: resolvedRootDirectorMode,
       strength: Math.max(0, Math.min(1, rootDirectorStrength)),
       zoneSegments: ROOT_DIRECTOR_ZONE_SEGMENTS,
       falloff: ROOT_DIRECTOR_FALLOFF,
@@ -281,6 +299,11 @@ export class HairSolver {
       correctionDistanceLastStep: 0,
       minimumNormalDot: 0,
       meanNormalDot: 0,
+      minimumTargetDot: 0,
+      meanTargetDot: 0,
+      minimumTargetOutwardDot: 0,
+      meanTargetOutwardDot: 0,
+      meanTargetTangentialMagnitude: 0,
     };
     this.maxStretchError = 0;
     this.moisture = 0;
@@ -366,14 +389,26 @@ export class HairSolver {
       ) {
         const prior = this.index(strand, segment);
         const next = this.index(strand, segment + 1);
+        const styled = this.rootDirector.mode === "styled_side_part";
+        const field = styled
+          ? bakeStyledRootDirection(
+              frame.root[0],
+              frame.root[1],
+              frame.root[2],
+              frame.normal[0],
+              frame.normal[1],
+              frame.normal[2],
+              this.rootStyleProjection
+            )
+          : frame.normal;
         bakeRootDirectorTarget(
-          frame.normal[0],
-          frame.normal[1],
-          frame.normal[2],
+          field[0],
+          field[1],
+          field[2],
           this.rest[next] - this.rest[prior],
           this.rest[next + 1] - this.rest[prior + 1],
           this.rest[next + 2] - this.rest[prior + 2],
-          ROOT_DIRECTOR_NORMAL_BIASES[segment],
+          (styled ? ROOT_DIRECTOR_STYLED_BIASES : ROOT_DIRECTOR_NORMAL_BIASES)[segment],
           this.rootDirectorProjection
         );
         const target = (strand * ROOT_DIRECTOR_ZONE_SEGMENTS + segment) * 3;
@@ -382,6 +417,14 @@ export class HairSolver {
         }
       }
     }
+    const targetSummary = summarizeRootTargets(
+      this.rootDirectorTargets,
+      this.rootNormals,
+      this.rootDirector.zoneSegments
+    );
+    this.rootDirector.minimumTargetOutwardDot = targetSummary.minimumOutwardDot;
+    this.rootDirector.meanTargetOutwardDot = targetSummary.meanOutwardDot;
+    this.rootDirector.meanTargetTangentialMagnitude = targetSummary.meanTangentialMagnitude;
   }
 
   reset(preset = this.preset) {
@@ -922,6 +965,15 @@ export class HairSolver {
     );
     this.rootDirector.minimumNormalDot = alignment.minimum;
     this.rootDirector.meanNormalDot = alignment.mean;
+    const targetAlignment = summarizeRootTargetAlignment(
+      this.positions,
+      this.roots,
+      this.rootDirectorTargets,
+      this.particlesPerGuide,
+      this.rootDirector.zoneSegments
+    );
+    this.rootDirector.minimumTargetDot = targetAlignment.minimum;
+    this.rootDirector.meanTargetDot = targetAlignment.mean;
   }
 
   #projectSectionLift() {
@@ -1020,14 +1072,31 @@ export class HairSolver {
       },
       root_director: {
         enabled: this.rootDirector.enabled,
+        mode: this.rootDirector.mode,
+        field_identity:
+          this.rootDirector.mode === "styled_side_part"
+            ? ROOT_STYLE_FIELD_ID
+            : this.rootDirector.mode === "scalp_normal"
+              ? "scalp_normal_v1"
+              : "free_v1",
         strength: this.rootDirector.strength,
         zone_segments: this.rootDirector.zoneSegments,
         falloff: this.rootDirector.falloff,
-        normal_biases: [...this.rootDirector.normalBiases],
+        normal_biases:
+          this.rootDirector.mode === "styled_side_part"
+            ? [...ROOT_DIRECTOR_STYLED_BIASES]
+            : [...this.rootDirector.normalBiases],
+        section_count: this.rootDirector.mode === "styled_side_part" ? ROOT_STYLE_SECTION_COUNT : 0,
+        part_x: this.rootDirector.mode === "styled_side_part" ? ROOT_STYLE_PART_X : null,
         corrections_last_step: this.rootDirector.correctionsLastStep,
         correction_distance_last_step: this.rootDirector.correctionDistanceLastStep,
         minimum_first_segment_normal_dot: this.rootDirector.minimumNormalDot,
         mean_first_segment_normal_dot: this.rootDirector.meanNormalDot,
+        minimum_first_segment_target_dot: this.rootDirector.minimumTargetDot,
+        mean_first_segment_target_dot: this.rootDirector.meanTargetDot,
+        minimum_target_outward_dot: this.rootDirector.minimumTargetOutwardDot,
+        mean_target_outward_dot: this.rootDirector.meanTargetOutwardDot,
+        mean_target_tangential_magnitude: this.rootDirector.meanTargetTangentialMagnitude,
         exact_antipodal_boundary: "tangent_correction_zero",
       },
       iterations: this.iterations,
