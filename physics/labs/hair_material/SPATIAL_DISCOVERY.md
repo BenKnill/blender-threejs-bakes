@@ -120,3 +120,43 @@ degeneracy handling, quantization, or physical contact completeness.
 Grok's full Issue #111 review is archived locally at
 `attachments/20260712T143738Z-grok-issue-111-review.md`. Fable was not retried
 after the user asked us to continue while they repair its access.
+
+## Temporal churn follow-up
+
+Issue #113 samples the closest-distance ranker in consecutive-frame clusters
+around comb start, mid-pass, exit, diagonal-cut onset/sweep, and post-cut
+settling. The default `hair-contact-churn/1` receipt contains counts, set
+metrics, and digests only; it deliberately omits admitted pair payloads. Wide
+sample gaps are retained for trajectory context but do not decide whether the
+rank frontier flickers.
+
+Adjacent-frame observation on the M5:
+
+| fixture       | samples | minimum Jaccard | mean Jaccard | worst churn | max additions/removals |
+| ------------- | ------: | --------------: | ------------: | ----------: | ---------------------: |
+| dry comb      |      11 |           0.933 |         0.948 |        6.7% |              691 / 691 |
+| wet comb      |      11 |           0.948 |         0.962 |        5.2% |              579 / 458 |
+| product comb  |      11 |           0.968 |         0.977 |        3.2% |              328 / 328 |
+| product cut   |      14 |           0.959 |         0.980 |        4.1% |              423 / 423 |
+
+All four traces reproduce bit-identical whole-trace digests on a complete
+rerun, match the ordinary mechanical replay at the final step, retain every
+active persistent bond, drop no quantized zero-risk pair, and keep
+`spatial_force_integration: false`. During the three adjacent cut clusters,
+778 removals touch newly inactive segments versus 392 removals whose two
+segments remain active, so topology-local removal dominates rather than
+causing wholesale unrelated replacement.
+
+The closest-ranked set therefore clears the review's Jaccard-at-least-0.9 gate
+for a cautious low-count force A/B. This is not a license to turn on all 20,000
+contacts: dry hair's 6.7% worst adjacent churn exceeds the alternate 5% target
+and must remain visible in the next receipt. The next experiment should apply
+response only to a strict interior subset, such as a very small per-segment
+count or a distance threshold well inside the admitted frontier.
+
+`HAIR_CONTACT_CHURN_CURRENT_PARTITION` supports the finite-set cardinality
+identity checked by the transition receipt. It does not verify JavaScript Set
+semantics, hashing, ranking, floating point, or contact physics. Grok's
+interrupted inspection and successfully resumed final review are archived
+together at `attachments/20260712T144729Z-grok-issue-113-review.md`. Fable
+remains paused while the user repairs its account access.

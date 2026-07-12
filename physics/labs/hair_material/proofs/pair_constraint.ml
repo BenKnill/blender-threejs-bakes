@@ -151,6 +151,21 @@ let HAIR_SQUARED_SEPARATION_NONNEGATIVE = prove
   MP_TAC(SPEC `dz:real` REAL_LE_SQUARE) THEN
   REAL_ARITH_TAC);;
 
+(** The compact churn receipt partitions the current admitted finite set into
+    retained contacts and additions.  This supports the cardinality runtime
+    check only; it does not verify JavaScript Set operations or contact ids. *)
+let HAIR_CONTACT_CHURN_CURRENT_PARTITION = prove
+ (`!previous current:A->bool.
+      FINITE previous /\ FINITE current
+      ==> CARD (previous INTER current) + CARD (current DIFF previous) =
+          CARD current`,
+  REPEAT STRIP_TAC THEN
+  MATCH_MP_TAC CARD_UNION_EQ THEN REPEAT CONJ_TAC THENL
+   [ASM_REWRITE_TAC[];
+    REWRITE_TAC[EXTENSION; IN_INTER; IN_DIFF; NOT_IN_EMPTY] THEN
+    MESON_TAC[];
+    REWRITE_TAC[EXTENSION; IN_UNION; IN_INTER; IN_DIFF] THEN MESON_TAC[]]);;
+
 (** A quarter-turn of the horizontal wind vector preserves squared magnitude.
     The browser uses continuous sine/cosine directions; this is a narrow
     algebraic rotation sanity contract, not a proof of JavaScript trig. *)
