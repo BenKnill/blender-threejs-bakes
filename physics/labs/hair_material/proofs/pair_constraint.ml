@@ -208,3 +208,22 @@ let HAIR_BARYCENTRIC_ENDPOINT_EXCHANGE_PRESERVES_SUM = prove
 let HAIR_WIND_QUARTER_TURN_PRESERVES_SQUARED_MAGNITUDE = prove
  (`!x z:real. (--z) pow 2 + x pow 2 = x pow 2 + z pow 2`,
   CONV_TAC REAL_RING);;
+
+(** A rest-baked display fiber uses one fixed weight to interpolate corresponding
+    scalar samples from two parent guides.  For ordered parent samples, a weight
+    in [0,1] keeps the result between them.  This is a representation contract;
+    it does not verify parent selection, JavaScript floating point, or pixels. *)
+let HAIR_TWO_PARENT_INTERPOLATION_BETWEEN_ORDERED_SAMPLES = prove
+ (`!weight lower upper:real.
+      &0 <= weight /\ weight <= &1 /\ lower <= upper
+      ==> lower <= (&1 - weight) * lower + weight * upper /\
+          (&1 - weight) * lower + weight * upper <= upper`,
+  REPEAT GEN_TAC THEN
+  DISCH_THEN
+   (CONJUNCTS_THEN2 ASSUME_TAC
+     (CONJUNCTS_THEN2 ASSUME_TAC ASSUME_TAC)) THEN
+  SUBGOAL_THEN `&0 <= weight * (upper - lower)` ASSUME_TAC THENL
+   [MATCH_MP_TAC REAL_LE_MUL THEN ASM_REAL_ARITH_TAC;
+    SUBGOAL_THEN `&0 <= (&1 - weight) * (upper - lower)` ASSUME_TAC THENL
+     [MATCH_MP_TAC REAL_LE_MUL THEN ASM_REAL_ARITH_TAC;
+      CONJ_TAC THEN ASM_REAL_ARITH_TAC]]);;
