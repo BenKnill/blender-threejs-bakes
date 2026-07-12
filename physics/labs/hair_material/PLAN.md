@@ -21,10 +21,14 @@ proof boundaries must remain explicit.
 ## Next: improve material behavior where the traces point
 
 - [x] Add a continuously rotating directional wind field with a visible flow indicator and autoplay showcase.
-- [ ] Compare dry, wet, and product-heavy response using peaks, work, releases,
+- [x] Compare dry, wet, and product-heavy response using peaks, work, releases,
       trace shape, and runtime—not appearance alone.
-- [ ] Choose one operator to improve from evidence: friction, cohesion, pressure,
+- [x] Choose one operator to improve from evidence: friction, cohesion, pressure,
       comb contact, or length enforcement.
+- [ ] Improve persistent contact/cohesion first: the product-heavy lane creates
+      7.5x the final bonds and 3.2x the releases of dry hair while shifting 56%
+      of reaction into the final travel third. Add bounded contact-age/service
+      telemetry before changing the force law.
 - [ ] Add a repeated pass, section lift, or simple grab only when it answers a
       concrete material question.
 - [ ] Keep a small explicit-guide reference scene before raising guide count.

@@ -2,7 +2,13 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 import { HairSolver } from "./solver.js";
-import { advanceHairReplay, createReplayState, digestHairState } from "./replay.js";
+import {
+  advanceHairReplay,
+  COMB_MATERIAL_CONDITIONS,
+  createReplayState,
+  digestHairState,
+  summarizeCombReceipt,
+} from "./replay.js";
 
 let renderFibersPerGuide = 9;
 
@@ -152,6 +158,12 @@ const deterministicReplay = {
   state: createReplayState(),
   config: { dt: 1 / 60, baseWind: 0.18, gust: 0, cut: "none", cutAt: 2.5, cutDuration: 1.4 },
 };
+const materialStudy = {
+  enabled: false,
+  conditions: Object.keys(COMB_MATERIAL_CONDITIONS),
+  index: 0,
+  results: {},
+};
 
 function hairColor() {
   const colors = {
@@ -206,9 +218,10 @@ function rebuildSolver() {
 }
 
 function startCombPass(condition, cycle = false) {
-  const wet = condition === "wet";
-  document.querySelector("#moisture").value = wet ? "0.85" : "0.05";
-  document.querySelector("#product").value = wet ? "0.2" : "0";
+  const material = COMB_MATERIAL_CONDITIONS[condition];
+  if (!material) throw new Error(`unknown comb material condition: ${condition}`);
+  document.querySelector("#moisture").value = String(material.moisture);
+  document.querySelector("#product").value = String(material.product);
   document.querySelector("#moisture").dispatchEvent(new Event("input", { bubbles: true }));
   document.querySelector("#product").dispatchEvent(new Event("input", { bubbles: true }));
   deterministicReplay.enabled = true;
@@ -231,8 +244,52 @@ function startCombPass(condition, cycle = false) {
   document.querySelector("#scenario-label").textContent =
     `Comb-through instrument · ${condition}${cycle ? " cycle" : ""}`;
   status.textContent = cycle
-    ? `${condition} comb cycle: outward pass, pause, then visible return.`
-    : `${condition} comb pass: settling, then measuring steps 30–150.`;
+    ? `${material.label} comb cycle: outward pass, pause, then visible return.`
+    : `${material.label} comb pass: settling, then measuring steps 30–150.`;
+}
+
+function updateMaterialStudyTable() {
+  for (const condition of materialStudy.conditions) {
+    const row = document.querySelector(`[data-study-condition="${condition}"]`);
+    const summary = materialStudy.results[condition];
+    if (!summary) {
+      row.textContent =
+        condition === materialStudy.conditions[materialStudy.index] ? "running" : "—";
+      continue;
+    }
+    row.textContent = `${summary.peak_reaction_proxy.toFixed(0)} · ${summary.accumulated_work_proxy.toFixed(0)} · ${summary.clump_releases} · ${summary.persistent_clump_bonds} · ${(summary.peak_relative_stretch_error * 100).toFixed(2)}%`;
+  }
+}
+
+function startMaterialStudy() {
+  document.querySelector("#guides").value = "256";
+  document.querySelector("#iterations").value = "6";
+  document.querySelector("#guides").dispatchEvent(new Event("input", { bubbles: true }));
+  document.querySelector("#iterations").dispatchEvent(new Event("input", { bubbles: true }));
+  materialStudy.enabled = true;
+  materialStudy.index = 0;
+  materialStudy.results = {};
+  updateMaterialStudyTable();
+  startCombPass(materialStudy.conditions[0]);
+  status.textContent = "Material study 1/3: dry comb pass.";
+}
+
+function advanceMaterialStudy() {
+  if (!materialStudy.enabled || deterministicReplay.state.step < 180) return;
+  const condition = materialStudy.conditions[materialStudy.index];
+  materialStudy.results[condition] = summarizeCombReceipt(solver.receipt());
+  materialStudy.index += 1;
+  updateMaterialStudyTable();
+  if (materialStudy.index >= materialStudy.conditions.length) {
+    materialStudy.enabled = false;
+    deterministicReplay.autoplay = false;
+    status.textContent = "Three-condition material study complete; comparison table is live.";
+    return;
+  }
+  const next = materialStudy.conditions[materialStudy.index];
+  startCombPass(next);
+  updateMaterialStudyTable();
+  status.textContent = `Material study ${materialStudy.index + 1}/3: ${COMB_MATERIAL_CONDITIONS[next].label.toLowerCase()} comb pass.`;
 }
 
 function applyMaterialControls() {
@@ -481,6 +538,7 @@ function animate(now) {
           deterministicReplay.state,
           deterministicReplay.state.step + 1
         );
+        advanceMaterialStudy();
       }
     } else {
       updateFilmDirection(now);
@@ -623,7 +681,9 @@ document.querySelector("#scissors").addEventListener("click", (event) => {
 document.querySelector("#plane-cut").addEventListener("click", cutToGuideLine);
 document.querySelector("#comb-dry").addEventListener("click", () => startCombPass("dry"));
 document.querySelector("#comb-wet").addEventListener("click", () => startCombPass("wet"));
+document.querySelector("#comb-product").addEventListener("click", () => startCombPass("product"));
 document.querySelector("#comb-cycle").addEventListener("click", () => startCombPass("wet", true));
+document.querySelector("#material-study").addEventListener("click", startMaterialStudy);
 document.querySelector("#receipt").addEventListener("click", async () => {
   await navigator.clipboard.writeText(JSON.stringify(solver.receipt(), null, 2));
   status.textContent = "Copied the current material and solver receipt.";
