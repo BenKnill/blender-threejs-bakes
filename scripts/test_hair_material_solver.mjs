@@ -64,6 +64,7 @@ import {
   createReplayState,
   digestHairState,
   runHairReplay,
+  sectionLiftEnvelopeAtStep,
   summarizeCombReceipt,
 } from "../physics/labs/hair_material/demo/replay.js";
 
@@ -547,6 +548,22 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
 }
 
 {
+  const cycle = { startStep: 30, peakStep: 90, holdEndStep: 155, endStep: 230, height: 0.24 };
+  assert.deepEqual(sectionLiftEnvelopeAtStep(0, cycle), { phase: "idle", value: 0 });
+  assert.equal(sectionLiftEnvelopeAtStep(60, cycle).phase, "rise");
+  nearlyEqual(sectionLiftEnvelopeAtStep(60, cycle).value, 0.12);
+  assert.deepEqual(sectionLiftEnvelopeAtStep(90, cycle), { phase: "hold", value: 0.24 });
+  assert.equal(sectionLiftEnvelopeAtStep(190, cycle).phase, "release");
+  assert.ok(sectionLiftEnvelopeAtStep(190, cycle).value < 0.24);
+  assert.deepEqual(sectionLiftEnvelopeAtStep(230, cycle), { phase: "released", value: 0 });
+  assert.throws(
+    () =>
+      sectionLiftEnvelopeAtStep(0, { startStep: 10, peakStep: 10, holdEndStep: 20, endStep: 30 }),
+    /start < peak <= hold < end/
+  );
+}
+
+{
   const config = {
     solver: {
       guideCount: 96,
@@ -650,6 +667,47 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     ),
     1
   );
+}
+
+{
+  const liftConfig = {
+    solver: {
+      guideCount: 64,
+      segments: 8,
+      preset: "wavy",
+      iterations: 6,
+      collectiveRulesEnabled: true,
+      rootDirectorMode: "styled_side_part",
+      rootDirectorStrength: 0.22,
+    },
+    steps: 240,
+    dt: 1 / 60,
+    moisture: 0.35,
+    product: 0.45,
+    baseWind: 0.28,
+    gust: 0.38,
+    windRotationRate: 0.58,
+    sectionLiftCycle: {
+      startStep: 30,
+      peakStep: 90,
+      holdEndStep: 155,
+      endStep: 230,
+      height: 0.24,
+    },
+  };
+  const held = runHairReplay({ ...liftConfig, steps: 100 }).result;
+  assert.equal(held.receipt.section_lift.phase, "hold");
+  nearlyEqual(held.receipt.section_lift.target_meters, 0.24);
+  assert.ok(held.receipt.section_lift.corrections_last_step > 0);
+  assert.ok(held.receipt.section_lift.correction_distance_last_step > 0);
+  const released = runHairReplay(liftConfig).result;
+  const repeated = runHairReplay(liftConfig).result;
+  assert.equal(released.state_digest, repeated.state_digest);
+  assert.deepEqual(released.receipt, repeated.receipt);
+  assert.equal(released.receipt.section_lift.phase, "released");
+  assert.equal(released.receipt.section_lift.target_meters, 0);
+  assert.equal(released.receipt.section_lift.corrections_last_step, 0);
+  assert.ok(released.receipt.max_relative_stretch_error <= 0.035);
 }
 
 {
