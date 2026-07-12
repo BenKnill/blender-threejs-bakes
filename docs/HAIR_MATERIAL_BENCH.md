@@ -72,17 +72,23 @@ rest roots and include their binding digest in `hair-render/1` receipts.
 The volume mode chooses two distinct nearby secondary guides, keeps all weights
 convex, and fades the third parent's influence in from 45% to 90% of strand
 length. This keeps the styled root part driven by the owner/primary pair while
-breaking up repeated line sheets lower in the silhouette. After cuts, a display
-fiber uses the shortest active length of every parent with nonzero weight.
+breaking up repeated line sheets lower in the silhouette. After cuts, the owner
+and primary parent define the visible fiber length. The third parent is a
+volume-only shape donor: when it is shorter, its influence fades smoothly to
+zero over the two segments before its cut and stays zero beyond that boundary.
 
 At the fixed 256-guide × 15-fiber step-150 A/B, both modes report physics digest
 `3c45d9ec1cd8d04b`; the two-parent binding/buffer digests are
 `74bfb34c` / `49d77d60`, while the three-parent digests are
 `0be410f0` / `4dda2af6`. Geometry p99 was 0.90 ms for both observations. At
 step 330 after the diagonal cut, both modes report physics digest
-`18079d1e106a2407`; the shortest-of-three rule emits 26,691 primitives versus
-26,884 for two parents. The volume mode is therefore a useful opt-in fullness
-experiment, not a claim that it improves every cut silhouette.
+`18079d1e106a2407`. The original shortest-of-three rule emitted 26,691
+primitives versus 26,884 for two parents. The cut-aware donor fade now emits the
+same 26,884 primitives as two-parent mode while preserving binding digest
+`0be410f0`; its post-cut position-buffer digest is `02fa2f01`. A 600-frame live
+sample observed 0.459 ms mean / 0.60 ms p99 / 0.70 ms max geometry update. The
+mode remains opt-in because this is a bounded reconstruction improvement, not a
+claim that three-parent interpolation improves every hairstyle.
 
 Add `autoplay=0` to a `showcase=1` replay URL to hold the requested
 `replaySteps` state for a fixed narrow-preview comparison.

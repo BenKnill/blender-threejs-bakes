@@ -170,6 +170,7 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     binding_build_count: 1,
     cut_length_rule: "pure_owner_else_min_parents",
     secondary_weight_envelope: "none",
+    secondary_cut_fade_segments: 0,
   });
 
   const volumeBindings = buildGroomInterpolationBindings(roots, 8, 5, { parentCount: 3 });
@@ -202,7 +203,12 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.ok(groomSecondaryWeightAt(8, 12, 0.2) > 0);
   nearlyEqual(groomSecondaryWeightAt(12, 12, 0.2), 0.2);
   const volumeActiveSegments = new Uint16Array([12, 5, 3]);
-  assert.equal(groomBindingActiveSegments(volumeActiveSegments, 0, 1, 0.2, 2, 0.2), 3);
+  assert.equal(groomBindingActiveSegments(volumeActiveSegments, 0, 1, 0.2), 5);
+  nearlyEqual(groomSecondaryWeightAt(7, 12, 0.2, 9), groomSecondaryWeightAt(7, 12, 0.2));
+  assert.ok(groomSecondaryWeightAt(8, 12, 0.2, 9) > 0);
+  assert.ok(groomSecondaryWeightAt(8, 12, 0.2, 9) < groomSecondaryWeightAt(8, 12, 0.2));
+  nearlyEqual(groomSecondaryWeightAt(9, 12, 0.2, 9), 0);
+  nearlyEqual(groomSecondaryWeightAt(10, 12, 0.2, 9), 0);
   assert.deepEqual(groomInterpolationReceipt(volumeBindings, 1), {
     mode: "section_interp_3parent",
     section_count: 8,
@@ -212,8 +218,9 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     binding_count: 40,
     binding_digest: volumeBindings.bindingDigest,
     binding_build_count: 1,
-    cut_length_rule: "pure_owner_else_min_weighted_parents",
+    cut_length_rule: "owner_primary_length_secondary_donor_fade",
     secondary_weight_envelope: "smoothstep_45pct_to_90pct",
+    secondary_cut_fade_segments: 2,
   });
 
   const productionGroomSolver = new HairSolver({ guideCount: 256, segments: 12 });

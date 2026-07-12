@@ -5,6 +5,7 @@ const MIN_NEIGHBOR_WEIGHT = 0.12;
 const MAX_NEIGHBOR_WEIGHT = 0.45;
 const VOLUME_ENVELOPE_START_FRACTION = 0.45;
 const VOLUME_ENVELOPE_END_FRACTION = 0.9;
+const SECONDARY_CUT_FADE_SEGMENTS = 2;
 
 export function groomSectionId(x, z, sectionCount = DEFAULT_GROOM_SECTION_COUNT) {
   if (!Number.isInteger(sectionCount) || sectionCount < 1) {
@@ -117,19 +118,9 @@ export function buildGroomInterpolationBindings(
   return { ...bindings, bindingDigest: groomBindingDigest(bindings) };
 }
 
-export function groomBindingActiveSegments(
-  activeSegments,
-  owner,
-  neighbor,
-  neighborWeight,
-  secondaryNeighbor = owner,
-  secondaryNeighborWeight = 0
-) {
+export function groomBindingActiveSegments(activeSegments, owner, neighbor, neighborWeight) {
   let active = activeSegments[owner];
   if (neighborWeight > 0 && owner !== neighbor) active = Math.min(active, activeSegments[neighbor]);
-  if (secondaryNeighborWeight > 0 && owner !== secondaryNeighbor) {
-    active = Math.min(active, activeSegments[secondaryNeighbor]);
-  }
   return active;
 }
 
@@ -147,17 +138,27 @@ export function interpolateGroomScalar(
   );
 }
 
-export function groomSecondaryWeightAt(segment, activeSegments, secondaryNeighborWeight) {
+function smoothStep01(value) {
+  const t = Math.max(0, Math.min(1, value));
+  return t * t * (3 - 2 * t);
+}
+
+export function groomSecondaryWeightAt(
+  segment,
+  activeSegments,
+  secondaryNeighborWeight,
+  secondaryActiveSegments = activeSegments
+) {
   const fraction = segment / Math.max(1, activeSegments);
-  const t = Math.max(
-    0,
-    Math.min(
-      1,
-      (fraction - VOLUME_ENVELOPE_START_FRACTION) /
-        (VOLUME_ENVELOPE_END_FRACTION - VOLUME_ENVELOPE_START_FRACTION)
-    )
+  const envelope = smoothStep01(
+    (fraction - VOLUME_ENVELOPE_START_FRACTION) /
+      (VOLUME_ENVELOPE_END_FRACTION - VOLUME_ENVELOPE_START_FRACTION)
   );
-  return secondaryNeighborWeight * t * t * (3 - 2 * t);
+  const cutFade =
+    secondaryActiveSegments < activeSegments
+      ? smoothStep01((secondaryActiveSegments - segment) / SECONDARY_CUT_FADE_SEGMENTS)
+      : 1;
+  return secondaryNeighborWeight * envelope * cutFade;
 }
 
 function hashByte(hash, byte) {
@@ -205,8 +206,9 @@ export function groomInterpolationReceipt(bindings, buildCount) {
     binding_build_count: buildCount,
     cut_length_rule:
       bindings.parentCount === 3
-        ? "pure_owner_else_min_weighted_parents"
+        ? "owner_primary_length_secondary_donor_fade"
         : "pure_owner_else_min_parents",
     secondary_weight_envelope: bindings.parentCount === 3 ? "smoothstep_45pct_to_90pct" : "none",
+    secondary_cut_fade_segments: bindings.parentCount === 3 ? SECONDARY_CUT_FADE_SEGMENTS : 0,
   };
 }
