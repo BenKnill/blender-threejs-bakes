@@ -77,6 +77,7 @@ export const MATERIAL_PRESETS = Object.freeze({
 const HEAD = Object.freeze({ center: [0, 1.35, 0], radii: [0.9, 1.12, 0.82] });
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 const ROOT_DIRECTOR_MODES = new Set(["free", "scalp_normal", "styled_side_part"]);
+const SECTION_LIFT_STEP_STRENGTH = 0.18;
 
 function length3(x, y, z) {
   return Math.hypot(x, y, z);
@@ -283,6 +284,9 @@ export class HairSolver {
     this.windAngle = Math.atan2(0.45, 1);
     this.directionalWind = false;
     this.sectionLift = 0;
+    this.sectionLiftPhase = "static";
+    this.sectionLiftCorrections = 0;
+    this.sectionLiftCorrectionDistance = 0;
     const resolvedRootDirectorMode =
       rootDirectorMode ?? (rootDirectorEnabled ? "scalp_normal" : "free");
     if (!ROOT_DIRECTOR_MODES.has(resolvedRootDirectorMode)) {
@@ -494,8 +498,9 @@ export class HairSolver {
     };
   }
 
-  setSectionLift(value) {
+  setSectionLift(value, phase = "static") {
     this.sectionLift = Math.max(0, Math.min(1.4, value));
+    this.sectionLiftPhase = phase;
   }
 
   setWindDirection(angle) {
@@ -571,6 +576,8 @@ export class HairSolver {
     this.simulationStep += 1;
     this.rootDirector.correctionsLastStep = 0;
     this.rootDirector.correctionDistanceLastStep = 0;
+    this.sectionLiftCorrections = 0;
+    this.sectionLiftCorrectionDistance = 0;
     const damping = this.material.damping;
     for (let strand = 0; strand < this.guideCount; strand += 1) {
       for (let particle = 1; particle <= this.activeSegments[strand]; particle += 1) {
@@ -979,6 +986,7 @@ export class HairSolver {
   #projectSectionLift() {
     if (this.sectionLift <= 0) return;
     const targetParticle = Math.max(2, Math.round(this.segments * 0.48));
+    const strength = 1 - (1 - SECTION_LIFT_STEP_STRENGTH) ** (1 / this.iterations);
     for (let strand = 0; strand < this.guideCount; strand += 1) {
       const rootZ = this.roots[strand * 3 + 2];
       const rootX = this.roots[strand * 3];
@@ -986,11 +994,15 @@ export class HairSolver {
         continue;
       const index = this.index(strand, targetParticle);
       const rest = this.index(strand, targetParticle);
-      this.positions[index] += (this.rest[rest] - this.positions[index]) * 0.18;
-      this.positions[index + 1] +=
-        (this.rest[rest + 1] + this.sectionLift - this.positions[index + 1]) * 0.18;
-      this.positions[index + 2] +=
-        (this.rest[rest + 2] + this.sectionLift * 0.5 - this.positions[index + 2]) * 0.18;
+      const dx = (this.rest[rest] - this.positions[index]) * strength;
+      const dy = (this.rest[rest + 1] + this.sectionLift - this.positions[index + 1]) * strength;
+      const dz =
+        (this.rest[rest + 2] + this.sectionLift * 0.5 - this.positions[index + 2]) * strength;
+      this.positions[index] += dx;
+      this.positions[index + 1] += dy;
+      this.positions[index + 2] += dz;
+      this.sectionLiftCorrections += 1;
+      this.sectionLiftCorrectionDistance += length3(dx, dy, dz);
     }
   }
 
@@ -1098,6 +1110,17 @@ export class HairSolver {
         mean_target_outward_dot: this.rootDirector.meanTargetOutwardDot,
         mean_target_tangential_magnitude: this.rootDirector.meanTargetTangentialMagnitude,
         exact_antipodal_boundary: "tangent_correction_zero",
+      },
+      section_lift: {
+        enabled: this.sectionLift > 0,
+        phase: this.sectionLiftPhase,
+        target_meters: this.sectionLift,
+        target_particle: Math.max(2, Math.round(this.segments * 0.48)),
+        step_strength: SECTION_LIFT_STEP_STRENGTH,
+        per_iteration_strength: 1 - (1 - SECTION_LIFT_STEP_STRENGTH) ** (1 / this.iterations),
+        corrections_last_step: this.sectionLiftCorrections,
+        correction_distance_last_step: this.sectionLiftCorrectionDistance,
+        correction_distance_unit: "summed_solver_position",
       },
       iterations: this.iterations,
       max_relative_stretch_error: this.maxStretchError,

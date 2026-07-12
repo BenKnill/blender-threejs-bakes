@@ -1,4 +1,4 @@
-import { HairSolver } from "./solver.js?v=111";
+import { HairSolver } from "./solver.js?v=113";
 
 export const COMB_MATERIAL_CONDITIONS = Object.freeze({
   dry: Object.freeze({ label: "Dry", moisture: 0.05, product: 0 }),
@@ -132,6 +132,43 @@ function applyCombPass(solver, config, state) {
   solver.setCombPose(previousX, currentX, { ...comb.envelope, phase });
 }
 
+function smoothStep01(value) {
+  const t = Math.max(0, Math.min(1, value));
+  return t * t * (3 - 2 * t);
+}
+
+export function sectionLiftEnvelopeAtStep(step, cycle) {
+  const startStep = cycle.startStep ?? 30;
+  const peakStep = cycle.peakStep ?? 90;
+  const holdEndStep = cycle.holdEndStep ?? 155;
+  const endStep = cycle.endStep ?? 230;
+  const height = Math.max(0, Math.min(1.4, cycle.height ?? 0.24));
+  if (!(startStep < peakStep && peakStep <= holdEndStep && holdEndStep < endStep)) {
+    throw new Error("section lift cycle steps must satisfy start < peak <= hold < end");
+  }
+  if (step < startStep) return { phase: "idle", value: 0 };
+  if (step < peakStep) {
+    return {
+      phase: "rise",
+      value: height * smoothStep01((step - startStep) / (peakStep - startStep)),
+    };
+  }
+  if (step < holdEndStep) return { phase: "hold", value: height };
+  if (step < endStep) {
+    return {
+      phase: "release",
+      value: height * (1 - smoothStep01((step - holdEndStep) / (endStep - holdEndStep))),
+    };
+  }
+  return { phase: "released", value: 0 };
+}
+
+function applySectionLiftCycle(solver, config, state) {
+  if (!config.sectionLiftCycle) return;
+  const envelope = sectionLiftEnvelopeAtStep(state.step, config.sectionLiftCycle);
+  solver.setSectionLift(envelope.value, envelope.phase);
+}
+
 export function advanceHairReplay(solver, config, state, targetStep) {
   if (!Number.isInteger(targetStep) || targetStep < state.step) {
     throw new Error("replay target step must be an integer at or after the current step");
@@ -145,6 +182,7 @@ export function advanceHairReplay(solver, config, state, targetStep) {
       solver.setWindDirection((config.windAngle ?? 0) + elapsed * (config.windRotationRate ?? 0));
     }
     if (config.cut === "diagonal") applyDiagonalCut(solver, config, elapsed, state);
+    applySectionLiftCycle(solver, config, state);
     applyCombPass(solver, config, state);
     solver.step(dt);
     state.step += 1;

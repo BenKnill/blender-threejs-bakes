@@ -49,8 +49,14 @@ proof boundaries must remain explicit.
       0.903/0.940/0.981 for dry/wet/product while every deterministic comb and
       stretch gate passes. The cut fixture remains a separately reported
       baseline stretch failure and is not relabeled as a pass.
-- [ ] Add a repeated pass, section lift, or simple grab only when it answers a
-      concrete material question.
+- [x] Add a deterministic section lift only after the hands-off groom exposed
+      convincing but transient full silhouettes. The opt-in 0.24 m pulse rises,
+      holds, and releases entirely inside the measured comb cycle. Distributing
+      0.18 step stiffness across six iterations cuts held-state correction
+      distance from 5.088 to 2.529 solver-position units. The 256-guide replay
+      repeats at digest `4c7b4af505e0e011`, completes all 256 cuts, and peaks at
+      3.499% stretch. Active-phase browser cost is still higher, so this remains
+      an opt-in showcase rather than a default material operator.
 - [x] Build a small explicit-guide rod/reference fixture before raising guide
       count or enabling spatial friction in the browser by default. The
       settled axial/transverse lanes reproduce exactly, remain under 1.9%

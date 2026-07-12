@@ -93,6 +93,27 @@ claim that three-parent interpolation improves every hairstyle.
 Add `autoplay=0` to a `showcase=1` replay URL to hold the requested
 `replaySteps` state for a fixed narrow-preview comparison.
 
+## Section lift cycle
+
+The existing **Section elevation** slider remains a static authored constraint.
+For a deterministic hands-off experiment, add `liftCycle=1`; `liftPeak` controls
+the bounded peak in meters and defaults to 0.24. The replay rises from steps
+30–90, holds through step 154, releases through step 229, and stays off before
+the diagonal cut. `just hair-lift-showcase` prints this styled three-parent URL,
+while `just hair-section-lift-ab` runs the 256-guide acceptance gate.
+
+The lift uses 0.18 total step stiffness distributed across the configured
+solver iterations, rather than applying 0.18 in every iteration. At six
+iterations the per-iteration blend is 0.03253. Receipts report phase, target,
+correction count, and summed correction-distance proxy; that distance is not
+calibrated work or force.
+
+The fixed 420-step treatment repeats at digest `4c7b4af505e0e011`, completes all
+256 cuts, and peaks at 3.499% stretch inside the comb-cycle measurement window.
+The held / released / post-cut render-buffer digests are `5f0a9ab9`, `0e2a4e2e`,
+and `faec1a23`. A live active-phase observation reported 14.95 ms smoothed solver
+cost and 2.4 / 3.2 ms geometry p99 / max, so the choreography remains opt-in.
+
 ## Anisotropic-fluid rules
 
 The solver now treats the groom as a directed porous fluid through four compact

@@ -1,14 +1,14 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-import { HairSolver } from "./solver.js?v=111";
+import { HairSolver } from "./solver.js?v=113";
 import {
   advanceHairReplay,
   COMB_MATERIAL_CONDITIONS,
   createReplayState,
   digestHairState,
   summarizeCombReceipt,
-} from "./replay.js?v=110";
+} from "./replay.js?v=111";
 import {
   fatlineColorScale,
   fatlineHalfWidthAt,
@@ -723,6 +723,8 @@ function updateTelemetry(now) {
     `${receipt.root_director.minimum_first_segment_target_dot.toFixed(3)} / ${receipt.root_director.mean_first_segment_target_dot.toFixed(3)}`;
   document.querySelector("#metric-root-field-outward").textContent =
     `${receipt.root_director.minimum_target_outward_dot.toFixed(3)} / ${receipt.root_director.mean_target_tangential_magnitude.toFixed(3)}`;
+  document.querySelector("#metric-section-lift").textContent =
+    `${receipt.section_lift.phase} · ${receipt.section_lift.target_meters.toFixed(2)} m`;
   document.querySelector("#metric-geometry").textContent =
     geometryTiming.p99_ms === null
       ? "warming"
@@ -960,6 +962,16 @@ function applyQueryConfiguration() {
       cutDuration: Math.max(0.2, Number(params.get("cutDuration") ?? 1.4)),
       windAngle: Number(params.get("windAngle") ?? 0),
       windRotationRate: Number(params.get("windRotation") ?? 0),
+      sectionLiftCycle:
+        params.get("liftCycle") === "1"
+          ? {
+              startStep: 30,
+              peakStep: 90,
+              holdEndStep: 155,
+              endStep: 230,
+              height: Math.max(0, Math.min(1.4, Number(params.get("liftPeak") ?? 0.24))),
+            }
+          : undefined,
       comb:
         params.get("comb") === "1"
           ? {
@@ -1100,6 +1112,7 @@ function createRenderReceipt() {
     groom_mode: groomMode,
     groom_interpolation: groomInterpolationReceipt(groomBindings, groomBindingBuildCount),
     root_director: solver.receipt().root_director,
+    section_lift: solver.receipt().section_lift,
     guide_count: solver.guideCount,
     fiber_copies: renderFibersPerGuide,
     segments_per_guide: solver.segments,
