@@ -16,6 +16,7 @@ import {
 } from "../physics/labs/hair_material/demo/contact_discovery.js";
 import { barycentricEndpointWeights } from "../physics/labs/hair_material/demo/friction.js";
 import { runHairRodReference } from "../physics/labs/hair_material/demo/rod_reference.js";
+import { spatialFrictionPerformanceReceipt } from "../physics/labs/hair_material/demo/spatial_friction.js";
 import {
   digestContactTrace,
   snapshotRankedContacts,
@@ -544,10 +545,11 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     ...base,
     solver: { ...base.solver, spatialFrictionEnabled: false },
   }).result;
-  const treatment = runHairReplay({
+  const treatmentRun = runHairReplay({
     ...base,
     solver: { ...base.solver, spatialFrictionEnabled: true },
-  }).result;
+  });
+  const treatment = treatmentRun.result;
   const repeated = runHairReplay({
     ...base,
     solver: { ...base.solver, spatialFrictionEnabled: true },
@@ -573,6 +575,10 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.ok(treatment.receipt.spatial_friction.friction_impulse_proxy_total > 0);
   assert.equal(treatment.receipt.spatial_friction.spatial_cohesion, false);
   assert.equal(treatment.receipt.spatial_friction.spatial_pressure, false);
+  const performanceReceipt = spatialFrictionPerformanceReceipt(treatmentRun.solver.spatialFriction);
+  assert.ok(performanceReceipt.refresh_ms_total > 0);
+  assert.ok(performanceReceipt.discovery_ms_total > 0);
+  assert.ok(performanceReceipt.ranking_ms_total >= 0);
 }
 
 {

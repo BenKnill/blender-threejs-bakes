@@ -227,3 +227,42 @@ about 86 ms of solver time in the narrow in-app preview, so its current refresh
 cost misses a 60 fps budget even though the animation remains usable. Any
 default enablement must first reduce or amortize discovery cost and repeat the
 mechanical gates.
+
+## Deterministic discovery fast path
+
+Issue #121 removes bookkeeping overhead without changing spatial geometry,
+refresh cadence, contact policy, or solve order. The old discovery path sorted
+formatted cell keys, repeatedly split formatted pair keys during comparison,
+and then parsed them again. Segment ids are normalized before cell insertion,
+so the accepted path deduplicates numeric right-id sets per left id and performs
+one final numeric pair sort. The emitted pair order is unchanged.
+
+The new `just hair-spatial-step-benchmark` receipt separates deterministic
+per-step digests from wall-clock telemetry and labels refresh versus steady
+steps. On the 256-guide wet/product browser-like fixture:
+
+| metric                   | baseline | fast path | change |
+| ------------------------ | -------: | --------: | -----: |
+| refresh mean             | 115.2 ms |   54.0 ms |  -53% |
+| refresh maximum          | 170.8 ms |   59.5 ms |  -65% |
+| steady mean              |  21.5 ms |   19.0 ms |  -12% |
+| all-step mean            |  33.2 ms |   23.3 ms |  -30% |
+
+The complete 64-step deterministic section has the same SHA-256 before and
+after: `ea95bbefc19e74f844807a4995d5ebfd1f068d687cc6bbf293599aa2a61c4587`.
+Independent origin-main and fast-path executions also match exact final state
+digests and full deterministic receipt hashes for dry, wet, product, and
+product-cut treatments. The four-fixture wall time fell from 20.3 s to 14.8 s.
+
+Phase telemetry shows discovery still dominates the remaining refresh cost at
+about 30 ms per refresh; ranking is only about 0.3 ms because retained contacts
+already consume most k=1 slots. A tested nested numeric cell-map variant was
+rejected: it preserved every digest but raised refresh mean from 52.7 to
+55.0 ms on this V8 build. That negative result is intentionally not shipped.
+
+The existing `HAIR_SPATIAL_AABB_CELL_INTERVAL_COVERS_POINT` remains the narrow
+HOL Light support claim. This refactor does not alter cell coverage, floating-
+point geometry, or candidate filtering, so no new theorem is inferred from the
+performance result. Grok's recommendation and corrected HOL Light Workbench
+follow-up are archived at
+`attachments/20260712T154930Z-grok-next-hair-performance-review.md`.

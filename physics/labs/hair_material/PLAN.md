@@ -65,6 +65,11 @@ strand rendering; do not add another many-hair operator first.
       with live contact/churn/impulse telemetry and a hands-off autoplay URL.
       Default remains off; the 256-guide preview's roughly 86 ms solver cost is
       a visible performance blocker, not a hidden success.
+- [x] Remove split-heavy deterministic discovery bookkeeping. The exact
+      64-step digest stream and four full treatment receipts are unchanged;
+      refresh mean falls 53% and the observed maximum falls 65%. Discovery
+      remains the dominant roughly 30 ms phase, so default enablement is still
+      not implied.
 
 ## Later: prettier and more ambitious hair
 
