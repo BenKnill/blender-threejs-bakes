@@ -73,7 +73,13 @@ strand rendering; do not add another many-hair operator first.
 
 ## Later: prettier and more ambitious hair
 
-- [ ] Groom interpolation and rendering that preserve the measured guide motion.
+- [x] Add an opt-in dense appearance layer that preserves measured guide motion:
+      GPU-expanded tapered fat lines plus a crown undercoat. At 256 guides × 9
+      fibers, the fixed-step physics digest matches the default line renderer;
+      geometry update is 0.46 ms mean / 0.80 ms p99 and max in the narrow browser
+      lane. The 15-fiber showcase remains an appearance experiment, not a new
+      mechanics claim.
+- [ ] Replace fixed radial fiber offsets with section-aware groom interpolation.
 - [ ] Cutting plus combing in one deterministic scenario.
 - [ ] Better scalp/strand contact and a clearer calibration path.
 - [ ] Video variants only after the underlying receipt distinguishes them.
