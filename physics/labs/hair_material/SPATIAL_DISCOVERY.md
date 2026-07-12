@@ -22,11 +22,11 @@ it can miss long segments crossing cell boundaries.
 Parameters: 3,072 active segments, 0.24 m cells, 0.04 m AABB padding, at most
 16 emitted pairs per segment and 20,000 pairs globally.
 
-| lane | fixed candidates | spatial AABB candidates | emitted | saturated segments | discovery |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| dry | 5,093 | 34,702 | 20,000 | 1,627 | 87 ms |
-| wet | 5,093 | 40,699 | 20,000 | 1,688 | 87 ms |
-| product-heavy | 5,093 | 47,880 | 20,000 | 1,972 | 92 ms |
+| lane          | fixed candidates | spatial AABB candidates | emitted | saturated segments | discovery |
+| ------------- | ---------------: | ----------------------: | ------: | -----------------: | --------: |
+| dry           |            5,093 |                  34,702 |  20,000 |              1,627 |     87 ms |
+| wet           |            5,093 |                  40,699 |  20,000 |              1,688 |     87 ms |
+| product-heavy |            5,093 |                  47,880 |  20,000 |              1,972 |     92 ms |
 
 Times are observations, not thresholds. The result falsifies the idea that a
 spatial hash alone is a cheap drop-in replacement: it discovers many more
@@ -52,3 +52,34 @@ review could not run because Claude Code reported that subscription access had
 been disabled for the logged-in organization; the exact blocker is archived at
 `attachments/20260712T141516Z-fable-issue-107-review.md`. No Fable opinion is
 inferred from that failure.
+
+## Ranked admission follow-up
+
+Issue #109 removes the provisional discovery cap, reserves every active
+persistent bond first, and ranks new spatial pairs by quantized unpadded-AABB
+gap with canonical pair ids. A 20,000-pair global capacity and 16-new-pairs per
+segment capacity apply only after persistent reservation. Spatial pairs remain
+force-free.
+
+Initial M5 observation:
+
+| lane          | persistent retained | new spatial admitted | global drops | per-segment drops | global frontier in/out |
+| ------------- | ------------------: | -------------------: | -----------: | ----------------: | ---------------------: |
+| dry           |           610 / 610 |               19,390 |        3,637 |            11,066 |      420,664 / 420,720 |
+| wet           |       3,455 / 3,455 |               16,545 |        7,797 |            13,022 |      249,330 / 249,404 |
+| product-heavy |       4,576 / 4,576 |               15,424 |       14,531 |            13,606 |      140,841 / 140,854 |
+
+The global frontier is ordered correctly: the worst globally admitted spatial
+risk is still lower than the best pair dropped only by the global capacity.
+However, the best pair rejected by the per-segment quota has AABB risk zero in
+all lanes. Dense, skew segments create many overlapping boxes that this risk
+cannot distinguish. This falsifies force integration: the next experiment must
+rank those ties by deterministic segment–segment closest distance rather than
+loosening capacity or allowing arbitrary frontier flicker.
+
+The receipt includes the persistent/spatial partition, both drop causes,
+frontier risks, an admitted-pair digest, persistent overflow state, and an
+explicit `spatial_force_integration: false` gate. Grok's complete Issue #109
+review is archived locally at
+`attachments/20260712T143038Z-grok-issue-109-review.md`. Fable was not retried
+after the user confirmed they would repair its account access later.

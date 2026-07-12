@@ -12,6 +12,10 @@ function pairKey(left, right) {
   return left < right ? `${left}:${right}` : `${right}:${left}`;
 }
 
+function parsePairKey(key) {
+  return key.split(":").map(Number);
+}
+
 function comparePairKeys(left, right) {
   const [leftA, leftB] = left.split(":").map(Number);
   const [rightA, rightB] = right.split(":").map(Number);
@@ -27,6 +31,19 @@ export function paddedSegmentAabbsOverlap(left, right, padding = 0) {
     if (leftHigh < rightLow || rightHigh < leftLow) return false;
   }
   return true;
+}
+
+export function segmentAabbGapSquared(left, right) {
+  let gapSquared = 0;
+  for (let axis = 0; axis < 3; axis += 1) {
+    const leftLow = Math.min(left.a[axis], left.b[axis]);
+    const leftHigh = Math.max(left.a[axis], left.b[axis]);
+    const rightLow = Math.min(right.a[axis], right.b[axis]);
+    const rightHigh = Math.max(right.a[axis], right.b[axis]);
+    const gap = Math.max(0, leftLow - rightHigh, rightLow - leftHigh);
+    gapSquared += gap * gap;
+  }
+  return gapSquared;
 }
 
 export function segmentAabbCellKeys(segment, cellSize, padding = 0) {
@@ -139,4 +156,107 @@ export function hairSolverSegments(solver) {
     }
   }
   return segments;
+}
+
+export function hairSolverPersistentPairs(solver) {
+  const keys = new Set();
+  for (const bond of solver.clumpBonds) {
+    const [pairIndex, particle] = bond.split(":").map(Number);
+    const [guideA, guideB] = solver.neighborPairs[pairIndex];
+    const segment = particle - 1;
+    if (segment < 0 || segment >= solver.activeSegments[guideA]) continue;
+    if (segment >= solver.activeSegments[guideB]) continue;
+    keys.add(pairKey(guideA * solver.segments + segment, guideB * solver.segments + segment));
+  }
+  return [...keys].sort(comparePairKeys).map((key) => {
+    const [a, b] = parsePairKey(key);
+    return { a, b };
+  });
+}
+
+export function rankSpatialCandidates(
+  segments,
+  discoveredPairs,
+  persistentPairs,
+  { maxPairs = 20000, maxNewPairsPerSegment = 16, riskScale = 1e8 } = {}
+) {
+  const byId = new Map(segments.map((segment) => [segment.id, segment]));
+  const persistentKeys = [...new Set(persistentPairs.map((pair) => pairKey(pair.a, pair.b)))].sort(
+    comparePairKeys
+  );
+  for (const key of persistentKeys) {
+    const [a, b] = parsePairKey(key);
+    if (!byId.has(a) || !byId.has(b)) throw new Error(`persistent pair is inactive: ${key}`);
+  }
+  const persistentOverflow = persistentKeys.length > maxPairs;
+  const admitted = persistentKeys.slice(0, maxPairs).map((key) => {
+    const [a, b] = parsePairKey(key);
+    return { a, b, source: "persistent", risk_q: null };
+  });
+  const admittedKeys = new Set(admitted.map((pair) => pairKey(pair.a, pair.b)));
+  const rankedSpatial = [];
+  for (const pair of discoveredPairs) {
+    const key = pairKey(pair.a, pair.b);
+    if (admittedKeys.has(key)) continue;
+    const left = byId.get(pair.a);
+    const right = byId.get(pair.b);
+    if (!left || !right) throw new Error(`candidate references inactive segment: ${key}`);
+    rankedSpatial.push({
+      a: Math.min(pair.a, pair.b),
+      b: Math.max(pair.a, pair.b),
+      source: "spatial",
+      risk_q: Math.floor(segmentAabbGapSquared(left, right) * riskScale),
+    });
+  }
+  rankedSpatial.sort(
+    (left, right) => left.risk_q - right.risk_q || left.a - right.a || left.b - right.b
+  );
+
+  const newCounts = new Map();
+  let droppedGlobal = 0;
+  let droppedPerSegment = 0;
+  let bestGlobalDropRisk = null;
+  let bestPerSegmentDropRisk = null;
+  let worstAdmittedSpatialRisk = null;
+  for (const pair of rankedSpatial) {
+    if (
+      (newCounts.get(pair.a) ?? 0) >= maxNewPairsPerSegment ||
+      (newCounts.get(pair.b) ?? 0) >= maxNewPairsPerSegment
+    ) {
+      droppedPerSegment += 1;
+      bestPerSegmentDropRisk = Math.min(bestPerSegmentDropRisk ?? pair.risk_q, pair.risk_q);
+      continue;
+    }
+    if (admitted.length >= maxPairs) {
+      droppedGlobal += 1;
+      bestGlobalDropRisk = Math.min(bestGlobalDropRisk ?? pair.risk_q, pair.risk_q);
+      continue;
+    }
+    admitted.push(pair);
+    newCounts.set(pair.a, (newCounts.get(pair.a) ?? 0) + 1);
+    newCounts.set(pair.b, (newCounts.get(pair.b) ?? 0) + 1);
+    worstAdmittedSpatialRisk = Math.max(worstAdmittedSpatialRisk ?? pair.risk_q, pair.risk_q);
+  }
+
+  const admittedPersistent = admitted.filter((pair) => pair.source === "persistent").length;
+  const admittedSpatial = admitted.length - admittedPersistent;
+  return {
+    admitted_pairs: admitted,
+    admitted_pair_digest: digestOrderedPairs(admitted),
+    discovered_pair_count: discoveredPairs.length,
+    persistent_pair_count: persistentKeys.length,
+    admitted_persistent_count: admittedPersistent,
+    admitted_spatial_count: admittedSpatial,
+    dropped_global_count: droppedGlobal,
+    dropped_per_segment_count: droppedPerSegment,
+    maximum_pairs: maxPairs,
+    maximum_new_pairs_per_segment: maxNewPairsPerSegment,
+    persistent_capacity_saturated: persistentOverflow,
+    capacity_saturated: admitted.length >= maxPairs,
+    all_persistent_retained: !persistentOverflow && admittedPersistent === persistentKeys.length,
+    worst_admitted_spatial_risk_q: worstAdmittedSpatialRisk,
+    best_global_drop_risk_q: bestGlobalDropRisk,
+    best_per_segment_drop_risk_q: bestPerSegmentDropRisk,
+    spatial_force_integration: false,
+  };
 }
