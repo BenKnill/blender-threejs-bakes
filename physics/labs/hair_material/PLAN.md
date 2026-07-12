@@ -95,6 +95,14 @@ strand rendering; do not add another many-hair operator first.
       geometry remains about 0.9 ms p99 before the cut. It fills the pre-cut
       silhouette, but the shortest-of-three cut rule removes 0.72% more draw
       primitives and leaves a rougher post-cut fringe, so it remains opt-in.
+- [x] Make the third parent a volume-only donor after the shortest-of-three rule
+      exposed that fringe regression. Owner plus primary now define display
+      length, while secondary influence fades to zero over two segments before
+      its own cut. The fixed step-330 gate recovers all 193 lost primitives
+      (26,884, equal to two-parent) with unchanged physics digest
+      `18079d1e106a2407` and binding digest `0be410f0`; the step-150 render buffer
+      remains byte-identical. A 600-frame live sample observes 0.60 ms geometry
+      p99 and 0.70 ms max.
 - [x] Cutting plus combing in one deterministic scenario. The 330-step styled
       root-field replay combines a two-pass comb, rotating wind, and diagonal
       cut; its repeated digest is `e63a053332f3b265` and it stays inside the

@@ -21,7 +21,7 @@ import {
   groomInterpolationReceipt,
   groomSecondaryWeightAt,
   interpolateGroomScalar,
-} from "./groom_interpolation.js?v=116";
+} from "./groom_interpolation.js?v=117";
 
 let renderFibersPerGuide = 9;
 let hairRenderMode = "lines";
@@ -544,22 +544,23 @@ function updateSectionInterpolatedFatlineGeometry() {
       solver.activeSegments,
       owner,
       neighbor,
-      neighborWeight,
-      secondaryNeighbor,
-      secondaryNeighborWeight
+      neighborWeight
     );
+    const secondaryActiveSegments = solver.activeSegments[secondaryNeighbor];
     const copy = binding % renderFibersPerGuide;
     const colorScale = fatlineColorScale(owner, copy);
     for (let segment = 0; segment < activeSegments; segment += 1) {
       const secondaryStartWeight = groomSecondaryWeightAt(
         segment,
         activeSegments,
-        secondaryNeighborWeight
+        secondaryNeighborWeight,
+        secondaryActiveSegments
       );
       const secondaryEndWeight = groomSecondaryWeightAt(
         segment + 1,
         activeSegments,
-        secondaryNeighborWeight
+        secondaryNeighborWeight,
+        secondaryActiveSegments
       );
       const ownerStart = solver.index(owner, segment);
       const neighborStart = solver.index(neighbor, segment);
