@@ -9,8 +9,23 @@ import {
   digestHairState,
   summarizeCombReceipt,
 } from "./replay.js?v=106";
+import {
+  fatlineColorScale,
+  fatlineHalfWidthAt,
+  float32BufferDigest,
+  summarizeGeometryTimings,
+} from "./rendering.js?v=107";
 
 let renderFibersPerGuide = 9;
+let hairRenderMode = "lines";
+let renderReceiptEnabled = false;
+const FATLINE_DYNAMIC_ATTRIBUTES = Object.freeze([
+  "instanceStart",
+  "instanceEnd",
+  "instanceColor",
+  "instanceWidthStart",
+  "instanceWidthEnd",
+]);
 
 const viewport = document.querySelector("#viewport");
 const status = document.querySelector("#status");
@@ -129,7 +144,11 @@ scene.add(windStreaks);
 
 let solver;
 let hair;
+let hairUndercoat;
 let hairPositions;
+let hairDrawCount = 0;
+let hairGeometryTimings = [];
+const fatlineBaseColor = new THREE.Color();
 let paused = false;
 let cutting = false;
 let cuttingPointer = false;
@@ -176,11 +195,108 @@ function hairColor() {
   return colors[solver.preset];
 }
 
+function createFatlineMaterial() {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+    },
+    vertexShader: `
+      uniform vec2 resolution;
+      attribute vec3 instanceStart;
+      attribute vec3 instanceEnd;
+      attribute vec3 instanceColor;
+      attribute float instanceWidthStart;
+      attribute float instanceWidthEnd;
+      varying vec3 vColor;
+
+      void main() {
+        float along = position.x;
+        float sideSign = position.y;
+        vec4 startClip = projectionMatrix * modelViewMatrix * vec4(instanceStart, 1.0);
+        vec4 endClip = projectionMatrix * modelViewMatrix * vec4(instanceEnd, 1.0);
+        vec2 startScreen = (startClip.xy / startClip.w) * resolution * 0.5;
+        vec2 endScreen = (endClip.xy / endClip.w) * resolution * 0.5;
+        vec2 delta = endScreen - startScreen;
+        vec2 direction = dot(delta, delta) < 0.0001 ? vec2(0.0, 1.0) : normalize(delta);
+        vec2 side = vec2(-direction.y, direction.x);
+        float width = mix(instanceWidthStart, instanceWidthEnd, along);
+        float capSign = along * 2.0 - 1.0;
+        vec2 offsetPixels = side * sideSign * width + direction * capSign * min(width, 1.0);
+        vec2 offsetNdc = offsetPixels * 2.0 / resolution;
+        vec4 clipPosition = mix(startClip, endClip, along);
+        clipPosition.xy += offsetNdc * clipPosition.w;
+        gl_Position = clipPosition;
+        vColor = instanceColor;
+      }
+    `,
+    fragmentShader: `
+      varying vec3 vColor;
+
+      void main() {
+        gl_FragColor = vec4(vColor, 1.0);
+      }
+    `,
+    depthTest: true,
+    depthWrite: true,
+  });
+}
+
+function rebuildFatlineObject() {
+  const instanceCapacity = solver.guideCount * solver.segments * renderFibersPerGuide;
+  const geometry = new THREE.InstancedBufferGeometry();
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute([0, -1, 0, 0, 1, 0, 1, -1, 0, 1, 1, 0], 3)
+  );
+  geometry.setIndex([0, 2, 1, 2, 3, 1]);
+  const attributes = {
+    instanceStart: new THREE.InstancedBufferAttribute(new Float32Array(instanceCapacity * 3), 3),
+    instanceEnd: new THREE.InstancedBufferAttribute(new Float32Array(instanceCapacity * 3), 3),
+    instanceColor: new THREE.InstancedBufferAttribute(new Float32Array(instanceCapacity * 3), 3),
+    instanceWidthStart: new THREE.InstancedBufferAttribute(new Float32Array(instanceCapacity), 1),
+    instanceWidthEnd: new THREE.InstancedBufferAttribute(new Float32Array(instanceCapacity), 1),
+  };
+  for (const [name, attribute] of Object.entries(attributes)) {
+    attribute.setUsage(THREE.DynamicDrawUsage);
+    geometry.setAttribute(name, attribute);
+  }
+  geometry.instanceCount = 0;
+  hairPositions = attributes.instanceStart.array;
+  fatlineBaseColor.setHex(hairColor());
+  hair = new THREE.Mesh(geometry, createFatlineMaterial());
+  hair.frustumCulled = false;
+  scene.add(hair);
+  const undercoatGeometry = new THREE.SphereGeometry(1, 48, 20, 0, Math.PI * 2, 0, 1.18);
+  const undercoatMaterial = new THREE.MeshStandardMaterial({
+    color: hairColor(),
+    roughness: 0.88,
+    metalness: 0,
+  });
+  hairUndercoat = new THREE.Mesh(undercoatGeometry, undercoatMaterial);
+  hairUndercoat.scale.set(0.915, 1.138, 0.835);
+  hairUndercoat.position.set(0, 1.35, 0);
+  hairUndercoat.renderOrder = -1;
+  scene.add(hairUndercoat);
+}
+
 function rebuildHairObject() {
   if (hair) {
     scene.remove(hair);
     hair.geometry.dispose();
     hair.material.dispose();
+  }
+  if (hairUndercoat) {
+    scene.remove(hairUndercoat);
+    hairUndercoat.geometry.dispose();
+    hairUndercoat.material.dispose();
+    hairUndercoat = null;
+  }
+  hairGeometryTimings = [];
+  hairDrawCount = 0;
+  if (hairRenderMode === "fatline") {
+    rebuildFatlineObject();
+    updateHairGeometry();
+    return;
   }
   const vertexCapacity = solver.guideCount * solver.segments * renderFibersPerGuide * 2;
   hairPositions = new Float32Array(vertexCapacity * 3);
@@ -302,6 +418,13 @@ function applyMaterialControls() {
 }
 
 function updateHairGeometry() {
+  const geometryStart = performance.now();
+  if (hairRenderMode === "fatline") {
+    updateFatlineGeometry();
+    hairGeometryTimings.push(performance.now() - geometryStart);
+    if (hairGeometryTimings.length > 660) hairGeometryTimings.shift();
+    return;
+  }
   let cursor = 0;
   for (let strand = 0; strand < solver.guideCount; strand += 1) {
     for (let copy = 0; copy < renderFibersPerGuide; copy += 1) {
@@ -324,6 +447,50 @@ function updateHairGeometry() {
   hair.geometry.setDrawRange(0, cursor / 3);
   hair.geometry.attributes.position.needsUpdate = true;
   hair.geometry.computeBoundingSphere();
+  hairDrawCount = cursor / 6;
+}
+
+function updateFatlineGeometry() {
+  const { geometry } = hair;
+  const starts = geometry.attributes.instanceStart.array;
+  const ends = geometry.attributes.instanceEnd.array;
+  const colors = geometry.attributes.instanceColor.array;
+  const widthsStart = geometry.attributes.instanceWidthStart.array;
+  const widthsEnd = geometry.attributes.instanceWidthEnd.array;
+  let instance = 0;
+  for (let strand = 0; strand < solver.guideCount; strand += 1) {
+    const activeSegments = solver.activeSegments[strand];
+    for (let copy = 0; copy < renderFibersPerGuide; copy += 1) {
+      const phase =
+        strand * 1.618 + ((copy - 1) * Math.PI * 2) / Math.max(1, renderFibersPerGuide - 1);
+      const offset = copy === 0 ? 0 : 0.009 + (strand % 3) * 0.0018;
+      const offsetX = Math.cos(phase) * offset;
+      const offsetZ = Math.sin(phase) * offset;
+      const colorScale = fatlineColorScale(strand, copy);
+      for (let segment = 0; segment < activeSegments; segment += 1) {
+        const start = solver.index(strand, segment);
+        const end = solver.index(strand, segment + 1);
+        const cursor = instance * 3;
+        starts[cursor] = solver.positions[start] + offsetX;
+        starts[cursor + 1] = solver.positions[start + 1];
+        starts[cursor + 2] = solver.positions[start + 2] + offsetZ;
+        ends[cursor] = solver.positions[end] + offsetX;
+        ends[cursor + 1] = solver.positions[end + 1];
+        ends[cursor + 2] = solver.positions[end + 2] + offsetZ;
+        colors[cursor] = Math.min(1, fatlineBaseColor.r * colorScale);
+        colors[cursor + 1] = Math.min(1, fatlineBaseColor.g * colorScale);
+        colors[cursor + 2] = Math.min(1, fatlineBaseColor.b * colorScale);
+        widthsStart[instance] = fatlineHalfWidthAt(segment, activeSegments);
+        widthsEnd[instance] = fatlineHalfWidthAt(segment + 1, activeSegments);
+        instance += 1;
+      }
+    }
+  }
+  geometry.instanceCount = instance;
+  for (const name of FATLINE_DYNAMIC_ATTRIBUTES) {
+    geometry.attributes[name].needsUpdate = true;
+  }
+  hairDrawCount = instance;
 }
 
 function cutAtPointer(event) {
@@ -437,6 +604,15 @@ function updateTelemetry(now) {
   document.querySelector("#metric-pressure").textContent =
     receipt.crowd_pressure_corrections_last_iteration.toLocaleString();
   document.querySelector("#metric-solver").textContent = `${smoothedSolverMs.toFixed(2)} ms`;
+  const geometryTiming = summarizeGeometryTimings(hairGeometryTimings);
+  document.querySelector("#metric-render-mode").textContent = hairRenderMode;
+  document.querySelector("#metric-geometry").textContent =
+    geometryTiming.p99_ms === null
+      ? "warming"
+      : `${geometryTiming.p99_ms.toFixed(2)} / ${geometryTiming.max_ms.toFixed(2)} ms`;
+  if (renderReceiptEnabled) {
+    document.documentElement.dataset.hairRenderReceipt = JSON.stringify(createRenderReceipt());
+  }
   document.querySelector("#metric-fps").textContent = smoothedFps.toFixed(0);
   document.querySelector("#metric-stretch").textContent = `${(
     receipt.max_relative_stretch_error * 100
@@ -576,6 +752,9 @@ function resize() {
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
   renderer.setSize(width, height);
+  if (hairRenderMode === "fatline" && hair) {
+    hair.material.uniforms.resolution.value.set(width, height);
+  }
 }
 
 function applyQueryConfiguration() {
@@ -612,6 +791,8 @@ function applyQueryConfiguration() {
   if (params.has("fibers")) {
     renderFibersPerGuide = Math.max(1, Math.min(21, Number(params.get("fibers")) || 9));
   }
+  hairRenderMode = params.get("hairRender") === "fatline" ? "fatline" : "lines";
+  renderReceiptEnabled = params.get("renderReceipt") === "1";
   if (params.get("film") === "1") {
     filmDirection.enabled = true;
     filmDirection.baseWind = Number(params.get("wind") ?? 0.18);
@@ -760,4 +941,22 @@ window.hairMaterialReplay = {
   receipt() {
     return solver.receipt();
   },
+  renderReceipt() {
+    return createRenderReceipt();
+  },
 };
+
+function createRenderReceipt() {
+  return {
+    schema: "hair-render/1",
+    hair_render_mode: hairRenderMode,
+    guide_count: solver.guideCount,
+    fiber_copies: renderFibersPerGuide,
+    segments_per_guide: solver.segments,
+    active_draw_primitives: hairDrawCount,
+    geometry_update: summarizeGeometryTimings(hairGeometryTimings),
+    renderer_draw_calls: renderer.info.render.calls,
+    position_buffer_fnv1a32: float32BufferDigest(hairPositions),
+    physics_state_digest: digestHairState(solver),
+  };
+}

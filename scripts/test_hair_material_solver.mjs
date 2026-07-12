@@ -18,6 +18,12 @@ import { barycentricEndpointWeights } from "../physics/labs/hair_material/demo/f
 import { runHairRodReference } from "../physics/labs/hair_material/demo/rod_reference.js";
 import { spatialFrictionPerformanceReceipt } from "../physics/labs/hair_material/demo/spatial_friction.js";
 import {
+  fatlineColorScale,
+  fatlineHalfWidthAt,
+  float32BufferDigest,
+  summarizeGeometryTimings,
+} from "../physics/labs/hair_material/demo/rendering.js";
+import {
   digestContactTrace,
   snapshotRankedContacts,
   summarizeContactTransition,
@@ -45,6 +51,27 @@ import {
 
 function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} != ${expected}`);
+}
+
+{
+  assert.ok(fatlineHalfWidthAt(0, 12) > fatlineHalfWidthAt(6, 12));
+  assert.ok(fatlineHalfWidthAt(6, 12) > fatlineHalfWidthAt(12, 12));
+  nearlyEqual(fatlineHalfWidthAt(12, 12), fatlineHalfWidthAt(24, 12));
+  assert.equal(fatlineColorScale(8, 3), fatlineColorScale(8, 3));
+  assert.notEqual(fatlineColorScale(8, 3), fatlineColorScale(8, 4));
+  assert.equal(float32BufferDigest(new Float32Array([1, 2, 3])), "e971f89a");
+  assert.deepEqual(summarizeGeometryTimings([10, 20], 2), {
+    measured_frames: 0,
+    max_ms: null,
+    p99_ms: null,
+    mean_ms: null,
+  });
+  assert.deepEqual(summarizeGeometryTimings([100, 1, 4, 2, 3], 1), {
+    measured_frames: 4,
+    max_ms: 4,
+    p99_ms: 4,
+    mean_ms: 2.5,
+  });
 }
 
 {
