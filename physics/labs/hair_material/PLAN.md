@@ -79,7 +79,14 @@ strand rendering; do not add another many-hair operator first.
       geometry update is 0.46 ms mean / 0.80 ms p99 and max in the narrow browser
       lane. The 15-fiber showcase remains an appearance experiment, not a new
       mechanics claim.
-- [ ] Replace fixed radial fiber offsets with section-aware groom interpolation.
+- [x] Replace fixed radial fiber offsets with an opt-in rest-baked, section-local
+      two-parent groom interpolation. Bindings are immutable during a run,
+      receipt-digested, and use the shorter parent after cuts; three-parent
+      volume filling remains a visual follow-up if pairwise sheets dominate.
+      In the 560x720 browser gate at 256 guides x 15 fibers, the fixed-step
+      physics digest matches the radial baseline, binding digest `74bfb34c`
+      remains stable, and geometry update is 0.60 ms mean / 1.20 ms p99 /
+      1.90 ms max over 538 measured frames.
 - [ ] Cutting plus combing in one deterministic scenario.
 - [ ] Better scalp/strand contact and a clearer calibration path.
 - [ ] Video variants only after the underlying receipt distinguishes them.

@@ -24,6 +24,13 @@ import {
   summarizeGeometryTimings,
 } from "../physics/labs/hair_material/demo/rendering.js";
 import {
+  buildGroomInterpolationBindings,
+  groomBindingActiveSegments,
+  groomInterpolationReceipt,
+  groomSectionId,
+  interpolateGroomScalar,
+} from "../physics/labs/hair_material/demo/groom_interpolation.js";
+import {
   digestContactTrace,
   snapshotRankedContacts,
   summarizeContactTransition,
@@ -71,6 +78,58 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     max_ms: 4,
     p99_ms: 4,
     mean_ms: 2.5,
+  });
+}
+
+{
+  const roots = new Float64Array([
+    1, 1, 0,
+    0.8, 1.1, 0.2,
+    0.5, 1.2, 0.5,
+    -0.5, 1.2, 0.5,
+    -0.8, 1.1, 0.2,
+    -1, 1, 0,
+    -0.5, 0.9, -0.5,
+    0.5, 0.9, -0.5,
+  ]);
+  const bindings = buildGroomInterpolationBindings(roots, 8, 5);
+  const repeated = buildGroomInterpolationBindings(roots, 8, 5);
+  assert.equal(bindings.bindingCount, 40);
+  assert.equal(bindings.bindingDigest, repeated.bindingDigest);
+  assert.notEqual(
+    bindings.bindingDigest,
+    buildGroomInterpolationBindings(roots, 8, 4).bindingDigest
+  );
+  for (let guide = 0; guide < 8; guide += 1) {
+    assert.ok(groomSectionId(roots[guide * 3], roots[guide * 3 + 2]) < 8);
+    const pureOwner = guide * 5;
+    assert.equal(bindings.owners[pureOwner], guide);
+    assert.equal(bindings.neighbors[pureOwner], guide);
+    assert.equal(bindings.neighborWeights[pureOwner], 0);
+  }
+  for (let binding = 0; binding < bindings.bindingCount; binding += 1) {
+    assert.ok(bindings.neighborWeights[binding] >= 0);
+    assert.ok(bindings.neighborWeights[binding] <= 1);
+    const leftSection = bindings.sections[bindings.owners[binding]];
+    const rightSection = bindings.sections[bindings.neighbors[binding]];
+    const direct = Math.abs(leftSection - rightSection);
+    assert.ok(Math.min(direct, 8 - direct) <= 1);
+  }
+  nearlyEqual(interpolateGroomScalar(2, 10, 0), 2);
+  nearlyEqual(interpolateGroomScalar(2, 10, 0.25), 4);
+  const activeSegments = new Uint16Array([12, 5]);
+  assert.equal(groomBindingActiveSegments(activeSegments, 0, 1, 0), 12);
+  assert.equal(groomBindingActiveSegments(activeSegments, 0, 1, 0.25), 5);
+  assert.deepEqual(groomInterpolationReceipt(bindings, 1), {
+    mode: "section_interp_2parent",
+    section_count: 8,
+    section_search_radius: 1,
+    parent_count: 2,
+    nearest_neighbors_per_guide: 3,
+    binding_count: 40,
+    binding_digest: bindings.bindingDigest,
+    binding_build_count: 1,
+    cut_length_rule: "pure_owner_else_min_parents",
   });
 }
 

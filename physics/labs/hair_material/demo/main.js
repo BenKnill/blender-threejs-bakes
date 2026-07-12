@@ -15,9 +15,18 @@ import {
   float32BufferDigest,
   summarizeGeometryTimings,
 } from "./rendering.js?v=107";
+import {
+  buildGroomInterpolationBindings,
+  groomBindingActiveSegments,
+  groomInterpolationReceipt,
+  interpolateGroomScalar,
+} from "./groom_interpolation.js?v=108";
 
 let renderFibersPerGuide = 9;
 let hairRenderMode = "lines";
+let groomMode = "radial_xz";
+let groomBindings = null;
+let groomBindingBuildCount = 0;
 let renderReceiptEnabled = false;
 const FATLINE_DYNAMIC_ATTRIBUTES = Object.freeze([
   "instanceStart",
@@ -326,6 +335,11 @@ function rebuildSolver() {
     collectiveRulesEnabled: deterministicReplay.collectiveRulesEnabled,
     spatialFrictionEnabled: deterministicReplay.spatialFrictionEnabled,
   });
+  groomBindings =
+    groomMode === "section_interp"
+      ? buildGroomInterpolationBindings(solver.roots, solver.guideCount, renderFibersPerGuide)
+      : null;
+  if (groomBindings) groomBindingBuildCount += 1;
   filmDirection.startTime = null;
   filmDirection.cutDone = false;
   filmDirection.cutStrands.clear();
@@ -451,6 +465,10 @@ function updateHairGeometry() {
 }
 
 function updateFatlineGeometry() {
+  if (groomBindings) {
+    updateSectionInterpolatedFatlineGeometry();
+    return;
+  }
   const { geometry } = hair;
   const starts = geometry.attributes.instanceStart.array;
   const ends = geometry.attributes.instanceEnd.array;
@@ -484,6 +502,62 @@ function updateFatlineGeometry() {
         widthsEnd[instance] = fatlineHalfWidthAt(segment + 1, activeSegments);
         instance += 1;
       }
+    }
+  }
+  geometry.instanceCount = instance;
+  for (const name of FATLINE_DYNAMIC_ATTRIBUTES) {
+    geometry.attributes[name].needsUpdate = true;
+  }
+  hairDrawCount = instance;
+}
+
+function updateSectionInterpolatedFatlineGeometry() {
+  const { geometry } = hair;
+  const starts = geometry.attributes.instanceStart.array;
+  const ends = geometry.attributes.instanceEnd.array;
+  const colors = geometry.attributes.instanceColor.array;
+  const widthsStart = geometry.attributes.instanceWidthStart.array;
+  const widthsEnd = geometry.attributes.instanceWidthEnd.array;
+  const owners = groomBindings.owners;
+  const neighbors = groomBindings.neighbors;
+  const weights = groomBindings.neighborWeights;
+  let instance = 0;
+  for (let binding = 0; binding < groomBindings.bindingCount; binding += 1) {
+    const owner = owners[binding];
+    const neighbor = neighbors[binding];
+    const neighborWeight = weights[binding];
+    const activeSegments = groomBindingActiveSegments(
+      solver.activeSegments,
+      owner,
+      neighbor,
+      neighborWeight
+    );
+    const copy = binding % renderFibersPerGuide;
+    const colorScale = fatlineColorScale(owner, copy);
+    for (let segment = 0; segment < activeSegments; segment += 1) {
+      const ownerStart = solver.index(owner, segment);
+      const neighborStart = solver.index(neighbor, segment);
+      const ownerEnd = solver.index(owner, segment + 1);
+      const neighborEnd = solver.index(neighbor, segment + 1);
+      const cursor = instance * 3;
+      for (let axis = 0; axis < 3; axis += 1) {
+        starts[cursor + axis] = interpolateGroomScalar(
+          solver.positions[ownerStart + axis],
+          solver.positions[neighborStart + axis],
+          neighborWeight
+        );
+        ends[cursor + axis] = interpolateGroomScalar(
+          solver.positions[ownerEnd + axis],
+          solver.positions[neighborEnd + axis],
+          neighborWeight
+        );
+      }
+      colors[cursor] = Math.min(1, fatlineBaseColor.r * colorScale);
+      colors[cursor + 1] = Math.min(1, fatlineBaseColor.g * colorScale);
+      colors[cursor + 2] = Math.min(1, fatlineBaseColor.b * colorScale);
+      widthsStart[instance] = fatlineHalfWidthAt(segment, activeSegments);
+      widthsEnd[instance] = fatlineHalfWidthAt(segment + 1, activeSegments);
+      instance += 1;
     }
   }
   geometry.instanceCount = instance;
@@ -606,6 +680,7 @@ function updateTelemetry(now) {
   document.querySelector("#metric-solver").textContent = `${smoothedSolverMs.toFixed(2)} ms`;
   const geometryTiming = summarizeGeometryTimings(hairGeometryTimings);
   document.querySelector("#metric-render-mode").textContent = hairRenderMode;
+  document.querySelector("#metric-groom-mode").textContent = groomMode;
   document.querySelector("#metric-geometry").textContent =
     geometryTiming.p99_ms === null
       ? "warming"
@@ -792,6 +867,10 @@ function applyQueryConfiguration() {
     renderFibersPerGuide = Math.max(1, Math.min(21, Number(params.get("fibers")) || 9));
   }
   hairRenderMode = params.get("hairRender") === "fatline" ? "fatline" : "lines";
+  groomMode =
+    hairRenderMode === "fatline" && params.get("groomSections") === "1"
+      ? "section_interp"
+      : "radial_xz";
   renderReceiptEnabled = params.get("renderReceipt") === "1";
   if (params.get("film") === "1") {
     filmDirection.enabled = true;
@@ -950,6 +1029,8 @@ function createRenderReceipt() {
   return {
     schema: "hair-render/1",
     hair_render_mode: hairRenderMode,
+    groom_mode: groomMode,
+    groom_interpolation: groomInterpolationReceipt(groomBindings, groomBindingBuildCount),
     guide_count: solver.guideCount,
     fiber_copies: renderFibersPerGuide,
     segments_per_guide: solver.segments,
