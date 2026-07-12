@@ -27,6 +27,7 @@ import {
   buildGroomInterpolationBindings,
   groomBindingActiveSegments,
   groomInterpolationReceipt,
+  groomSecondaryWeightAt,
   groomSectionId,
   interpolateGroomScalar,
 } from "../physics/labs/hair_material/demo/groom_interpolation.js";
@@ -168,7 +169,67 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     binding_digest: bindings.bindingDigest,
     binding_build_count: 1,
     cut_length_rule: "pure_owner_else_min_parents",
+    secondary_weight_envelope: "none",
   });
+
+  const volumeBindings = buildGroomInterpolationBindings(roots, 8, 5, { parentCount: 3 });
+  const repeatedVolumeBindings = buildGroomInterpolationBindings(roots, 8, 5, {
+    parentCount: 3,
+  });
+  assert.equal(volumeBindings.bindingDigest, repeatedVolumeBindings.bindingDigest);
+  assert.notEqual(volumeBindings.bindingDigest, bindings.bindingDigest);
+  for (let binding = 0; binding < volumeBindings.bindingCount; binding += 1) {
+    const primaryWeight = volumeBindings.neighborWeights[binding];
+    const secondaryWeight = volumeBindings.secondaryNeighborWeights[binding];
+    assert.ok(primaryWeight >= 0);
+    assert.ok(secondaryWeight >= 0);
+    assert.ok(primaryWeight + secondaryWeight <= 0.36 + 1e-6);
+    if (secondaryWeight > 0) {
+      assert.notEqual(
+        volumeBindings.neighbors[binding],
+        volumeBindings.secondaryNeighbors[binding]
+      );
+    }
+    const ownerSection = volumeBindings.sections[volumeBindings.owners[binding]];
+    const secondarySection =
+      volumeBindings.sections[volumeBindings.secondaryNeighbors[binding]];
+    const direct = Math.abs(ownerSection - secondarySection);
+    assert.ok(Math.min(direct, 8 - direct) <= 1);
+  }
+  nearlyEqual(interpolateGroomScalar(2, 10, 0.25, 18, 0.25), 8);
+  nearlyEqual(groomSecondaryWeightAt(0, 12, 0.2), 0);
+  nearlyEqual(groomSecondaryWeightAt(5, 12, 0.2), 0);
+  assert.ok(groomSecondaryWeightAt(8, 12, 0.2) > 0);
+  nearlyEqual(groomSecondaryWeightAt(12, 12, 0.2), 0.2);
+  const volumeActiveSegments = new Uint16Array([12, 5, 3]);
+  assert.equal(groomBindingActiveSegments(volumeActiveSegments, 0, 1, 0.2, 2, 0.2), 3);
+  assert.deepEqual(groomInterpolationReceipt(volumeBindings, 1), {
+    mode: "section_interp_3parent",
+    section_count: 8,
+    section_search_radius: 1,
+    parent_count: 3,
+    nearest_neighbors_per_guide: 3,
+    binding_count: 40,
+    binding_digest: volumeBindings.bindingDigest,
+    binding_build_count: 1,
+    cut_length_rule: "pure_owner_else_min_weighted_parents",
+    secondary_weight_envelope: "smoothstep_45pct_to_90pct",
+  });
+
+  const productionGroomSolver = new HairSolver({ guideCount: 256, segments: 12 });
+  const productionTwoParent = buildGroomInterpolationBindings(
+    productionGroomSolver.roots,
+    productionGroomSolver.guideCount,
+    15
+  );
+  const productionThreeParent = buildGroomInterpolationBindings(
+    productionGroomSolver.roots,
+    productionGroomSolver.guideCount,
+    15,
+    { parentCount: 3 }
+  );
+  assert.equal(productionTwoParent.bindingDigest, "74bfb34c");
+  assert.equal(productionThreeParent.bindingDigest, "0be410f0");
 }
 
 {

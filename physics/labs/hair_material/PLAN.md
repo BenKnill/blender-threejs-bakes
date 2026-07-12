@@ -81,12 +81,20 @@ strand rendering; do not add another many-hair operator first.
       mechanics claim.
 - [x] Replace fixed radial fiber offsets with an opt-in rest-baked, section-local
       two-parent groom interpolation. Bindings are immutable during a run,
-      receipt-digested, and use the shorter parent after cuts; three-parent
-      volume filling remains a visual follow-up if pairwise sheets dominate.
+      receipt-digested, and use the shorter parent after cuts.
       In the 560x720 browser gate at 256 guides x 15 fibers, the fixed-step
       physics digest matches the radial baseline, binding digest `74bfb34c`
       remains stable, and geometry update is 0.60 ms mean / 1.20 ms p99 /
       1.90 ms max over 538 measured frames.
+- [x] Add opt-in convex three-parent volume filling after the two-parent sheets
+      remained visible in the styled showcase. The second neighbor fades in
+      only from 45% to 90% of strand length so roots keep the authored part.
+      At fixed steps 150 and 330, two- and three-parent modes have identical
+      physics digests (`3c45d9ec1cd8d04b` and `18079d1e106a2407`) and distinct
+      render-buffer digests. The three-parent binding digest is `0be410f0` and
+      geometry remains about 0.9 ms p99 before the cut. It fills the pre-cut
+      silhouette, but the shortest-of-three cut rule removes 0.72% more draw
+      primitives and leaves a rougher post-cut fringe, so it remains opt-in.
 - [x] Cutting plus combing in one deterministic scenario. The 330-step styled
       root-field replay combines a two-pass comb, rotating wind, and diagonal
       cut; its repeated digest is `e63a053332f3b265` and it stays inside the
