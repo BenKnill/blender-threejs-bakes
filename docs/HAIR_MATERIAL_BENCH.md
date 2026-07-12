@@ -114,6 +114,29 @@ The held / released / post-cut render-buffer digests are `5f0a9ab9`, `0e2a4e2e`,
 and `faec1a23`. A live active-phase observation reported 14.95 ms smoothed solver
 cost and 2.4 / 3.2 ms geometry p99 / max, so the choreography remains opt-in.
 
+## Artist-directed section pose
+
+The first Tonic-like control primitive selects one of the same eight scalp
+sections used by dense groom interpolation, then poses a three-point mid-shaft
+tube with lift plus signed scalp-tangential sweep. The remaining strand shape
+continues through the material solve, and dense two- or three-parent fibers
+inherit the guide motion. This is a sparse-control capability milestone, not a
+production grooming or Disney parity claim.
+
+Use the **Section pose**, **Pose lift**, and **Pose sweep** controls for a static
+pose. The hands-off replay uses `poseCycle=1`; `poseSection`, `poseLift`, and
+`poseSweep` default to section 6, 0.32 m, and -0.34 m. `just
+hair-section-pose-showcase` prints the dense autonomous recipe and `just
+hair-section-pose-ab` runs the fixed 256-guide acceptance gate.
+
+The pose applies 0.12 total step stiffness across three weighted control points
+at 36%, 50%, and 64% strand length, distributed over solver iterations. At six
+iterations the per-iteration blend is 0.02108. The 420-step replay selects 30
+guides, repeats at digest `0a6325fc2d861d5c`, completes all 256 cuts, and peaks
+at 3.4999% stretch. The unchanged disabled baseline remains
+`6a0294d4bf085310`. Receipts expose field identity, phase, section, guide counts,
+targets, stiffness, corrections, and summed correction-distance proxy.
+
 ## Anisotropic-fluid rules
 
 The solver now treats the groom as a directed porous fluid through four compact

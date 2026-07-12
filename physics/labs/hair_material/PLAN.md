@@ -57,6 +57,14 @@ proof boundaries must remain explicit.
       repeats at digest `4c7b4af505e0e011`, completes all 256 cuts, and peaks at
       3.499% stretch. Active-phase browser cost is still higher, so this remains
       an opt-in showcase rather than a default material operator.
+- [x] Add the first artist-directed section pose: one deterministic eighth-scalp
+      group drives a weighted three-point mid-shaft tube with lift plus signed
+      tangential sweep, while the rest of the guides and dense three-parent
+      fibers remain simulation-driven. The 256-guide comb/cut replay selects 30
+      guides, repeats at digest `0a6325fc2d861d5c`, completes all 256 cuts, and
+      peaks at 3.4999% stretch; the disabled baseline stays
+      `6a0294d4bf085310`. This is a Tonic-like control primitive, not production
+      groom or Disney parity.
 - [x] Build a small explicit-guide rod/reference fixture before raising guide
       count or enabling spatial friction in the browser by default. The
       settled axial/transverse lanes reproduce exactly, remain under 1.9%

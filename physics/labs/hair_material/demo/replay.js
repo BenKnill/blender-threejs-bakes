@@ -1,4 +1,4 @@
-import { HairSolver } from "./solver.js?v=113";
+import { HairSolver } from "./solver.js?v=114";
 
 export const COMB_MATERIAL_CONDITIONS = Object.freeze({
   dry: Object.freeze({ label: "Dry", moisture: 0.05, product: 0 }),
@@ -169,6 +169,43 @@ function applySectionLiftCycle(solver, config, state) {
   solver.setSectionLift(envelope.value, envelope.phase);
 }
 
+export function sectionPoseEnvelopeAtStep(step, cycle) {
+  const startStep = cycle.startStep ?? 30;
+  const peakStep = cycle.peakStep ?? 90;
+  const holdEndStep = cycle.holdEndStep ?? 170;
+  const endStep = cycle.endStep ?? 255;
+  if (!(startStep < peakStep && peakStep <= holdEndStep && holdEndStep < endStep)) {
+    throw new Error("section pose cycle steps must satisfy start < peak <= hold < end");
+  }
+  if (step < startStep) return { phase: "idle", weight: 0 };
+  if (step < peakStep) {
+    return {
+      phase: "pose",
+      weight: smoothStep01((step - startStep) / (peakStep - startStep)),
+    };
+  }
+  if (step < holdEndStep) return { phase: "hold", weight: 1 };
+  if (step < endStep) {
+    return {
+      phase: "release",
+      weight: 1 - smoothStep01((step - holdEndStep) / (endStep - holdEndStep)),
+    };
+  }
+  return { phase: "released", weight: 0 };
+}
+
+function applySectionPoseCycle(solver, config, state) {
+  if (!config.sectionPoseCycle) return;
+  const cycle = config.sectionPoseCycle;
+  const envelope = sectionPoseEnvelopeAtStep(state.step, cycle);
+  solver.setSectionPose({
+    section: cycle.section ?? 6,
+    lift: Math.max(0, cycle.lift ?? 0.32) * envelope.weight,
+    sweep: (cycle.sweep ?? -0.34) * envelope.weight,
+    phase: envelope.phase,
+  });
+}
+
 export function advanceHairReplay(solver, config, state, targetStep) {
   if (!Number.isInteger(targetStep) || targetStep < state.step) {
     throw new Error("replay target step must be an integer at or after the current step");
@@ -183,6 +220,7 @@ export function advanceHairReplay(solver, config, state, targetStep) {
     }
     if (config.cut === "diagonal") applyDiagonalCut(solver, config, elapsed, state);
     applySectionLiftCycle(solver, config, state);
+    applySectionPoseCycle(solver, config, state);
     applyCombPass(solver, config, state);
     solver.step(dt);
     state.step += 1;

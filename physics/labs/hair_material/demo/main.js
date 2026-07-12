@@ -1,14 +1,14 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-import { HairSolver } from "./solver.js?v=113";
+import { HairSolver } from "./solver.js?v=114";
 import {
   advanceHairReplay,
   COMB_MATERIAL_CONDITIONS,
   createReplayState,
   digestHairState,
   summarizeCombReceipt,
-} from "./replay.js?v=111";
+} from "./replay.js?v=112";
 import {
   fatlineColorScale,
   fatlineHalfWidthAt,
@@ -438,6 +438,11 @@ function applyMaterialControls() {
   solver.setMoisture(Number(document.querySelector("#moisture").value));
   solver.setProduct(Number(document.querySelector("#product").value));
   solver.setSectionLift(Number(document.querySelector("#lift").value));
+  solver.setSectionPose({
+    section: Number(document.querySelector("#pose-section").value),
+    lift: Number(document.querySelector("#pose-lift").value),
+    sweep: Number(document.querySelector("#pose-sweep").value),
+  });
   solver.wind = Number(document.querySelector("#wind").value);
 }
 
@@ -725,6 +730,10 @@ function updateTelemetry(now) {
     `${receipt.root_director.minimum_target_outward_dot.toFixed(3)} / ${receipt.root_director.mean_target_tangential_magnitude.toFixed(3)}`;
   document.querySelector("#metric-section-lift").textContent =
     `${receipt.section_lift.phase} · ${receipt.section_lift.target_meters.toFixed(2)} m`;
+  document.querySelector("#metric-section-pose").textContent =
+    receipt.section_pose.selected_section === null
+      ? "off"
+      : `${receipt.section_pose.phase} · s${receipt.section_pose.selected_section} · ${receipt.section_pose.affected_guides} guides · ${receipt.section_pose.lift_meters.toFixed(2)} / ${receipt.section_pose.tangential_sweep_meters.toFixed(2)} m`;
   document.querySelector("#metric-geometry").textContent =
     geometryTiming.p99_ms === null
       ? "warming"
@@ -886,6 +895,9 @@ function applyQueryConfiguration() {
     wetness: "moisture",
     product: "product",
     lift: "lift",
+    poseSection: "pose-section",
+    poseLift: "pose-lift",
+    poseSweep: "pose-sweep",
     wind: "wind",
   };
   const preset = params.get("preset");
@@ -972,6 +984,18 @@ function applyQueryConfiguration() {
               height: Math.max(0, Math.min(1.4, Number(params.get("liftPeak") ?? 0.24))),
             }
           : undefined,
+      sectionPoseCycle:
+        params.get("poseCycle") === "1"
+          ? {
+              startStep: 30,
+              peakStep: 90,
+              holdEndStep: 170,
+              endStep: 255,
+              section: Math.max(0, Math.min(7, Number(params.get("poseSection") ?? 6))),
+              lift: Math.max(0, Math.min(1.4, Number(params.get("poseLift") ?? 0.32))),
+              sweep: Math.max(-1.4, Math.min(1.4, Number(params.get("poseSweep") ?? -0.34))),
+            }
+          : undefined,
       comb:
         params.get("comb") === "1"
           ? {
@@ -998,6 +1022,8 @@ for (const [id, output, format] of [
   ["moisture", "moisture-output", (value) => `${Math.round(value * 100)}%`],
   ["product", "product-output", (value) => `${Math.round(value * 100)}%`],
   ["lift", "lift-output", (value) => `${Number(value).toFixed(2)} m`],
+  ["pose-lift", "pose-lift-output", (value) => `${Number(value).toFixed(2)} m`],
+  ["pose-sweep", "pose-sweep-output", (value) => `${Number(value).toFixed(2)} m`],
   ["wind", "wind-output", (value) => Number(value).toFixed(2)],
 ]) {
   const input = document.querySelector(`#${id}`);
@@ -1007,12 +1033,15 @@ for (const [id, output, format] of [
     outputElement.textContent = formattedValue;
     const controlLabel = input.closest("label")?.querySelector("span")?.textContent ?? id;
     outputElement.setAttribute("aria-label", `${controlLabel} ${formattedValue}`);
-    if (["moisture", "product", "lift", "wind"].includes(id)) applyMaterialControls();
+    if (["moisture", "product", "lift", "pose-lift", "pose-sweep", "wind"].includes(id)) {
+      applyMaterialControls();
+    }
   });
   if (["guides", "iterations"].includes(id)) input.addEventListener("change", rebuildSolver);
 }
 
 document.querySelector("#preset").addEventListener("change", rebuildSolver);
+document.querySelector("#pose-section").addEventListener("input", applyMaterialControls);
 document.querySelector("#root-field").addEventListener("change", (event) => {
   rootDirectorMode = event.currentTarget.value;
   rebuildSolver();
@@ -1113,6 +1142,7 @@ function createRenderReceipt() {
     groom_interpolation: groomInterpolationReceipt(groomBindings, groomBindingBuildCount),
     root_director: solver.receipt().root_director,
     section_lift: solver.receipt().section_lift,
+    section_pose: solver.receipt().section_pose,
     guide_count: solver.guideCount,
     fiber_copies: renderFibersPerGuide,
     segments_per_guide: solver.segments,

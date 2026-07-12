@@ -85,6 +85,31 @@
       </label>
 
       <label>
+        Section pose
+        <select id="pose-section">
+          <option value="-1" selected>Off</option>
+          <option value="0">Section 0 · −X / −Z</option>
+          <option value="1">Section 1 · −X / back</option>
+          <option value="2">Section 2 · +X / back</option>
+          <option value="3">Section 3 · +X / −Z</option>
+          <option value="4">Section 4 · +X / +Z</option>
+          <option value="5">Section 5 · +X / front</option>
+          <option value="6">Section 6 · −X / front</option>
+          <option value="7">Section 7 · −X / +Z</option>
+        </select>
+      </label>
+
+      <label>
+        Pose lift <output id="pose-lift-output">0.00 m</output>
+        <input id="pose-lift" type="range" min="0" max="1.4" step="0.02" value="0" />
+      </label>
+
+      <label>
+        Pose sweep <output id="pose-sweep-output">0.00 m</output>
+        <input id="pose-sweep" type="range" min="-1.4" max="1.4" step="0.02" value="0" />
+      </label>
+
+      <label>
         Wind <output id="wind-output">0.18</output>
         <input id="wind" type="range" min="0" max="1.2" step="0.02" value="0.18" />
       </label>
@@ -159,6 +184,10 @@
           <div>
             <dt>Section lift phase / target</dt>
             <dd id="metric-section-lift">static · 0.00 m</dd>
+          </div>
+          <div>
+            <dt>Section pose phase / lift / sweep</dt>
+            <dd id="metric-section-pose">off</dd>
           </div>
           <div>
             <dt>Geometry p99 / max</dt>
