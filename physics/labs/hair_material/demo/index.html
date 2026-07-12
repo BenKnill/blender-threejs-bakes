@@ -50,6 +50,16 @@
       </label>
 
       <label>
+        Hair display
+        <select id="groom-display">
+          <option value="lines" selected>Mechanical guide lines</option>
+          <option value="radial_xz">Dense radial fibers</option>
+          <option value="section_interp">Dense two-parent sections</option>
+          <option value="section_volume">Dense three-parent volume</option>
+        </select>
+      </label>
+
+      <label>
         Simulated guides <output id="guide-output">512</output>
         <input id="guides" type="range" min="128" max="768" step="64" value="512" />
       </label>
@@ -263,6 +273,6 @@
       <div id="status" role="status">Running deterministic wavy preset.</div>
     </aside>
     <div id="cut-cursor" aria-hidden="true"></div>
-    <script type="module" src="./main.js?v=111"></script>
+    <script type="module" src="./main.js?v=120"></script>
   </body>
 </html>

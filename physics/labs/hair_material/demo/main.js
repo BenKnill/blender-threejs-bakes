@@ -19,8 +19,9 @@ import {
   buildGroomInterpolationBindings,
   groomBindingActiveSegments,
   groomInterpolationReceipt,
+  groomSecondaryWeightAt,
   interpolateGroomScalar,
-} from "./groom_interpolation.js?v=108";
+} from "./groom_interpolation.js?v=116";
 
 let renderFibersPerGuide = 9;
 let hairRenderMode = "lines";
@@ -339,10 +340,11 @@ function rebuildSolver() {
     rootDirectorMode,
     rootDirectorStrength,
   });
-  groomBindings =
-    groomMode === "section_interp"
-      ? buildGroomInterpolationBindings(solver.roots, solver.guideCount, renderFibersPerGuide)
-      : null;
+  groomBindings = groomMode.startsWith("section_")
+    ? buildGroomInterpolationBindings(solver.roots, solver.guideCount, renderFibersPerGuide, {
+        parentCount: groomMode === "section_volume" ? 3 : 2,
+      })
+    : null;
   if (groomBindings) groomBindingBuildCount += 1;
   filmDirection.startTime = null;
   filmDirection.cutDone = false;
@@ -528,36 +530,58 @@ function updateSectionInterpolatedFatlineGeometry() {
   const widthsEnd = geometry.attributes.instanceWidthEnd.array;
   const owners = groomBindings.owners;
   const neighbors = groomBindings.neighbors;
+  const secondaryNeighbors = groomBindings.secondaryNeighbors;
   const weights = groomBindings.neighborWeights;
+  const secondaryWeights = groomBindings.secondaryNeighborWeights;
   let instance = 0;
   for (let binding = 0; binding < groomBindings.bindingCount; binding += 1) {
     const owner = owners[binding];
     const neighbor = neighbors[binding];
+    const secondaryNeighbor = secondaryNeighbors[binding];
     const neighborWeight = weights[binding];
+    const secondaryNeighborWeight = secondaryWeights[binding];
     const activeSegments = groomBindingActiveSegments(
       solver.activeSegments,
       owner,
       neighbor,
-      neighborWeight
+      neighborWeight,
+      secondaryNeighbor,
+      secondaryNeighborWeight
     );
     const copy = binding % renderFibersPerGuide;
     const colorScale = fatlineColorScale(owner, copy);
     for (let segment = 0; segment < activeSegments; segment += 1) {
+      const secondaryStartWeight = groomSecondaryWeightAt(
+        segment,
+        activeSegments,
+        secondaryNeighborWeight
+      );
+      const secondaryEndWeight = groomSecondaryWeightAt(
+        segment + 1,
+        activeSegments,
+        secondaryNeighborWeight
+      );
       const ownerStart = solver.index(owner, segment);
       const neighborStart = solver.index(neighbor, segment);
+      const secondaryNeighborStart = solver.index(secondaryNeighbor, segment);
       const ownerEnd = solver.index(owner, segment + 1);
       const neighborEnd = solver.index(neighbor, segment + 1);
+      const secondaryNeighborEnd = solver.index(secondaryNeighbor, segment + 1);
       const cursor = instance * 3;
       for (let axis = 0; axis < 3; axis += 1) {
         starts[cursor + axis] = interpolateGroomScalar(
           solver.positions[ownerStart + axis],
           solver.positions[neighborStart + axis],
-          neighborWeight
+          neighborWeight,
+          solver.positions[secondaryNeighborStart + axis],
+          secondaryStartWeight
         );
         ends[cursor + axis] = interpolateGroomScalar(
           solver.positions[ownerEnd + axis],
           solver.positions[neighborEnd + axis],
-          neighborWeight
+          neighborWeight,
+          solver.positions[secondaryNeighborEnd + axis],
+          secondaryEndWeight
         );
       }
       colors[cursor] = Math.min(1, fatlineBaseColor.r * colorScale);
@@ -895,9 +919,14 @@ function applyQueryConfiguration() {
   }
   hairRenderMode = params.get("hairRender") === "fatline" ? "fatline" : "lines";
   groomMode =
-    hairRenderMode === "fatline" && params.get("groomSections") === "1"
-      ? "section_interp"
-      : "radial_xz";
+    hairRenderMode !== "fatline"
+      ? "radial_xz"
+      : params.get("groomVolume") === "1"
+        ? "section_volume"
+        : params.get("groomSections") === "1"
+          ? "section_interp"
+          : "radial_xz";
+  document.querySelector("#groom-display").value = hairRenderMode === "lines" ? "lines" : groomMode;
   renderReceiptEnabled = params.get("renderReceipt") === "1";
   if (params.get("film") === "1") {
     filmDirection.enabled = true;
@@ -914,7 +943,8 @@ function applyQueryConfiguration() {
   }
   if (params.get("replay") === "1") {
     deterministicReplay.enabled = true;
-    deterministicReplay.autoplay = params.get("autoplay") === "1" || showcase;
+    deterministicReplay.autoplay =
+      params.get("autoplay") === "1" || (showcase && params.get("autoplay") !== "0");
     deterministicReplay.targetStep = Math.max(
       0,
       Math.floor(Number(params.get("replaySteps") ?? 0))
@@ -972,6 +1002,12 @@ for (const [id, output, format] of [
 document.querySelector("#preset").addEventListener("change", rebuildSolver);
 document.querySelector("#root-field").addEventListener("change", (event) => {
   rootDirectorMode = event.currentTarget.value;
+  rebuildSolver();
+});
+document.querySelector("#groom-display").addEventListener("change", (event) => {
+  const requestedMode = event.currentTarget.value;
+  hairRenderMode = requestedMode === "lines" ? "lines" : "fatline";
+  groomMode = requestedMode === "lines" ? "radial_xz" : requestedMode;
   rebuildSolver();
 });
 document.querySelector("#reset").addEventListener("click", rebuildSolver);

@@ -2,7 +2,8 @@
 
 Issues: [#79](https://github.com/BenKnill/blender-threejs-bakes/issues/79),
 [#86](https://github.com/BenKnill/blender-threejs-bakes/issues/86),
-[#130](https://github.com/BenKnill/blender-threejs-bakes/issues/130)
+[#130](https://github.com/BenKnill/blender-threejs-bakes/issues/130),
+[#132](https://github.com/BenKnill/blender-threejs-bakes/issues/132)
 
 This laboratory is the first interactive step beyond the rendered mannequin
 cut. It runs hundreds of 3D mechanical guides in the browser, couples nearby
@@ -59,6 +60,32 @@ actual field alignment.
 `just hair-root-field-ab` runs free, scalp-normal, and styled modes through one
 330-step cut/comb/rotating-wind replay. `just hair-styled-showcase` prints the
 dense 256-guide × 15-fiber hands-off narrow-preview URL.
+
+## Dense groom interpolation
+
+The **Hair display** selector exposes mechanical lines, dense radial copies,
+the established section-local two-parent interpolation, and an opt-in
+three-parent volume mode. URL fixtures use `groomSections=1` for two parents or
+`groomVolume=1` for three parents. Both modes bake immutable bindings from the
+rest roots and include their binding digest in `hair-render/1` receipts.
+
+The volume mode chooses two distinct nearby secondary guides, keeps all weights
+convex, and fades the third parent's influence in from 45% to 90% of strand
+length. This keeps the styled root part driven by the owner/primary pair while
+breaking up repeated line sheets lower in the silhouette. After cuts, a display
+fiber uses the shortest active length of every parent with nonzero weight.
+
+At the fixed 256-guide × 15-fiber step-150 A/B, both modes report physics digest
+`3c45d9ec1cd8d04b`; the two-parent binding/buffer digests are
+`74bfb34c` / `49d77d60`, while the three-parent digests are
+`0be410f0` / `4dda2af6`. Geometry p99 was 0.90 ms for both observations. At
+step 330 after the diagonal cut, both modes report physics digest
+`18079d1e106a2407`; the shortest-of-three rule emits 26,691 primitives versus
+26,884 for two parents. The volume mode is therefore a useful opt-in fullness
+experiment, not a claim that it improves every cut silhouette.
+
+Add `autoplay=0` to a `showcase=1` replay URL to hold the requested
+`replaySteps` state for a fixed narrow-preview comparison.
 
 ## Anisotropic-fluid rules
 
