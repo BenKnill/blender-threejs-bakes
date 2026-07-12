@@ -88,9 +88,14 @@ strand rendering; do not add another many-hair operator first.
       remains stable, and geometry update is 0.60 ms mean / 1.20 ms p99 /
       1.90 ms max over 538 measured frames.
 - [ ] Cutting plus combing in one deterministic scenario.
-- [ ] Add an opt-in two-segment scalp-normal root director with receipt-backed
+- [x] Add an opt-in two-segment scalp-normal root director with receipt-backed
       alignment and stretch A/B gates; promote it only if the silhouette gain
-      outweighs solver cost and does not create a rigid helmet.
+      outweighs solver cost and does not create a rigid helmet. At 256 guides,
+      min/mean root-normal alignment improves from -0.104/0.022 to 0.691/0.867,
+      the fixed replay repeats exactly, and the full cut/comb showcase remains
+      under 3.1% stretch. Strength 0.22 remains opt-in because it approaches a
+      smooth crown cap. The scalar alignment contract is observed through the
+      refreshed OrbStack/CRIU `light` shelf as warm development evidence.
 - [ ] Better scalp/strand contact and a clearer calibration path.
 - [ ] Video variants only after the underlying receipt distinguishes them.
 
