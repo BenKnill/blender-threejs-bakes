@@ -130,6 +130,16 @@ let HAIR_SPATIAL_AABB_CELL_INTERVAL_COVERS_POINT = prove
           point < (cell_high + &1) * width`,
   REAL_ARITH_TAC);;
 
+(** The discovery-only ranker emits a bounded prefix after reserving persistent
+    pairs.  This cardinality lemma says the prefix never exceeds its capacity
+    and retains the whole list when it already fits.  It does not prove the
+    JavaScript float-to-integer ranking key or physical contact completeness. *)
+let HAIR_BOUNDED_PREFIX_CAPACITY = prove
+ (`!capacity count:num.
+      MIN capacity count <= capacity /\
+      (count <= capacity ==> MIN capacity count = count)`,
+  ARITH_TAC);;
+
 (** A quarter-turn of the horizontal wind vector preserves squared magnitude.
     The browser uses continuous sine/cosine directions; this is a narrow
     algebraic rotation sanity contract, not a proof of JavaScript trig. *)

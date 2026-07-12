@@ -32,8 +32,12 @@ proof boundaries must remain explicit.
 - [x] A/B deterministic multi-cell spatial discovery against the fixed graph
       without changing forces. It finds 35k–48k padded-AABB candidates and
       honestly saturates the provisional 20k budget in every material lane.
-- [ ] Rank and cap spatial candidates while keeping active persistent bonds hot;
-      only then let spatial discovery drive a force/operator A/B.
+- [x] Rank and cap spatial candidates while keeping active persistent bonds hot.
+      All persistent bonds survive and the global frontier is ordered, but the
+      per-segment quota still drops AABB-overlap risk-zero pairs.
+- [ ] Replace AABB-gap ties with deterministic segment–segment closest-distance
+      risk. Keep spatial forces disabled until dense-clump quota drops no longer
+      discard the geometrically closest pairs.
 - [ ] Add a repeated pass, section lift, or simple grab only when it answers a
       concrete material question.
 - [ ] Keep a small explicit-guide reference scene before raising guide count.

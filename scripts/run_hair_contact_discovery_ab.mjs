@@ -4,7 +4,9 @@ import { performance } from "node:perf_hooks";
 
 import {
   discoverSegmentPairs,
+  hairSolverPersistentPairs,
   hairSolverSegments,
+  rankSpatialCandidates,
 } from "../physics/labs/hair_material/demo/contact_discovery.js";
 import {
   COMB_MATERIAL_CONDITIONS,
@@ -29,14 +31,19 @@ for (const [name, condition] of Object.entries(COMB_MATERIAL_CONDITIONS)) {
   const spatial = discoverSegmentPairs(segments, {
     cellSize: 0.24,
     padding: 0.04,
-    maxPairsPerSegment: 16,
+    maxPairsPerSegment: 100000,
+    maxPairs: 100000,
+  });
+  const ranked = rankSpatialCandidates(segments, spatial.pairs, hairSolverPersistentPairs(hair), {
     maxPairs: 20000,
+    maxNewPairsPerSegment: 16,
   });
   lanes[name] = {
     mechanical_state_digest: result.state_digest,
     fixed_graph_candidates_per_step: result.receipt.contact_service.candidate_capacity,
     spatial_discovery_ms: performance.now() - started,
     spatial,
+    ranked,
   };
 }
 

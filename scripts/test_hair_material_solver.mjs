@@ -4,8 +4,11 @@ import assert from "node:assert/strict";
 
 import {
   discoverSegmentPairs,
+  hairSolverPersistentPairs,
   hairSolverSegments,
   paddedSegmentAabbsOverlap,
+  rankSpatialCandidates,
+  segmentAabbGapSquared,
   segmentAabbCellKeys,
 } from "../physics/labs/hair_material/demo/contact_discovery.js";
 
@@ -40,6 +43,7 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   ];
   assert.ok(segmentAabbCellKeys(crossing[0], 0.25).length > 2);
   assert.equal(paddedSegmentAabbsOverlap(crossing[0], crossing[1]), true);
+  nearlyEqual(segmentAabbGapSquared(crossing[0], crossing[1]), 0);
   const forward = discoverSegmentPairs(crossing, { cellSize: 0.25, maxPairs: 10 });
   const reverse = discoverSegmentPairs([...crossing].reverse(), { cellSize: 0.25, maxPairs: 10 });
   assert.deepEqual(forward.pairs, [{ a: 10, b: 21 }]);
@@ -61,6 +65,38 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   });
   assert.ok(bounded.unbounded_candidate_count > bounded.emitted_candidate_count);
   assert.ok(bounded.saturated_segment_ids.length > 0);
+
+  const ranking = rankSpatialCandidates(
+    crowded,
+    discoverSegmentPairs(crowded, {
+      cellSize: 0.5,
+      maxPairsPerSegment: 100,
+      maxPairs: 100,
+    }).pairs,
+    [{ a: 0, b: 4 }],
+    { maxPairs: 4, maxNewPairsPerSegment: 1 }
+  );
+  assert.equal(ranking.admitted_pairs[0].source, "persistent");
+  assert.deepEqual(
+    { a: ranking.admitted_pairs[0].a, b: ranking.admitted_pairs[0].b },
+    { a: 0, b: 4 }
+  );
+  assert.equal(ranking.all_persistent_retained, true);
+  assert.ok(ranking.dropped_per_segment_count > 0);
+  assert.equal(ranking.spatial_force_integration, false);
+  const repeated = rankSpatialCandidates(
+    crowded,
+    [
+      ...discoverSegmentPairs(crowded, {
+        cellSize: 0.5,
+        maxPairsPerSegment: 100,
+        maxPairs: 100,
+      }).pairs,
+    ].reverse(),
+    [{ a: 4, b: 0 }],
+    { maxPairs: 4, maxNewPairsPerSegment: 1 }
+  );
+  assert.equal(ranking.admitted_pair_digest, repeated.admitted_pair_digest);
 }
 
 {
@@ -186,6 +222,14 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
       (segment) => segment.guide === 3 && segment.segment >= solver.activeSegments[3]
     ),
     false
+  );
+  assert.equal(
+    hairSolverPersistentPairs(solver).every(
+      (pair) =>
+        pair.a % solver.segments < solver.activeSegments[Math.floor(pair.a / solver.segments)] &&
+        pair.b % solver.segments < solver.activeSegments[Math.floor(pair.b / solver.segments)]
+    ),
+    true
   );
 }
 
