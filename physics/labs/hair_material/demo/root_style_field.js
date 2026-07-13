@@ -1,19 +1,19 @@
 import { groomSectionId } from "./groom_interpolation.js";
 
-export const ROOT_STYLE_FIELD_ID = "side_part_sweep_crown_lift_v1";
+export const ROOT_STYLE_FIELD_ID = "face_clear_side_part_crown_v2";
 export const ROOT_STYLE_SECTION_COUNT = 8;
 export const ROOT_STYLE_PART_X = -0.2;
 export const ROOT_STYLE_MIN_OUTWARD_DOT = 0.52;
 
 const SECTION_SWEEP = Object.freeze([
-  Object.freeze([0.9, -0.18, -0.34]),
-  Object.freeze([1.0, -0.1, -0.3]),
-  Object.freeze([1.0, 0.08, -0.2]),
-  Object.freeze([0.86, 0.18, -0.3]),
-  Object.freeze([0.62, 0.06, -0.62]),
-  Object.freeze([0.48, -0.12, -0.78]),
-  Object.freeze([0.7, -0.2, -0.66]),
-  Object.freeze([0.84, -0.22, -0.48]),
+  Object.freeze([0.18, -0.16, -0.3]),
+  Object.freeze([0.22, -0.08, -0.28]),
+  Object.freeze([0.2, 0.08, -0.24]),
+  Object.freeze([0.14, 0.16, -0.32]),
+  Object.freeze([-0.08, 0.08, -0.58]),
+  Object.freeze([-0.16, -0.08, -0.72]),
+  Object.freeze([-0.08, -0.18, -0.62]),
+  Object.freeze([0.1, -0.2, -0.42]),
 ]);
 
 function clamp(value, lower, upper) {
@@ -29,11 +29,16 @@ export function bakeStyledRootDirection(rootX, rootY, rootZ, normalX, normalY, n
   const section = groomSectionId(rootX, rootZ, ROOT_STYLE_SECTION_COUNT);
   const sweep = SECTION_SWEEP[section];
   const crown = smoothstep(0.48, 0.94, normalY);
-  const partSeparation = 1 - smoothstep(0.04, 0.38, Math.abs(rootX - ROOT_STYLE_PART_X));
+  const front = smoothstep(0.02, 0.72, normalZ);
+  const centerFront = front * (1 - smoothstep(0.18, 0.82, Math.abs(normalX)));
+  const partSeparation = 1 - smoothstep(0.025, 0.24, Math.abs(rootX - ROOT_STYLE_PART_X));
   const partSide = rootX < ROOT_STYLE_PART_X ? -1 : 1;
-  const authoredX = sweep[0] + partSide * partSeparation * 0.9;
-  const authoredY = sweep[1] + crown * 0.5;
-  const authoredZ = sweep[2] - Math.max(0, normalZ) * 0.24;
+  const crownSideReduction = 1 - crown * (1 - front) * 0.82;
+  const authoredX =
+    sweep[0] * crownSideReduction +
+    partSide * (partSeparation * 0.18 + centerFront * 0.62 + (1 - crown) * 0.14);
+  const authoredY = sweep[1] + crown * 0.5 + centerFront * 0.14;
+  const authoredZ = sweep[2] - centerFront * 0.82 - front * 0.22 - crown * 0.52;
   const authoredNormalDot = authoredX * normalX + authoredY * normalY + authoredZ * normalZ;
   let tangentX = authoredX - authoredNormalDot * normalX;
   let tangentY = authoredY - authoredNormalDot * normalY;
@@ -48,7 +53,7 @@ export function bakeStyledRootDirection(rootX, rootY, rootZ, normalX, normalY, n
   tangentX /= tangentLength;
   tangentY /= tangentLength;
   tangentZ /= tangentLength;
-  const outward = ROOT_STYLE_MIN_OUTWARD_DOT + crown * 0.16;
+  const outward = ROOT_STYLE_MIN_OUTWARD_DOT + crown * 0.14 + front * 0.06;
   const tangent = Math.sqrt(Math.max(0, 1 - outward * outward));
   output[0] = normalX * outward + tangentX * tangent;
   output[1] = normalY * outward + tangentY * tangent;

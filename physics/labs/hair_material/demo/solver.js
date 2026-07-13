@@ -23,8 +23,15 @@ import {
   ROOT_STYLE_PART_X,
   ROOT_STYLE_SECTION_COUNT,
   summarizeRootTargets,
-} from "./root_style_field.js";
+} from "./root_style_field.js?v=115";
 import { groomSectionId } from "./groom_interpolation.js";
+import {
+  scalpRootFrame,
+  SCALP_CENTER,
+  SCALP_LAYOUT_ID,
+  SCALP_RADII,
+  summarizeScalpLayout,
+} from "./scalp_layout.js?v=115";
 
 export { blendPairAnisotropicFriction } from "./friction.js";
 
@@ -75,14 +82,14 @@ export const MATERIAL_PRESETS = Object.freeze({
   }),
 });
 
-const HEAD = Object.freeze({ center: [0, 1.35, 0], radii: [0.9, 1.12, 0.82] });
-const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 const ROOT_DIRECTOR_MODES = new Set(["free", "scalp_normal", "styled_side_part"]);
 const SECTION_LIFT_STEP_STRENGTH = 0.18;
 const SECTION_POSE_FIELD_ID = "eight_section_tangent_tube_v1";
 const SECTION_POSE_STEP_STRENGTH = 0.12;
 const SECTION_POSE_CONTROL_FRACTIONS = Object.freeze([0.36, 0.5, 0.64]);
 const SECTION_POSE_CONTROL_WEIGHTS = Object.freeze([0.55, 1, 0.62]);
+const FACE_CLEAR_GROOM_ID = "front_midshaft_rest_projection_v1";
+const FACE_CLEAR_STEP_STRENGTH = 0.12;
 
 function length3(x, y, z) {
   return Math.hypot(x, y, z);
@@ -91,10 +98,6 @@ function length3(x, y, z) {
 function normalize3(x, y, z) {
   const length = length3(x, y, z) || 1;
   return [x / length, y / length, z / length];
-}
-
-function cross3(a, b) {
-  return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 }
 
 export function projectPair(
@@ -205,23 +208,12 @@ export function projectCombSweep(position, previousX, currentX, clearance = 0.00
   return { active: true, correction: [targetX - position[0], 0, 0] };
 }
 
-function rootFrame(index, count) {
-  const fraction = (index + 0.5) / count;
-  const theta = 0.1 + 1.18 * Math.sqrt(fraction);
-  const phi = index * GOLDEN_ANGLE;
-  const sinTheta = Math.sin(theta);
-  const normal = normalize3(sinTheta * Math.cos(phi), Math.cos(theta), sinTheta * Math.sin(phi));
-  const root = [
-    HEAD.center[0] + HEAD.radii[0] * normal[0],
-    HEAD.center[1] + HEAD.radii[1] * normal[1],
-    HEAD.center[2] + HEAD.radii[2] * normal[2],
-  ];
-  const tangent = normalize3(...cross3([0, 1, 0], normal));
-  const bitangent = normalize3(...cross3(normal, tangent));
-  return { root, normal, tangent, bitangent, phi };
+function smoothStep01(value) {
+  const t = Math.max(0, Math.min(1, value));
+  return t * t * (3 - 2 * t);
 }
 
-function restPoint(frame, material, segment, segments) {
+function restPoint(frame, material, segment, segments, styled) {
   if (segment === 0) return frame.root;
   const s = segment / segments;
   const angle = s * material.curlTurns * Math.PI * 2 + frame.phi;
@@ -230,14 +222,35 @@ function restPoint(frame, material, segment, segments) {
   const curlU = material.curlRadius * (Math.cos(angle) - baseCos);
   const curlV = material.curlRadius * (Math.sin(angle) - baseSin);
   const lift = 0.16 * Math.sin(Math.min(1, s * 3) * Math.PI * 0.5);
+  const front = Math.max(0, frame.normal[2]);
+  const center = 1 - Math.min(1, Math.abs(frame.normal[0]) / 0.82);
+  const faceClear = styled ? front * center : 0;
+  const partSide = frame.root[0] < ROOT_STYLE_PART_X ? -1 : 1;
+  const faceEnvelope = smoothStep01((s - 0.055) / 0.38);
+  const returnEnvelope = 1 - 0.34 * smoothStep01((s - 0.62) / 0.38);
+  const lateralClear = partSide * faceClear * 0.44 * faceEnvelope * returnEnvelope;
+  const rearClear = -faceClear * 0.28 * faceEnvelope * returnEnvelope;
+  const crown = smoothStep01((frame.normal[1] - 0.68) / 0.28);
+  const crownFlow = -crown * 0.24 * faceEnvelope * returnEnvelope;
+  const crownLift = styled ? crown * 0.11 * Math.sin(Math.min(1, s * 1.8) * Math.PI) : 0;
   return [
-    frame.root[0] + frame.normal[0] * lift + frame.tangent[0] * curlU + frame.bitangent[0] * curlV,
+    frame.root[0] +
+      frame.normal[0] * lift +
+      frame.tangent[0] * curlU +
+      frame.bitangent[0] * curlV +
+      lateralClear,
     frame.root[1] +
       frame.normal[1] * lift -
       material.length * s +
       frame.tangent[1] * curlU +
-      frame.bitangent[1] * curlV,
-    frame.root[2] + frame.normal[2] * lift + frame.tangent[2] * curlU + frame.bitangent[2] * curlV,
+      frame.bitangent[1] * curlV +
+      crownLift,
+    frame.root[2] +
+      frame.normal[2] * lift +
+      frame.tangent[2] * curlU +
+      frame.bitangent[2] * curlV +
+      rearClear +
+      crownFlow,
   ];
 }
 
@@ -255,6 +268,7 @@ export class HairSolver {
     rootDirectorEnabled = false,
     rootDirectorMode,
     rootDirectorStrength = ROOT_DIRECTOR_DEFAULT_STRENGTH,
+    faceClearGroomEnabled,
   } = {}) {
     if (!(preset in MATERIAL_PRESETS)) throw new Error(`unknown material preset: ${preset}`);
     if (guideCount < 8 || segments < 4) throw new Error("hair solver resolution is too small");
@@ -325,6 +339,13 @@ export class HairSolver {
       meanTargetOutwardDot: 0,
       meanTargetTangentialMagnitude: 0,
     };
+    this.faceClearGroom = {
+      enabled: resolvedRootDirectorMode === "styled_side_part" && faceClearGroomEnabled !== false,
+      affectedGuideCount: 0,
+      activeGuideCountLastStep: 0,
+      correctionsLastStep: 0,
+      correctionDistanceLastStep: 0,
+    };
     this.maxStretchError = 0;
     this.moisture = 0;
     this.product = 0;
@@ -378,7 +399,7 @@ export class HairSolver {
 
   #initialize() {
     for (let strand = 0; strand < this.guideCount; strand += 1) {
-      const frame = rootFrame(strand, this.guideCount);
+      const frame = scalpRootFrame(strand, this.guideCount);
       this.activeSegments[strand] = this.segments;
       for (let axis = 0; axis < 3; axis += 1) {
         this.roots[strand * 3 + axis] = frame.root[axis];
@@ -390,7 +411,13 @@ export class HairSolver {
         ROOT_STYLE_SECTION_COUNT
       );
       for (let particle = 0; particle <= this.segments; particle += 1) {
-        const point = restPoint(frame, this.material, particle, this.segments);
+        const point = restPoint(
+          frame,
+          this.material,
+          particle,
+          this.segments,
+          this.rootDirector.mode === "styled_side_part"
+        );
         for (let axis = 0; axis < 3; axis += 1) {
           const index = this.index(strand, particle, axis);
           this.positions[index] = point[axis];
@@ -450,6 +477,7 @@ export class HairSolver {
     this.rootDirector.minimumTargetOutwardDot = targetSummary.minimumOutwardDot;
     this.rootDirector.meanTargetOutwardDot = targetSummary.meanOutwardDot;
     this.rootDirector.meanTargetTangentialMagnitude = targetSummary.meanTangentialMagnitude;
+    this.scalpLayout = summarizeScalpLayout(this.rootNormals);
   }
 
   reset(preset = this.preset) {
@@ -620,6 +648,9 @@ export class HairSolver {
     this.sectionPose.activeGuideCountLastStep = 0;
     this.sectionPose.correctionsLastStep = 0;
     this.sectionPose.correctionDistanceLastStep = 0;
+    this.faceClearGroom.activeGuideCountLastStep = 0;
+    this.faceClearGroom.correctionsLastStep = 0;
+    this.faceClearGroom.correctionDistanceLastStep = 0;
     const damping = this.material.damping;
     for (let strand = 0; strand < this.guideCount; strand += 1) {
       for (let particle = 1; particle <= this.activeSegments[strand]; particle += 1) {
@@ -661,6 +692,7 @@ export class HairSolver {
       if (this.collectiveRulesEnabled) this.#projectCollectivePairs();
       this.#projectSectionLift();
       this.#projectSectionPose();
+      this.#projectFaceClearGroom();
       this.#projectScalp();
       if (this.rootDirector.enabled) {
         this.#projectRootDirector();
@@ -1087,8 +1119,8 @@ export class HairSolver {
   }
 
   #projectScalp() {
-    const center = HEAD.center;
-    const radii = HEAD.radii.map((radius) => radius + 0.035);
+    const center = SCALP_CENTER;
+    const radii = SCALP_RADII.map((radius) => radius + 0.035);
     for (let strand = 0; strand < this.guideCount; strand += 1) {
       for (let particle = 1; particle <= this.activeSegments[strand]; particle += 1) {
         const index = this.index(strand, particle);
@@ -1106,6 +1138,45 @@ export class HairSolver {
         this.positions[index + 2] = center[2] + local[2] * scale;
       }
     }
+  }
+
+  #projectFaceClearGroom() {
+    if (!this.faceClearGroom.enabled) return;
+    const startParticle = Math.max(2, Math.round(this.segments * 0.22));
+    const endParticle = Math.min(this.segments, Math.round(this.segments * 0.68));
+    const strength = 1 - (1 - FACE_CLEAR_STEP_STRENGTH) ** (1 / this.iterations);
+    let activeGuideCount = 0;
+    let affectedGuideCount = 0;
+    for (let strand = 0; strand < this.guideCount; strand += 1) {
+      const root = strand * 3;
+      const front = this.rootNormals[root + 2];
+      const side = Math.abs(this.rootNormals[root]);
+      if (front <= 0.34 || side >= 0.64) continue;
+      const sideSign = this.roots[root] < ROOT_STYLE_PART_X ? -1 : 1;
+      affectedGuideCount += 1;
+      let active = false;
+      for (let particle = startParticle; particle <= endParticle; particle += 1) {
+        if (particle > this.activeSegments[strand]) continue;
+        const index = this.index(strand, particle);
+        const span = Math.max(1, endParticle - startParticle);
+        const phase = (particle - startParticle) / span;
+        const weight = Math.sin(Math.PI * phase) ** 2;
+        if (weight <= 1e-8) continue;
+        const minimumSideClearance = 0.58 + 0.18 * weight;
+        const targetX = sideSign * Math.max(Math.abs(this.rest[index]), minimumSideClearance);
+        const targetZ = Math.min(this.rest[index + 2], 0.24);
+        const dx = (targetX - this.positions[index]) * strength * weight;
+        const dz = (targetZ - this.positions[index + 2]) * strength * weight;
+        this.positions[index] += dx;
+        this.positions[index + 2] += dz;
+        this.faceClearGroom.correctionsLastStep += 1;
+        this.faceClearGroom.correctionDistanceLastStep += Math.hypot(dx, dz);
+        active = true;
+      }
+      if (active) activeGuideCount += 1;
+    }
+    this.faceClearGroom.affectedGuideCount = affectedGuideCount;
+    this.faceClearGroom.activeGuideCountLastStep = activeGuideCount;
   }
 
   #pinRoots() {
@@ -1190,6 +1261,27 @@ export class HairSolver {
         mean_target_outward_dot: this.rootDirector.meanTargetOutwardDot,
         mean_target_tangential_magnitude: this.rootDirector.meanTargetTangentialMagnitude,
         exact_antipodal_boundary: "tangent_correction_zero",
+      },
+      scalp_layout: {
+        field_identity: SCALP_LAYOUT_ID,
+        crown_guide_count: this.scalpLayout.crownGuideCount,
+        front_center_guide_count: this.scalpLayout.frontCenterGuideCount,
+        minimum_front_center_normal_y: this.scalpLayout.minimumFrontCenterNormalY,
+        maximum_front_center_theta_radians: this.scalpLayout.maximumFrontCenterTheta,
+        collision_proxy: "analytic_ellipsoid_unchanged",
+      },
+      face_clear_groom: {
+        enabled: this.faceClearGroom.enabled,
+        field_identity: FACE_CLEAR_GROOM_ID,
+        affected_guides: this.faceClearGroom.affectedGuideCount,
+        active_guides_last_step: this.faceClearGroom.activeGuideCountLastStep,
+        corrections_last_step: this.faceClearGroom.correctionsLastStep,
+        correction_distance_last_step: this.faceClearGroom.correctionDistanceLastStep,
+        step_strength: FACE_CLEAR_STEP_STRENGTH,
+        per_iteration_strength: 1 - (1 - FACE_CLEAR_STEP_STRENGTH) ** (1 / this.iterations),
+        particle_fraction_range: [0.22, 0.68],
+        clearance_target: "outside_0.58m_cheek_width_and_behind_z_0.24m",
+        physics_authority: "bounded_styled_face_volume_projection",
       },
       section_lift: {
         enabled: this.sectionLift > 0,

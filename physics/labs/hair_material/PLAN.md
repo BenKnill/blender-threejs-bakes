@@ -67,6 +67,16 @@ proof boundaries must remain explicit.
       peaks at 3.4982% stretch; the disabled baseline stays
       `6a0294d4bf085310`. This is a Tonic-like control primitive, not production
       groom or Disney parity.
+- [x] Replace the uniform polar root cap after browser screenshots exposed
+      anchors on the forehead and an apparently bald crown. The
+      `face_hairline_ellipsoid_v1` layout raises the central frontal boundary,
+      retains side/rear coverage, and offsets anchors 45 mm outside the analytic
+      head. The v2 styled field separates crown-back flow from frontal lateral
+      flow; a bounded 64-guide face-volume projection clears mid-shafts from the
+      cheeks. The 180-step A/B repeats at digest `bad7957fcc2e2976` and peaks at
+      3.4993% stretch; the full section-pose/cut gate repeats at
+      `b1e6b723267c19fc` and 3.4997%. An outward-wound, hairline-matched 62%
+      undercoat fixes the renderer-side crown hole.
 - [x] Present the section pose as an explicitly non-physical authoring volume
       that hydrates into rendered hair. A deterministic five-phase envelope
       starts with thin cyan proxy fibers and a translucent 10-sided mean-guide
@@ -187,10 +197,10 @@ strand rendering; do not add another many-hair operator first.
 - [x] Add an eight-section styled scalp root field with a side part, lateral
       sweep, and crown lift while retaining positive outward target growth.
       Free and scalp-normal modes remain available. In the 256-guide A/B, the
-      styled target has 0.820 mean tangential magnitude and 0.462 minimum
-      outward dot versus 0.260 tangential magnitude for scalp-normal. The
-      finished 560x720 fat-line showcase reads as a swept part instead of the
-      scalp-normal cap, holds 3.03% stretch, and observes 0.50 ms geometry p99.
+      current v2 styled target has 0.812 mean tangential magnitude and 0.465
+      minimum outward dot versus 0.258 tangential magnitude for scalp-normal.
+      The 330-step cut/comb replay repeats at `810dcc040586fc06`, completes all
+      256 cuts, and remains inside the 3.5% stretch gate.
 - [ ] Better scalp/strand contact and a clearer calibration path.
 - [x] Define three receipt-distinct reel shots before packaging video variants.
 - [ ] Package short 16:9 and vertical reels from those named moving shots.

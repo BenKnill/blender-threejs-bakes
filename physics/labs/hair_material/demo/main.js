@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
-import { HairSolver } from "./solver.js?v=114";
+import { HairSolver } from "./solver.js?v=124";
 import {
   advanceHairReplay,
   COMB_MATERIAL_CONDITIONS,
@@ -24,7 +24,7 @@ import {
   REEL_CAMERA_FIELD_ID,
   sectionPosePresentationAtStep,
   summarizeGeometryTimings,
-} from "./rendering.js?v=114";
+} from "./rendering.js?v=115";
 import {
   buildGroomInterpolationBindings,
   groomBindingActiveSegments,
@@ -32,6 +32,13 @@ import {
   groomSecondaryWeightAt,
   interpolateGroomScalar,
 } from "./groom_interpolation.js?v=117";
+import {
+  scalpPolarLimit,
+  SCALP_CENTER,
+  SCALP_LAYOUT_ID,
+  SCALP_RADII,
+  SCALP_ROOT_OFFSET,
+} from "./scalp_layout.js?v=115";
 
 let renderFibersPerGuide = 9;
 let hairRenderMode = "lines";
@@ -40,6 +47,7 @@ let groomBindings = null;
 let groomBindingBuildCount = 0;
 let rootDirectorMode = "free";
 let rootDirectorStrength = 0.22;
+let faceClearGroomEnabled = true;
 let renderReceiptEnabled = false;
 let sectionControlTubeEnabled = false;
 let fullGroomHydrationEnabled = false;
@@ -476,7 +484,7 @@ function updateFullGroomPresentation() {
     hair.material.opacity = baseOpacity * fullGroomPresentation.hairHydration;
   }
   if (hairUndercoat) {
-    hairUndercoat.material.opacity = 0.28 * fullGroomPresentation.hairHydration;
+    hairUndercoat.material.opacity = 0.62 * fullGroomPresentation.hairHydration;
     hairUndercoat.visible = fullGroomPresentation.hairHydration > 0.002;
   }
   const mechanicalWeight = fullGroomHydrationEnabled
@@ -617,11 +625,17 @@ function writeHydratedFiberStyle(
   widthsStart[instance] =
     fatlineHalfWidthAt(segment, activeSegments) *
     widthScale *
-    fiberEmergenceScaleAt(guide, copy, segment, activeSegments);
+    fiberEmergenceScaleAt(guide, copy, segment, activeSegments, solver.rootNormals[guide * 3 + 1]);
   widthsEnd[instance] =
     fatlineHalfWidthAt(segment + 1, activeSegments) *
     widthScale *
-    fiberEmergenceScaleAt(guide, copy, segment + 1, activeSegments);
+    fiberEmergenceScaleAt(
+      guide,
+      copy,
+      segment + 1,
+      activeSegments,
+      solver.rootNormals[guide * 3 + 1]
+    );
 }
 
 function updateSectionControlTube() {
@@ -837,6 +851,55 @@ function createFatlineMaterial() {
   });
 }
 
+function createHairlineUndercoatGeometry(rings = 14, slices = 72) {
+  const shellOffset = SCALP_ROOT_OFFSET - 0.006;
+  const positions = [
+    SCALP_CENTER[0],
+    SCALP_CENTER[1] + SCALP_RADII[1] + shellOffset,
+    SCALP_CENTER[2],
+  ];
+  const indices = [];
+  for (let ring = 1; ring <= rings; ring += 1) {
+    const ringFraction = ring / rings;
+    for (let slice = 0; slice < slices; slice += 1) {
+      const phi = (slice / slices) * Math.PI * 2;
+      const theta = 0.035 + (scalpPolarLimit(phi) - 0.035) * ringFraction;
+      const sinTheta = Math.sin(theta);
+      const normalX = sinTheta * Math.cos(phi);
+      const normalY = Math.cos(theta);
+      const normalZ = sinTheta * Math.sin(phi);
+      positions.push(
+        SCALP_CENTER[0] + (SCALP_RADII[0] + shellOffset) * normalX,
+        SCALP_CENTER[1] + (SCALP_RADII[1] + shellOffset) * normalY,
+        SCALP_CENTER[2] + (SCALP_RADII[2] + shellOffset) * normalZ
+      );
+    }
+  }
+  for (let slice = 0; slice < slices; slice += 1) {
+    indices.push(0, 1 + ((slice + 1) % slices), 1 + slice);
+  }
+  for (let ring = 1; ring < rings; ring += 1) {
+    const prior = 1 + (ring - 1) * slices;
+    const next = prior + slices;
+    for (let slice = 0; slice < slices; slice += 1) {
+      const nextSlice = (slice + 1) % slices;
+      indices.push(
+        prior + slice,
+        prior + nextSlice,
+        next + slice,
+        prior + nextSlice,
+        next + nextSlice,
+        next + slice
+      );
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
 function rebuildFatlineObject() {
   const instanceCapacity = solver.guideCount * solver.segments * renderFibersPerGuide;
   const geometry = new THREE.InstancedBufferGeometry();
@@ -862,18 +925,19 @@ function rebuildFatlineObject() {
   hair = new THREE.Mesh(geometry, createFatlineMaterial());
   hair.frustumCulled = false;
   scene.add(hair);
-  const undercoatGeometry = new THREE.SphereGeometry(1, 48, 20, 0, Math.PI * 2, 0, 1.02);
+  const undercoatGeometry = createHairlineUndercoatGeometry();
   const undercoatMaterial = new THREE.MeshStandardMaterial({
     color: fatlineBaseColor.clone().multiplyScalar(0.34),
     roughness: 0.96,
     metalness: 0,
     transparent: true,
-    opacity: 0.28,
+    opacity: 0.62,
     depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1,
   });
   hairUndercoat = new THREE.Mesh(undercoatGeometry, undercoatMaterial);
-  hairUndercoat.scale.set(0.915, 1.138, 0.835);
-  hairUndercoat.position.set(0, 1.35, 0);
   hairUndercoat.renderOrder = -1;
   scene.add(hairUndercoat);
 }
@@ -928,6 +992,7 @@ function rebuildSolver() {
     spatialFrictionEnabled: deterministicReplay.spatialFrictionEnabled,
     rootDirectorMode,
     rootDirectorStrength,
+    faceClearGroomEnabled,
   });
   groomBindings = groomMode.startsWith("section_")
     ? buildGroomInterpolationBindings(solver.roots, solver.guideCount, renderFibersPerGuide, {
@@ -1567,6 +1632,7 @@ function applyQueryConfiguration() {
   document.querySelector("#showcase-groom").textContent =
     rootDirectorMode === "styled_side_part" ? "Styled side-part groom" : "Rotating-wind groom";
   rootDirectorStrength = Math.max(0, Math.min(1, Number(params.get("rootStrength") ?? 0.22)));
+  faceClearGroomEnabled = params.get("faceClear") !== "0";
   if (deterministicReplay.spatialFrictionEnabled && !params.has("scenario")) {
     document.querySelector("#scenario-label").textContent =
       "Hair material study · experimental k=1 spatial friction";
@@ -1840,7 +1906,8 @@ function createRenderReceipt() {
       root_emergence: "one tapered owner plus deterministic child fade over first 4-27pct",
       cross_section_coverage: "soft analytic alpha across each screen-space fiber",
       joint_coverage: "half-coverage endpoints reconstruct adjacent segment continuity",
-      undercoat: "cropped low-opacity density fill",
+      undercoat: "hairline-masked ellipsoid cap at 62pct opacity",
+      scalp_layout_identity: SCALP_LAYOUT_ID,
       physics_authority: "none_renderer_only",
     },
     presentation_loop: {
@@ -1875,6 +1942,8 @@ function createRenderReceipt() {
       physics_authority: "none_camera_only",
     },
     root_director: solver.receipt().root_director,
+    scalp_layout: solver.receipt().scalp_layout,
+    face_clear_groom: solver.receipt().face_clear_groom,
     section_lift: solver.receipt().section_lift,
     section_pose: solver.receipt().section_pose,
     full_groom_hydration: {

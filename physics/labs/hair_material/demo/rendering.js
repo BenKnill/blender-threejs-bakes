@@ -77,14 +77,15 @@ export function hairFiberColorAt(baseColor, strand, copy, rootFraction, target =
   return target;
 }
 
-export function fiberEmergenceScaleAt(strand, copy, particle, activeSegments) {
+export function fiberEmergenceScaleAt(strand, copy, particle, activeSegments, rootNormalY = 0) {
   const fraction = Math.max(0, Math.min(1, particle / Math.max(1, activeSegments)));
   if (copy === 0) return smoothStep01(fraction / 0.085);
   let hash = Math.imul(strand + 1, 0x45d9f3b) ^ Math.imul(copy + 1, 0x27d4eb2d);
   hash ^= hash >>> 16;
   const unsigned = hash >>> 0;
-  const start = 0.035 + (unsigned % 7) * 0.011;
-  const end = start + 0.12 + ((unsigned >>> 4) % 5) * 0.012;
+  const crown = smoothStep01((rootNormalY - 0.68) / 0.26);
+  const start = (0.035 + (unsigned % 7) * 0.011) * (1 - crown * 0.58);
+  const end = start + (0.12 + ((unsigned >>> 4) % 5) * 0.012) * (1 - crown * 0.42);
   return smoothStep01((fraction - start) / Math.max(0.001, end - start));
 }
 

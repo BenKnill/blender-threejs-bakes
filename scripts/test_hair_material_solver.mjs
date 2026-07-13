@@ -52,6 +52,12 @@ import {
   summarizeRootTargets,
 } from "../physics/labs/hair_material/demo/root_style_field.js";
 import {
+  scalpPolarLimit,
+  scalpRootFrame,
+  SCALP_LAYOUT_ID,
+  summarizeScalpLayout,
+} from "../physics/labs/hair_material/demo/scalp_layout.js";
+import {
   digestContactTrace,
   snapshotRankedContacts,
   summarizeContactTransition,
@@ -105,6 +111,7 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.equal(fiberEmergenceScaleAt(8, 3, 0, 12), 0);
   assert.equal(fiberEmergenceScaleAt(8, 3, 12, 12), 1);
   assert.ok(fiberEmergenceScaleAt(8, 3, 1, 12) <= fiberEmergenceScaleAt(8, 3, 2, 12));
+  assert.ok(fiberEmergenceScaleAt(8, 3, 1, 12, 0.96) > fiberEmergenceScaleAt(8, 3, 1, 12));
   assert.deepEqual(reelCameraPoseAtStep(0, "beauty"), reelCameraPoseAtStep(450, "beauty"));
   assert.notDeepEqual(reelCameraPoseAtStep(0, "beauty"), reelCameraPoseAtStep(225, "beauty"));
   assert.notDeepEqual(reelCameraPoseAtStep(330, "control"), reelCameraPoseAtStep(330, "cut"));
@@ -132,6 +139,19 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     guideOpacity: 0,
     tubeOpacity: 0,
   });
+}
+
+{
+  assert.equal(SCALP_LAYOUT_ID, "face_hairline_ellipsoid_v1");
+  assert.ok(scalpPolarLimit(Math.PI / 2) < scalpPolarLimit(-Math.PI / 2));
+  assert.ok(scalpPolarLimit(Math.PI / 2) < scalpPolarLimit(0));
+  const frames = Array.from({ length: 256 }, (_, guide) => scalpRootFrame(guide, 256));
+  const normals = Float64Array.from(frames.flatMap((frame) => frame.normal));
+  const summary = summarizeScalpLayout(normals);
+  assert.ok(summary.crownGuideCount >= 50);
+  assert.ok(summary.frontCenterGuideCount > 0);
+  assert.ok(summary.maximumFrontCenterTheta < 1.1);
+  for (const frame of frames) assert.ok(frame.theta <= frame.thetaLimit + 1e-12);
 }
 
 {
@@ -322,8 +342,8 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     15,
     { parentCount: 3 }
   );
-  assert.equal(productionTwoParent.bindingDigest, "74bfb34c");
-  assert.equal(productionThreeParent.bindingDigest, "0be410f0");
+  assert.equal(productionTwoParent.bindingDigest, "db0f26db");
+  assert.equal(productionThreeParent.bindingDigest, "bbb64f44");
 }
 
 {
@@ -996,6 +1016,14 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     ...base,
     solver: { ...base.solver, rootDirectorMode: "styled_side_part" },
   }).result;
+  const styledWithoutFaceClear = runHairReplay({
+    ...base,
+    solver: {
+      ...base.solver,
+      rootDirectorMode: "styled_side_part",
+      faceClearGroomEnabled: false,
+    },
+  }).result;
   const repeated = runHairReplay({
     ...base,
     solver: { ...base.solver, rootDirectorMode: "styled_side_part" },
@@ -1005,6 +1033,13 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.notEqual(styled.state_digest, normal.state_digest);
   assert.equal(styled.receipt.root_director.mode, "styled_side_part");
   assert.equal(styled.receipt.root_director.field_identity, ROOT_STYLE_FIELD_ID);
+  assert.equal(styled.receipt.face_clear_groom.enabled, true);
+  assert.equal(styled.receipt.face_clear_groom.field_identity, "front_midshaft_rest_projection_v1");
+  assert.ok(styled.receipt.face_clear_groom.affected_guides > 0);
+  assert.ok(styled.receipt.face_clear_groom.corrections_last_step > 0);
+  assert.equal(styledWithoutFaceClear.receipt.face_clear_groom.enabled, false);
+  assert.equal(styledWithoutFaceClear.receipt.face_clear_groom.corrections_last_step, 0);
+  assert.notEqual(styled.state_digest, styledWithoutFaceClear.state_digest);
   assert.equal(styled.receipt.root_director.section_count, 8);
   assert.ok(styled.receipt.root_director.minimum_target_outward_dot > 0);
   assert.ok(styled.receipt.root_director.mean_target_tangential_magnitude > 0.4);
