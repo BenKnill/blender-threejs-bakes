@@ -100,6 +100,7 @@ import {
   PREVIEW_WIND_PROGRAM,
   PREVIEW_WIND_PROGRAM_ID,
   previewWindProgramAtStep,
+  resolvePreviewWindMagnitudes,
   runHairReplay,
   sectionLiftEnvelopeAtStep,
   sectionPoseEnvelopeAtStep,
@@ -112,9 +113,26 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
 
 {
   assert.equal(HAIR_FIBER_SHADING_ID, "tangent_dual_lobe_root_emergence_v2");
-  assert.equal(HAIR_PRESENTATION_LOOP_ID, "two_wind_orbits_1020_step_v2");
+  assert.equal(HAIR_PRESENTATION_LOOP_ID, "visible_two_wind_orbits_1020_step_v3");
   assert.equal(REEL_CAMERA_FIELD_ID, "fixed_control_two_orbit_1020_step_v3");
-  assert.equal(PREVIEW_WIND_PROGRAM_ID, "hydrated_strong_then_moderate_full_orbits_v1");
+  assert.equal(PREVIEW_WIND_PROGRAM_ID, "hydrated_strong_then_moderate_full_orbits_v2");
+  nearlyEqual(PREVIEW_WIND_PROGRAM.strongMagnitude, 4);
+  nearlyEqual(PREVIEW_WIND_PROGRAM.moderateMagnitude, 1.5);
+  assert.deepEqual(resolvePreviewWindMagnitudes(undefined, undefined), {
+    strongMagnitude: 4,
+    moderateMagnitude: 1.5,
+    legacyScaleMigrated: false,
+  });
+  assert.deepEqual(resolvePreviewWindMagnitudes("0.58", "0.29"), {
+    strongMagnitude: 4,
+    moderateMagnitude: 1.5,
+    legacyScaleMigrated: true,
+  });
+  assert.deepEqual(resolvePreviewWindMagnitudes("3", "0.9"), {
+    strongMagnitude: 3,
+    moderateMagnitude: 0.9,
+    legacyScaleMigrated: false,
+  });
   assert.equal(FULL_GROOM_HYDRATION_ID, "uniform_rod_joint_hydration_450_v3");
   assert.equal(PHYSICS_SKELETON_STYLE_ID, "uniform_world_space_rods_joints_v1");
   assert.equal(LOCK_AWARE_COVERAGE_ID, "live_root_cover_locks_catmull_rom_v3");

@@ -6,16 +6,56 @@ export const COMB_MATERIAL_CONDITIONS = Object.freeze({
   product: Object.freeze({ label: "Product-heavy", moisture: 0.35, product: 0.85 }),
 });
 
-export const PREVIEW_WIND_PROGRAM_ID = "hydrated_strong_then_moderate_full_orbits_v1";
+export const PREVIEW_WIND_PROGRAM_ID = "hydrated_strong_then_moderate_full_orbits_v2";
 export const PREVIEW_WIND_PROGRAM = Object.freeze({
   setupEndStep: 240,
   strongEndStep: 600,
   moderateEndStep: 960,
   loopEndStep: 1020,
   setupMagnitude: 0.12,
-  strongMagnitude: 0.58,
-  moderateMagnitude: 0.29,
+  strongMagnitude: 4,
+  moderateMagnitude: 1.5,
 });
+
+export function resolvePreviewWindMagnitudes(strongValue, moderateValue, maximumMagnitude = 6) {
+  if (!Number.isFinite(maximumMagnitude) || maximumMagnitude <= 0) {
+    throw new Error("preview wind maximum magnitude is invalid");
+  }
+  const requestedStrong =
+    strongValue === undefined || strongValue === null
+      ? PREVIEW_WIND_PROGRAM.strongMagnitude
+      : Number(strongValue);
+  const requestedModerate =
+    moderateValue === undefined || moderateValue === null
+      ? PREVIEW_WIND_PROGRAM.moderateMagnitude
+      : Number(moderateValue);
+  const legacyScaleMigrated = requestedStrong === 0.58 && requestedModerate === 0.29;
+  const strongMagnitude = legacyScaleMigrated
+    ? PREVIEW_WIND_PROGRAM.strongMagnitude
+    : requestedStrong;
+  const moderateMagnitude = legacyScaleMigrated
+    ? PREVIEW_WIND_PROGRAM.moderateMagnitude
+    : requestedModerate;
+  return {
+    strongMagnitude: Math.max(
+      0,
+      Math.min(
+        maximumMagnitude,
+        Number.isFinite(strongMagnitude) ? strongMagnitude : PREVIEW_WIND_PROGRAM.strongMagnitude
+      )
+    ),
+    moderateMagnitude: Math.max(
+      0,
+      Math.min(
+        maximumMagnitude,
+        Number.isFinite(moderateMagnitude)
+          ? moderateMagnitude
+          : PREVIEW_WIND_PROGRAM.moderateMagnitude
+      )
+    ),
+    legacyScaleMigrated,
+  };
+}
 
 export function previewWindProgramAtStep(step, overrides = {}) {
   if (!Number.isFinite(step) || step < 0) throw new Error("preview wind step is invalid");

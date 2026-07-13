@@ -11,8 +11,9 @@ import {
   PREVIEW_WIND_PROGRAM,
   PREVIEW_WIND_PROGRAM_ID,
   previewWindProgramAtStep,
+  resolvePreviewWindMagnitudes,
   summarizeCombReceipt,
-} from "./replay.js?v=113";
+} from "./replay.js?v=114";
 import {
   buildUndercoatCoverageProfile,
   buildRootCoverageCurve,
@@ -1747,7 +1748,7 @@ function updateWindVisual() {
   const direction = new THREE.Vector3(solver.windDirection[0], 0, solver.windDirection[2]);
   const perpendicular = new THREE.Vector3(-direction.z, 0, direction.x);
   windArrow.setDirection(direction);
-  windArrow.setLength(0.9 + solver.wind * 0.9, 0.24, 0.14);
+  windArrow.setLength(1.35, 0.24, 0.14);
   for (let index = 0; index < windStreakCount; index += 1) {
     const phase = (solver.time * (0.35 + solver.wind) + index * 0.173) % 1;
     const along = (phase - 0.5) * 6.2;
@@ -1946,6 +1947,10 @@ function applyQueryConfiguration() {
     controls.autoRotateSpeed = Number(params.get("orbit") ?? 0.8);
   }
   if (params.get("replay") === "1") {
+    const previewWindMagnitudes = resolvePreviewWindMagnitudes(
+      params.get("strongWind"),
+      params.get("moderateWind")
+    );
     deterministicReplay.enabled = true;
     deterministicReplay.autoplay =
       params.get("autoplay") === "1" || (showcase && params.get("autoplay") !== "0");
@@ -1965,22 +1970,7 @@ function applyQueryConfiguration() {
       windRotationRate: Number(params.get("windRotation") ?? 0),
       previewWindProgram:
         params.get("windProgram") === "strong-then-moderate-orbits"
-          ? {
-              strongMagnitude: Math.max(
-                0,
-                Math.min(
-                  2,
-                  Number(params.get("strongWind") ?? PREVIEW_WIND_PROGRAM.strongMagnitude)
-                )
-              ),
-              moderateMagnitude: Math.max(
-                0,
-                Math.min(
-                  2,
-                  Number(params.get("moderateWind") ?? PREVIEW_WIND_PROGRAM.moderateMagnitude)
-                )
-              ),
-            }
+          ? previewWindMagnitudes
           : undefined,
       sectionLiftCycle:
         params.get("liftCycle") === "1"

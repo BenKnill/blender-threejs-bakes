@@ -1,7 +1,7 @@
 export const FATLINE_ROOT_HALF_WIDTH_PX = 0.84;
 export const FATLINE_TIP_HALF_WIDTH_PX = 0.07;
 export const HAIR_FIBER_SHADING_ID = "tangent_dual_lobe_root_emergence_v2";
-export const HAIR_PRESENTATION_LOOP_ID = "two_wind_orbits_1020_step_v2";
+export const HAIR_PRESENTATION_LOOP_ID = "visible_two_wind_orbits_1020_step_v3";
 export const REEL_CAMERA_FIELD_ID = "fixed_control_two_orbit_1020_step_v3";
 export const FULL_GROOM_HYDRATION_ID = "uniform_rod_joint_hydration_450_v3";
 export const PHYSICS_SKELETON_STYLE_ID = "uniform_world_space_rods_joints_v1";

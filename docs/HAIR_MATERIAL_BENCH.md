@@ -376,6 +376,13 @@ names the current wind strength and reports revolution progress, so the two-act
 sequence remains legible without inferring it from the hair alone. See
 `docs/receipts/hair_two_orbit_wind_preview.md`.
 
+The follow-up visual calibration uses strong/moderate solver magnitudes 4.0 and
+1.5. The original 0.58/0.29 program advanced correctly but was swallowed by the
+dense hydrated groom and therefore read frozen. The corrected fixture moves
+guide tips approximately 326-402 mm RMS per settled strong quarter-orbit versus
+132-150 mm moderate while remaining below 3.5% post-settle live stretch. See
+`docs/receipts/hair_visible_wind_amplitude.md`.
+
 ## Hero mannequin and reel cameras
 
 The demo can now put that loop on a CC0 Blender Studio realistic head with

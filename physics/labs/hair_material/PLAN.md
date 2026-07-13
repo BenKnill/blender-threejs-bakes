@@ -229,6 +229,13 @@ strand rendering; do not add another many-hair operator first.
       256-guide fixture repeats at digest `9c5a319aa70970b5`; post-settle live
       stretch peaks at 3.4998%, and settled quarter-orbit tip motion separates
       to roughly 55-79 mm RMS strong versus 26-29 mm RMS moderate.
+- [x] Calibrate that two-act preview against the hydrated silhouette after the
+      initial 0.58/0.29 labels moved counters but read frozen. Production was
+      advancing at roughly 30 FPS with changing physics and render digests; the
+      failure was force scale. The corrected 4.0/1.5 program produces roughly
+      326-402 mm RMS settled strong quarter motion versus 132-150 mm moderate,
+      stays under 3.5% post-settle live stretch, and reads directionally in the
+      fixed-camera Canary frames.
 - [ ] Better scalp/strand contact and a clearer calibration path.
 - [x] Define three receipt-distinct reel shots before packaging video variants.
 - [ ] Package short 16:9 and vertical reels from those named moving shots.
