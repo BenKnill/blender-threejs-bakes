@@ -14,6 +14,8 @@ import {
   fatlineHalfWidthAt,
   fiberEmergenceScaleAt,
   float32BufferDigest,
+  fullGroomHydrationAtStep,
+  FULL_GROOM_HYDRATION_ID,
   hairFiberColorAt,
   HAIR_FIBER_SHADING_ID,
   HAIR_PRESENTATION_LOOP_ID,
@@ -22,7 +24,7 @@ import {
   REEL_CAMERA_FIELD_ID,
   sectionPosePresentationAtStep,
   summarizeGeometryTimings,
-} from "./rendering.js?v=112";
+} from "./rendering.js?v=113";
 import {
   buildGroomInterpolationBindings,
   groomBindingActiveSegments,
@@ -40,6 +42,7 @@ let rootDirectorMode = "free";
 let rootDirectorStrength = 0.22;
 let renderReceiptEnabled = false;
 let sectionControlTubeEnabled = false;
+let fullGroomHydrationEnabled = false;
 let hairShadingMode = "fiber_lobes";
 let presentationLoopEnabled = false;
 let presentationLoopRestarts = 0;
@@ -266,8 +269,22 @@ let hairGeometryTimings = [];
 let sectionControlTube;
 let sectionControlTubeTimings = [];
 let sectionPresentation = { phase: "off", hydration: 1, tubeOpacity: 0 };
+let fullGroomPresentation = {
+  phase: "hair_only",
+  hairHydration: 1,
+  guideOpacity: 0,
+  tubeOpacity: 0,
+};
+let physicsGuideCage;
+let physicsGuidePositions = new Float32Array();
+let physicsGuideCageTimings = [];
+let physicsRootPoints;
+let physicsRootPositions = new Float32Array();
 const SECTION_CONTROL_TUBE_RADIAL_SEGMENTS = 10;
 const SECTION_CONTROL_TUBE_COLOR = new THREE.Color(0x63e6ff);
+const PHYSICS_CAGE_SECTION_COLORS = Object.freeze([
+  0x63e6ff, 0x9b87ff, 0xe879f9, 0xfb7185, 0xfbbf24, 0x86efac, 0x22d3ee, 0xc4b5fd,
+]);
 const fatlineBaseColor = new THREE.Color();
 const hairFiberColorScratch = { r: 0, g: 0, b: 0 };
 let paused = false;
@@ -364,7 +381,143 @@ function rebuildSectionControlTube() {
   scene.add(sectionControlTube);
 }
 
+function rebuildPhysicsGuideCage() {
+  if (physicsGuideCage) {
+    scene.remove(physicsGuideCage);
+    physicsGuideCage.geometry.dispose();
+    physicsGuideCage.material.dispose();
+  }
+  if (physicsRootPoints) {
+    scene.remove(physicsRootPoints);
+    physicsRootPoints.geometry.dispose();
+    physicsRootPoints.material.dispose();
+  }
+  physicsGuideCageTimings = [];
+  physicsGuidePositions = new Float32Array(solver.guideCount * solver.segments * 2 * 3);
+  const guideColors = new Float32Array(physicsGuidePositions.length);
+  const color = new THREE.Color();
+  let cursor = 0;
+  for (let guide = 0; guide < solver.guideCount; guide += 1) {
+    color.setHex(PHYSICS_CAGE_SECTION_COLORS[solver.guideSections[guide] % 8]);
+    for (let segment = 0; segment < solver.segments; segment += 1) {
+      for (let endpoint = 0; endpoint < 2; endpoint += 1) {
+        guideColors[cursor] = color.r;
+        guideColors[cursor + 1] = color.g;
+        guideColors[cursor + 2] = color.b;
+        cursor += 3;
+      }
+    }
+  }
+  const guideGeometry = new THREE.BufferGeometry();
+  guideGeometry.setAttribute("position", new THREE.BufferAttribute(physicsGuidePositions, 3));
+  guideGeometry.setAttribute("color", new THREE.BufferAttribute(guideColors, 3));
+  physicsGuideCage = new THREE.LineSegments(
+    guideGeometry,
+    new THREE.LineBasicMaterial({
+      vertexColors: true,
+      transparent: true,
+      opacity: 0,
+      depthTest: false,
+      depthWrite: false,
+    })
+  );
+  physicsGuideCage.frustumCulled = false;
+  physicsGuideCage.renderOrder = 9;
+  physicsGuideCage.visible = false;
+  scene.add(physicsGuideCage);
+
+  physicsRootPositions = new Float32Array(solver.guideCount * 3);
+  const rootColors = new Float32Array(physicsRootPositions.length);
+  for (let guide = 0; guide < solver.guideCount; guide += 1) {
+    color.setHex(PHYSICS_CAGE_SECTION_COLORS[solver.guideSections[guide] % 8]);
+    const root = guide * 3;
+    rootColors[root] = color.r;
+    rootColors[root + 1] = color.g;
+    rootColors[root + 2] = color.b;
+  }
+  const rootGeometry = new THREE.BufferGeometry();
+  rootGeometry.setAttribute("position", new THREE.BufferAttribute(physicsRootPositions, 3));
+  rootGeometry.setAttribute("color", new THREE.BufferAttribute(rootColors, 3));
+  physicsRootPoints = new THREE.Points(
+    rootGeometry,
+    new THREE.PointsMaterial({
+      vertexColors: true,
+      size: 0.035,
+      sizeAttenuation: true,
+      transparent: true,
+      opacity: 0,
+      depthTest: false,
+      depthWrite: false,
+    })
+  );
+  physicsRootPoints.frustumCulled = false;
+  physicsRootPoints.renderOrder = 10;
+  physicsRootPoints.visible = false;
+  scene.add(physicsRootPoints);
+}
+
+function updateFullGroomPresentation() {
+  const step = deterministicReplay.enabled
+    ? deterministicReplay.state.step
+    : Math.floor(solver.time * 60);
+  fullGroomPresentation = fullGroomHydrationEnabled
+    ? fullGroomHydrationAtStep(step)
+    : { phase: "hair_only", hairHydration: 1, guideOpacity: 0, tubeOpacity: 0 };
+  if (hairRenderMode === "fatline" && hair?.material.uniforms?.presentationHydration) {
+    hair.material.uniforms.presentationHydration.value = fullGroomPresentation.hairHydration;
+  } else if (hair?.material) {
+    const baseOpacity = hair.material.userData.baseOpacity ?? 1;
+    hair.material.opacity = baseOpacity * fullGroomPresentation.hairHydration;
+  }
+  if (hairUndercoat) {
+    hairUndercoat.material.opacity = 0.28 * fullGroomPresentation.hairHydration;
+    hairUndercoat.visible = fullGroomPresentation.hairHydration > 0.002;
+  }
+}
+
+function updatePhysicsGuideCage() {
+  if (!physicsGuideCage || !physicsRootPoints) return;
+  const opacity = fullGroomPresentation.guideOpacity;
+  physicsGuideCage.visible = fullGroomHydrationEnabled && opacity > 0.002;
+  physicsRootPoints.visible = physicsGuideCage.visible;
+  physicsGuideCage.material.opacity = opacity;
+  physicsRootPoints.material.opacity = Math.min(1, opacity + 0.08);
+  if (!physicsGuideCage.visible) return;
+  const started = performance.now();
+  let cursor = 0;
+  for (let guide = 0; guide < solver.guideCount; guide += 1) {
+    const activeSegments = solver.activeSegments[guide];
+    for (let segment = 0; segment < solver.segments; segment += 1) {
+      const displayedSegment = Math.min(segment, activeSegments - 1);
+      for (const particle of [displayedSegment, Math.min(activeSegments, displayedSegment + 1)]) {
+        const source = solver.index(guide, particle);
+        physicsGuidePositions[cursor] = solver.positions[source];
+        physicsGuidePositions[cursor + 1] = solver.positions[source + 1];
+        physicsGuidePositions[cursor + 2] = solver.positions[source + 2];
+        cursor += 3;
+      }
+    }
+    const root = solver.index(guide, 0);
+    const target = guide * 3;
+    physicsRootPositions[target] = solver.positions[root];
+    physicsRootPositions[target + 1] = solver.positions[root + 1];
+    physicsRootPositions[target + 2] = solver.positions[root + 2];
+  }
+  physicsGuideCage.geometry.attributes.position.needsUpdate = true;
+  physicsRootPoints.geometry.attributes.position.needsUpdate = true;
+  physicsGuideCageTimings.push(performance.now() - started);
+  if (physicsGuideCageTimings.length > 660) physicsGuideCageTimings.shift();
+}
+
 function updateSectionPresentation() {
+  if (fullGroomHydrationEnabled) {
+    sectionPresentation = {
+      phase: fullGroomPresentation.phase,
+      hydration: fullGroomPresentation.hairHydration,
+      tubeOpacity: fullGroomPresentation.tubeOpacity,
+    };
+    return;
+  }
   if (!sectionControlTubeEnabled || solver.sectionPose.section < 0) {
     sectionPresentation = { phase: "off", hydration: 1, tubeOpacity: 0 };
     return;
@@ -376,6 +529,7 @@ function updateSectionPresentation() {
 }
 
 function sectionHydrationForGuide(guide) {
+  if (fullGroomHydrationEnabled) return fullGroomPresentation.hairHydration;
   return sectionControlTubeEnabled && solver.guideSections[guide] === solver.sectionPose.section
     ? sectionPresentation.hydration
     : 1;
@@ -431,7 +585,9 @@ function updateSectionControlTube() {
   const section = solver.sectionPose.section;
   sectionControlTube.material.opacity = sectionPresentation.tubeOpacity;
   sectionControlTube.visible =
-    sectionControlTubeEnabled && section >= 0 && sectionPresentation.tubeOpacity > 0.002;
+    (sectionControlTubeEnabled || fullGroomHydrationEnabled) &&
+    section >= 0 &&
+    sectionPresentation.tubeOpacity > 0.002;
   if (!sectionControlTube.visible) return;
   const radialSegments = SECTION_CONTROL_TUBE_RADIAL_SEGMENTS;
   const positions = sectionControlTube.geometry.attributes.position.array;
@@ -513,6 +669,7 @@ function createFatlineMaterial() {
     uniforms: {
       resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
       shadingEnabled: { value: hairShadingMode === "fiber_lobes" ? 1 : 0 },
+      presentationHydration: { value: fullGroomHydrationEnabled ? 0 : 1 },
       keyDirectionWorld: { value: new THREE.Vector3(4, 6, 5).normalize() },
       rimDirectionWorld: { value: new THREE.Vector3(-3, 1, 3).normalize() },
       keyColor: { value: new THREE.Color(0xffddcf) },
@@ -561,6 +718,7 @@ function createFatlineMaterial() {
     `,
     fragmentShader: `
       uniform float shadingEnabled;
+      uniform float presentationHydration;
       uniform vec3 keyDirectionWorld;
       uniform vec3 rimDirectionWorld;
       uniform vec3 keyColor;
@@ -587,7 +745,8 @@ function createFatlineMaterial() {
         float crossSection = sqrt(max(0.0, 1.0 - vAcross * vAcross));
         float fiberCoverage = 1.0 - smoothstep(0.58, 1.0, abs(vAcross));
         float jointCoverage = 0.5 + 0.5 * sin(3.14159265 * clamp(vAlong, 0.0, 1.0));
-        float fiberAlpha = fiberCoverage * jointCoverage * (0.72 + 0.22 * crossSection);
+        float fiberAlpha =
+          fiberCoverage * jointCoverage * (0.72 + 0.22 * crossSection) * presentationHydration;
         if (shadingEnabled < 0.5) {
           gl_FragColor = vec4(vColor, fiberAlpha);
           return;
@@ -697,11 +856,13 @@ function rebuildHairObject() {
   hairPositions = new Float32Array(vertexCapacity * 3);
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.BufferAttribute(hairPositions, 3));
+  const lineOpacity = Math.max(0.42, 0.78 - renderFibersPerGuide * 0.02);
   const material = new THREE.LineBasicMaterial({
     color: hairColor(),
     transparent: true,
-    opacity: Math.max(0.42, 0.78 - renderFibersPerGuide * 0.02),
+    opacity: lineOpacity,
   });
+  material.userData.baseOpacity = lineOpacity;
   hair = new THREE.LineSegments(geometry, material);
   hair.frustumCulled = false;
   scene.add(hair);
@@ -736,6 +897,7 @@ function rebuildSolver() {
   applyMaterialControls();
   rebuildHairObject();
   rebuildSectionControlTube();
+  rebuildPhysicsGuideCage();
   const activeExperiments = [
     solver.spatialFriction.enabled ? "spatial friction" : null,
     solver.rootDirector.enabled ? solver.rootDirector.mode.replaceAll("_", " ") : null,
@@ -831,12 +993,14 @@ function applyMaterialControls() {
 }
 
 function updateHairGeometry() {
+  updateFullGroomPresentation();
   updateSectionPresentation();
   const geometryStart = performance.now();
   if (hairRenderMode === "fatline") {
     updateFatlineGeometry();
     hairGeometryTimings.push(performance.now() - geometryStart);
     if (hairGeometryTimings.length > 660) hairGeometryTimings.shift();
+    updatePhysicsGuideCage();
     updateSectionControlTube();
     return;
   }
@@ -863,6 +1027,7 @@ function updateHairGeometry() {
   hair.geometry.attributes.position.needsUpdate = true;
   hair.geometry.computeBoundingSphere();
   hairDrawCount = cursor / 6;
+  updatePhysicsGuideCage();
   updateSectionControlTube();
 }
 
@@ -1135,9 +1300,11 @@ function updateTelemetry(now) {
     receipt.section_pose.selected_section === null
       ? "off"
       : `${receipt.section_pose.phase} · s${receipt.section_pose.selected_section} · ${receipt.section_pose.affected_guides} guides · ${receipt.section_pose.lift_meters.toFixed(2)} / ${receipt.section_pose.tangential_sweep_meters.toFixed(2)} m`;
-  document.querySelector("#metric-control-tube").textContent = sectionControlTubeEnabled
-    ? `${sectionPresentation.phase} · ${(sectionPresentation.hydration * 100).toFixed(0)}% hair · ${(sectionPresentation.tubeOpacity * 100).toFixed(0)}% tube`
-    : "off";
+  document.querySelector("#metric-control-tube").textContent = fullGroomHydrationEnabled
+    ? `${fullGroomPresentation.phase.replaceAll("_", " ")} · ${(fullGroomPresentation.hairHydration * 100).toFixed(0)}% hair · ${(fullGroomPresentation.guideOpacity * 100).toFixed(0)}% guides`
+    : sectionControlTubeEnabled
+      ? `${sectionPresentation.phase} · ${(sectionPresentation.hydration * 100).toFixed(0)}% hair · ${(sectionPresentation.tubeOpacity * 100).toFixed(0)}% tube`
+      : "off";
   document.querySelector("#metric-geometry").textContent =
     geometryTiming.p99_ms === null
       ? "warming"
@@ -1170,8 +1337,9 @@ function updateTelemetry(now) {
   assumptionMetric.textContent = receipt.assumption_receipt.status;
   assumptionMetric.dataset.status = receipt.assumption_receipt.status;
   drawCombTrace(receipt.comb.force_displacement_trace);
-  document.querySelector("#showcase-phase").textContent =
-    sectionControlTubeEnabled && sectionPresentation.phase !== "simulation"
+  document.querySelector("#showcase-phase").textContent = fullGroomHydrationEnabled
+    ? `groom hydration · ${fullGroomPresentation.phase.replaceAll("_", " ")}`
+    : sectionControlTubeEnabled && sectionPresentation.phase !== "simulation"
       ? `control tube · ${sectionPresentation.phase}`
       : solver.comb.enabled
         ? `${solver.comb.phase} comb pass`
@@ -1378,10 +1546,13 @@ function applyQueryConfiguration() {
     : "free";
   document.querySelector("#reel-shot").value = reelShot;
   if (reelShot !== "free") controls.autoRotate = false;
-  sectionControlTubeEnabled = params.get("controlTube") === "1";
-  document.querySelector("#pose-visual").value = sectionControlTubeEnabled
-    ? "control_tube"
-    : "hair_only";
+  fullGroomHydrationEnabled = params.get("groomHydration") === "1";
+  sectionControlTubeEnabled = !fullGroomHydrationEnabled && params.get("controlTube") === "1";
+  document.querySelector("#pose-visual").value = fullGroomHydrationEnabled
+    ? "full_groom_hydration"
+    : sectionControlTubeEnabled
+      ? "control_tube"
+      : "hair_only";
   renderReceiptEnabled = params.get("renderReceipt") === "1";
   presentationLoopEnabled = params.get("presentationLoop") === "1";
   if (params.get("film") === "1") {
@@ -1483,9 +1654,12 @@ for (const [id, output, format] of [
 
 document.querySelector("#preset").addEventListener("change", rebuildSolver);
 document.querySelector("#pose-visual").addEventListener("change", (event) => {
-  sectionControlTubeEnabled = event.currentTarget.value === "control_tube";
+  const mode = event.currentTarget.value;
+  sectionControlTubeEnabled = mode === "control_tube";
+  fullGroomHydrationEnabled = mode === "full_groom_hydration";
   sectionControlTubeTimings = [];
-  updateHairGeometry();
+  physicsGuideCageTimings = [];
+  rebuildSolver();
 });
 document.querySelector("#pose-section").addEventListener("input", applyMaterialControls);
 document.querySelector("#root-field").addEventListener("change", (event) => {
@@ -1656,8 +1830,23 @@ function createRenderReceipt() {
     root_director: solver.receipt().root_director,
     section_lift: solver.receipt().section_lift,
     section_pose: solver.receipt().section_pose,
+    full_groom_hydration: {
+      enabled: fullGroomHydrationEnabled,
+      field_identity: FULL_GROOM_HYDRATION_ID,
+      phase: fullGroomPresentation.phase,
+      hair_hydration: fullGroomPresentation.hairHydration,
+      guide_opacity: fullGroomPresentation.guideOpacity,
+      tube_opacity: fullGroomPresentation.tubeOpacity,
+      guide_count: solver.guideCount,
+      guide_segments: solver.guideCount * solver.segments,
+      root_point_count: solver.guideCount,
+      section_color_count: PHYSICS_CAGE_SECTION_COLORS.length,
+      geometry_update: summarizeGeometryTimings(physicsGuideCageTimings),
+      position_buffer_fnv1a32: float32BufferDigest(physicsGuidePositions),
+      physics_authority: "none_renderer_only_reads_mechanical_guides",
+    },
     section_control_tube: {
-      enabled: sectionControlTubeEnabled,
+      enabled: sectionControlTubeEnabled || fullGroomHydrationEnabled,
       field_identity: "mean_guide_tube_hydration_v1",
       phase: sectionPresentation.phase,
       hydration: sectionPresentation.hydration,

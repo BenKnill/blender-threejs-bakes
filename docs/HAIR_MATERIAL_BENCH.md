@@ -261,6 +261,22 @@ fixed step 90, tube-on and hair-only modes share physics digest
 p99 and 1.20 ms total hair-geometry p99 at 256 guides × 15 fibers. These are
 single-browser render costs; the tube has no solver authority.
 
+`groomHydration=1` is the stronger whole-groom presentation. It begins with no
+dense hair or undercoat: the browser renders all 256 mechanical guides in eight
+section colors, 256 scalp-root points, and the selected translucent mean-section
+tube. Steps 45-119 hydrate the complete 5,376-fiber material while guide opacity
+falls; steps 120-149 release the remaining guide overlay; from step 150 only the
+shaded groom remains. The three states are deliberately different enough to
+read in a narrow preview rather than behaving like a small debug tint.
+
+At fixed step 90 the full-groom and hair-only modes share physics digest
+`1b50f30cdfdff721`. The transition is 64.8% hydrated hair, 40.048% guide
+opacity, and 10.5952% tube opacity. One 560x720 observation measured the cage at
+0.026 ms mean / 0.10 ms p99 / 0.20 ms maximum and dense geometry at 2.90 ms
+p99. `just hair-groom-hydration-showcase` is the direct front door, and
+`just hair-reel-control` now uses this global separation. The cage reads
+mechanical guide positions but has no force, collision, or state authority.
+
 The dense fat-line path now defaults to `hairShade=fiber`, a compact real-time
 strand approximation informed by Disney fiber models and TressFX rather than a
 2D noise texture. It uses the segment tangent for diffuse response, separates a

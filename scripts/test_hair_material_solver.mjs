@@ -22,6 +22,8 @@ import {
   fatlineHalfWidthAt,
   fiberEmergenceScaleAt,
   float32BufferDigest,
+  fullGroomHydrationAtStep,
+  FULL_GROOM_HYDRATION_ID,
   hairFiberColorAt,
   HAIR_FIBER_SHADING_ID,
   HAIR_PRESENTATION_LOOP_ID,
@@ -85,6 +87,7 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.equal(HAIR_FIBER_SHADING_ID, "tangent_dual_lobe_root_emergence_v2");
   assert.equal(HAIR_PRESENTATION_LOOP_ID, "fade_reset_450_step_v1");
   assert.equal(REEL_CAMERA_FIELD_ID, "three_shot_orbit_450_step_v1");
+  assert.equal(FULL_GROOM_HYDRATION_ID, "section_guide_cage_hydration_450_v1");
   nearlyEqual(presentationLoopOpacityAtStep(0), 0);
   nearlyEqual(presentationLoopOpacityAtStep(15), 0.5);
   nearlyEqual(presentationLoopOpacityAtStep(30), 1);
@@ -106,6 +109,28 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.notDeepEqual(reelCameraPoseAtStep(0, "beauty"), reelCameraPoseAtStep(225, "beauty"));
   assert.notDeepEqual(reelCameraPoseAtStep(330, "control"), reelCameraPoseAtStep(330, "cut"));
   assert.equal(reelCameraPoseAtStep(0, "free"), null);
+  assert.deepEqual(fullGroomHydrationAtStep(0), {
+    phase: "physics_cage",
+    hairHydration: 0,
+    guideOpacity: 0.88,
+    tubeOpacity: 0.22,
+  });
+  assert.equal(fullGroomHydrationAtStep(45).phase, "hydrating");
+  assert.equal(fullGroomHydrationAtStep(45).hairHydration, 0);
+  assert.ok(fullGroomHydrationAtStep(90).hairHydration > 0.5);
+  assert.ok(fullGroomHydrationAtStep(90).guideOpacity > 0.14);
+  assert.deepEqual(fullGroomHydrationAtStep(120), {
+    phase: "guide_release",
+    hairHydration: 1,
+    guideOpacity: 0.14,
+    tubeOpacity: 0.044,
+  });
+  assert.deepEqual(fullGroomHydrationAtStep(150), {
+    phase: "hydrated",
+    hairHydration: 1,
+    guideOpacity: 0,
+    tubeOpacity: 0,
+  });
 }
 
 {

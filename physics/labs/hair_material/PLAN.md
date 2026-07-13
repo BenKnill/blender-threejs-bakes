@@ -103,6 +103,15 @@ proof boundaries must remain explicit.
       a cropped 28%-opacity density fill. The reel recipes now use the existing
       21-fiber ceiling (5,376 fibers); fixed step 90 retains physics digest
       `1b50f30cdfdff721` and observes 2.8 ms geometry p99 in the narrow gate.
+- [x] Make the physics-to-render hierarchy globally legible instead of tinting
+      one section while finished hair remains everywhere else. The opt-in full
+      groom presentation now begins with 256 section-colored mechanical guides,
+      256 scalp-root points, and one translucent mean-section tube while dense
+      hair and undercoat are absent; steps 45-149 hydrate all 5,376 fibers and
+      release the cage. At step 90, enabled and hair-only modes share physics
+      digest `1b50f30cdfdff721`; the cage costs 0.10 ms p99 versus 2.90 ms for
+      dense geometry in one narrow observation. Physics, transition, and
+      hydrated screenshots now read as three distinct representations.
 - [x] Build a small explicit-guide rod/reference fixture before raising guide
       count or enabling spatial friction in the browser by default. The
       settled axial/transverse lanes reproduce exactly, remain under 1.9%

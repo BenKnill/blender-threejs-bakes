@@ -3,6 +3,7 @@ export const FATLINE_TIP_HALF_WIDTH_PX = 0.07;
 export const HAIR_FIBER_SHADING_ID = "tangent_dual_lobe_root_emergence_v2";
 export const HAIR_PRESENTATION_LOOP_ID = "fade_reset_450_step_v1";
 export const REEL_CAMERA_FIELD_ID = "three_shot_orbit_450_step_v1";
+export const FULL_GROOM_HYDRATION_ID = "section_guide_cage_hydration_450_v1";
 
 function smoothStep01(value) {
   const t = Math.max(0, Math.min(1, value));
@@ -19,6 +20,46 @@ export function presentationLoopOpacityAtStep(
   if (step < fadeInEndStep) return smoothStep01(step / fadeInEndStep);
   if (step < fadeOutStartStep) return 1;
   return 1 - smoothStep01((step - fadeOutStartStep) / (endStep - fadeOutStartStep));
+}
+
+export function fullGroomHydrationAtStep(
+  step,
+  { physicsEndStep = 45, hydrationEndStep = 120, guideFadeEndStep = 150 } = {}
+) {
+  if (
+    !Number.isFinite(step) ||
+    !(
+      0 < physicsEndStep &&
+      physicsEndStep < hydrationEndStep &&
+      hydrationEndStep < guideFadeEndStep
+    )
+  ) {
+    throw new Error("full groom hydration steps are invalid");
+  }
+  if (step < physicsEndStep) {
+    return { phase: "physics_cage", hairHydration: 0, guideOpacity: 0.88, tubeOpacity: 0.22 };
+  }
+  if (step < hydrationEndStep) {
+    const progress = smoothStep01((step - physicsEndStep) / (hydrationEndStep - physicsEndStep));
+    return {
+      phase: "hydrating",
+      hairHydration: progress,
+      guideOpacity: 0.88 + (0.14 - 0.88) * progress,
+      tubeOpacity: 0.22 + (0.044 - 0.22) * progress,
+    };
+  }
+  if (step < guideFadeEndStep) {
+    const progress = smoothStep01(
+      (step - hydrationEndStep) / (guideFadeEndStep - hydrationEndStep)
+    );
+    return {
+      phase: "guide_release",
+      hairHydration: 1,
+      guideOpacity: 0.14 * (1 - progress),
+      tubeOpacity: 0.044 * (1 - progress),
+    };
+  }
+  return { phase: "hydrated", hairHydration: 1, guideOpacity: 0, tubeOpacity: 0 };
 }
 
 export function hairFiberColorAt(baseColor, strand, copy, rootFraction, target = {}) {
