@@ -19,12 +19,15 @@ import {
   hairFiberColorAt,
   HAIR_FIBER_SHADING_ID,
   HAIR_PRESENTATION_LOOP_ID,
+  physicsSkeletonDepthWriteAt,
+  PHYSICS_SKELETON_STYLE,
+  PHYSICS_SKELETON_STYLE_ID,
   presentationLoopOpacityAtStep,
   reelCameraPoseAtStep,
   REEL_CAMERA_FIELD_ID,
   sectionPosePresentationAtStep,
   summarizeGeometryTimings,
-} from "./rendering.js?v=115";
+} from "./rendering.js?v=116";
 import {
   buildGroomInterpolationBindings,
   groomBindingActiveSegments,
@@ -298,9 +301,6 @@ let physicsGuideCageTimings = [];
 let physicsSkeletonGuides = [];
 const SECTION_CONTROL_TUBE_RADIAL_SEGMENTS = 10;
 const SECTION_CONTROL_TUBE_COLOR = new THREE.Color(0x63e6ff);
-const PHYSICS_SKELETON_GUIDE_LIMIT = 32;
-const PHYSICS_ROD_RADIUS = 0.014;
-const PHYSICS_JOINT_RADIUS = 0.027;
 const PHYSICS_CAGE_SECTION_COLORS = Object.freeze([
   0x63e6ff, 0x9b87ff, 0xe879f9, 0xfb7185, 0xfbbf24, 0x86efac, 0x22d3ee, 0xc4b5fd,
 ]);
@@ -421,7 +421,7 @@ function rebuildPhysicsGuideCage() {
     physicsJointMesh.material.dispose();
   }
   physicsGuideCageTimings = [];
-  const sampleCount = Math.min(PHYSICS_SKELETON_GUIDE_LIMIT, solver.guideCount);
+  const sampleCount = Math.min(PHYSICS_SKELETON_STYLE.guideLimit, solver.guideCount);
   physicsSkeletonGuides = Array.from({ length: sampleCount }, (_, sample) =>
     Math.min(solver.guideCount - 1, Math.floor(((sample + 0.5) * solver.guideCount) / sampleCount))
   );
@@ -438,11 +438,9 @@ function rebuildPhysicsGuideCage() {
     emissiveIntensity: 0.72,
     transparent: true,
     opacity: 0,
-    depthWrite: false,
+    depthWrite: true,
   });
   const jointMaterial = rodMaterial.clone();
-  jointMaterial.roughness = 0.18;
-  jointMaterial.emissiveIntensity = 0.9;
   physicsGuideCage = new THREE.InstancedMesh(rodGeometry, rodMaterial, rodCount);
   physicsJointMesh = new THREE.InstancedMesh(jointGeometry, jointMaterial, jointCount);
   physicsGuideCage.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -510,6 +508,9 @@ function updatePhysicsGuideCage() {
   physicsJointMesh.visible = physicsGuideCage.visible;
   physicsGuideCage.material.opacity = opacity;
   physicsJointMesh.material.opacity = Math.min(1, opacity + 0.06);
+  const depthWrite = physicsSkeletonDepthWriteAt(fullGroomPresentation.phase, opacity);
+  physicsGuideCage.material.depthWrite = depthWrite;
+  physicsJointMesh.material.depthWrite = depthWrite;
   if (!physicsGuideCage.visible) return;
   const started = performance.now();
   let positionCursor = 0;
@@ -524,8 +525,8 @@ function updatePhysicsGuideCage() {
       physicsGuidePositions[positionCursor + 1] = physicsRodStart.y;
       physicsGuidePositions[positionCursor + 2] = physicsRodStart.z;
       positionCursor += 3;
-      const jointRadius = particle === 0 ? PHYSICS_JOINT_RADIUS * 1.65 : PHYSICS_JOINT_RADIUS;
-      const jointVisible = particle <= activeSegments ? jointRadius : 0.0001;
+      const jointVisible =
+        particle <= activeSegments ? PHYSICS_SKELETON_STYLE.jointRadiusMeters : 0.0001;
       physicsJointScale.setScalar(jointVisible);
       physicsInstanceMatrix.compose(
         physicsRodStart,
@@ -548,9 +549,9 @@ function updatePhysicsGuideCage() {
         length > 1e-7 ? physicsRodDirection.multiplyScalar(1 / length) : physicsUp
       );
       physicsRodScale.set(
-        PHYSICS_ROD_RADIUS,
+        PHYSICS_SKELETON_STYLE.rodRadiusMeters,
         particle < activeSegments ? Math.max(length, 0.0001) : 0.0001,
-        PHYSICS_ROD_RADIUS
+        PHYSICS_SKELETON_STYLE.rodRadiusMeters
       );
       physicsInstanceMatrix.compose(physicsRodMidpoint, physicsRodQuaternion, physicsRodScale);
       physicsGuideCage.setMatrixAt(sample * solver.segments + particle, physicsInstanceMatrix);
@@ -1957,8 +1958,13 @@ function createRenderReceipt() {
       displayed_guide_count: physicsSkeletonGuides.length,
       rod_count: physicsSkeletonGuides.length * solver.segments,
       joint_count: physicsSkeletonGuides.length * (solver.segments + 1),
-      rod_radius_meters: PHYSICS_ROD_RADIUS,
-      joint_radius_meters: PHYSICS_JOINT_RADIUS,
+      style_identity: PHYSICS_SKELETON_STYLE_ID,
+      rod_radius_meters: PHYSICS_SKELETON_STYLE.rodRadiusMeters,
+      joint_radius_meters: PHYSICS_SKELETON_STYLE.jointRadiusMeters,
+      root_joint_scale: PHYSICS_SKELETON_STYLE.rootJointScale,
+      uniform_size_contract: "one_active_rod_radius_and_one_active_joint_radius",
+      size_encodes: "display_role_only_not_mass_stiffness_or_constraint_type",
+      mechanical_hold_depth_write: true,
       mannequin_opacity:
         1 -
         (fullGroomHydrationEnabled

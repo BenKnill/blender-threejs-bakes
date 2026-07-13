@@ -270,21 +270,25 @@ p99 and 1.20 ms total hair-geometry p99 at 256 guides × 15 fibers. These are
 single-browser render costs; the tube has no solver authority.
 
 `groomHydration=1` now begins with an unambiguous reduced mechanical skeleton,
-not a dense guide bundle. It deterministically samples 32 of the 256 solver
-guides and draws 384 lit cylinder links plus 416 spherical joints in the eight
-section colors. Dense hair, undercoat, and the mean-section volume tube are all
-absent. A cool key/fill rig lights the rods while the mannequin fades to 32%
-opacity so front and rear structure remain readable at narrow preview scale.
+not a dense guide bundle. It deterministically samples 20 of the 256 solver
+guides and draws 240 lit cylinder links plus 260 spherical joints in the eight
+section colors. Every active rod has a 0.011 m world-space radius and every
+active joint, including roots, has a 0.020 m radius. Size does not encode mass,
+stiffness, or constraint type. The clean mechanical hold writes depth so
+overlapping transparent roots do not accumulate into false large particles.
+Dense hair, undercoat, and the mean-section volume tube are all absent. A cool
+key/fill rig lights the rods while the mannequin fades to 32% opacity.
 
 The clean mechanical hold lasts through step 119. Steps 120-209 hydrate the
 complete 5,376-fiber material while the rods recede; steps 210-239 release the
 last rod overlay; from step 240 only the shaded groom remains. At fixed step 60,
-the skeleton and hair-only modes share physics digest `4b5e2bcab247f0bd`.
-One 560x720 observation measured the skeleton update at 0.058 ms mean / 0.20 ms
+the skeleton and hair-only modes share physics digest `b7a5a62747c250db`.
+One 560x720 observation measured the skeleton update at 0.038 ms mean / 0.20 ms
 p99 / 0.20 ms maximum over 600 frames. `just hair-groom-hydration-showcase` is
 the direct front door, and `just hair-reel-control` uses the same presentation.
 The rods and joints read solver positions but have no force, collision, or
-state authority.
+state authority. Perspective still produces ordinary projected-size change;
+the renderer adds no semantic size variation.
 
 The dense fat-line path now defaults to `hairShade=fiber`, a compact real-time
 strand approximation informed by Disney fiber models and TressFX rather than a
