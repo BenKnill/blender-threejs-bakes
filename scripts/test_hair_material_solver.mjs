@@ -87,7 +87,7 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.equal(HAIR_FIBER_SHADING_ID, "tangent_dual_lobe_root_emergence_v2");
   assert.equal(HAIR_PRESENTATION_LOOP_ID, "fade_reset_450_step_v1");
   assert.equal(REEL_CAMERA_FIELD_ID, "three_shot_orbit_450_step_v1");
-  assert.equal(FULL_GROOM_HYDRATION_ID, "section_guide_cage_hydration_450_v1");
+  assert.equal(FULL_GROOM_HYDRATION_ID, "lit_rod_joint_hydration_450_v2");
   nearlyEqual(presentationLoopOpacityAtStep(0), 0);
   nearlyEqual(presentationLoopOpacityAtStep(15), 0.5);
   nearlyEqual(presentationLoopOpacityAtStep(30), 1);
@@ -110,22 +110,23 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.notDeepEqual(reelCameraPoseAtStep(330, "control"), reelCameraPoseAtStep(330, "cut"));
   assert.equal(reelCameraPoseAtStep(0, "free"), null);
   assert.deepEqual(fullGroomHydrationAtStep(0), {
-    phase: "physics_cage",
+    phase: "mechanical_skeleton",
     hairHydration: 0,
-    guideOpacity: 0.88,
-    tubeOpacity: 0.22,
+    guideOpacity: 0.92,
+    tubeOpacity: 0,
   });
-  assert.equal(fullGroomHydrationAtStep(45).phase, "hydrating");
-  assert.equal(fullGroomHydrationAtStep(45).hairHydration, 0);
-  assert.ok(fullGroomHydrationAtStep(90).hairHydration > 0.5);
-  assert.ok(fullGroomHydrationAtStep(90).guideOpacity > 0.14);
-  assert.deepEqual(fullGroomHydrationAtStep(120), {
+  assert.equal(fullGroomHydrationAtStep(119).phase, "mechanical_skeleton");
+  assert.equal(fullGroomHydrationAtStep(120).phase, "hydrating");
+  assert.equal(fullGroomHydrationAtStep(120).hairHydration, 0);
+  assert.ok(fullGroomHydrationAtStep(165).hairHydration > 0.49);
+  assert.ok(fullGroomHydrationAtStep(165).guideOpacity > 0.18);
+  assert.deepEqual(fullGroomHydrationAtStep(210), {
     phase: "guide_release",
     hairHydration: 1,
-    guideOpacity: 0.14,
-    tubeOpacity: 0.044,
+    guideOpacity: 0.18,
+    tubeOpacity: 0,
   });
-  assert.deepEqual(fullGroomHydrationAtStep(150), {
+  assert.deepEqual(fullGroomHydrationAtStep(240), {
     phase: "hydrated",
     hairHydration: 1,
     guideOpacity: 0,

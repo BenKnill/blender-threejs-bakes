@@ -112,6 +112,14 @@ proof boundaries must remain explicit.
       digest `1b50f30cdfdff721`; the cage costs 0.10 ms p99 versus 2.90 ms for
       dense geometry in one narrow observation. Physics, transition, and
       hydrated screenshots now read as three distinct representations.
+- [x] Correct the diagnostic phase after screenshot review showed the 256-line
+      cage plus volume tube still read as a bundle/hair hybrid. The current
+      `lit_rod_joint_hydration_450_v2` display deterministically samples 32
+      solver guides and draws 384 lit cylinder links plus 416 sphere joints.
+      Dense hair, undercoat, and the volume tube remain absent for a full 120
+      steps while the mannequin is ghosted; hydration begins only afterward.
+      At fixed step 60, enabled and hair-only modes share physics digest
+      `4b5e2bcab247f0bd`; one narrow sample measures the skeleton at 0.20 ms p99.
 - [x] Build a small explicit-guide rod/reference fixture before raising guide
       count or enabling spatial friction in the browser by default. The
       settled axial/transverse lanes reproduce exactly, remain under 1.9%

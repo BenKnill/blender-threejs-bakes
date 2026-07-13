@@ -2,6 +2,11 @@
 
 Issue: [#152](https://github.com/BenKnill/blender-threejs-bakes/issues/152)
 
+Historical note: issue #154 supersedes this initial 256-line cage with the
+clearer sparse lit rod-and-joint display documented in
+`hair_mechanical_skeleton.md`. The measurements below remain the receipt for
+the original v1 slice.
+
 ## Why the section tube was insufficient
 
 The earlier `controlTube=1` mode made one posed section cyan while finished hair
