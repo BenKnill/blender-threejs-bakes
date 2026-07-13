@@ -88,7 +88,7 @@ const snapshots = phaseSnapshots();
 
 assert.equal(treatment.state_digest, repeated.state_digest);
 assert.deepEqual(treatment.receipt, repeated.receipt);
-assert.equal(baseline.state_digest, "6a0294d4bf085310");
+assert.equal(baseline.state_digest, "689a1e24074e63a9");
 assert.equal(snapshots[30].phase, "idle");
 assert.equal(snapshots[91].phase, "hold");
 assert.equal(snapshots[91].selected_section, 7);

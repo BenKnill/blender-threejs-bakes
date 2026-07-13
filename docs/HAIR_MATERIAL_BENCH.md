@@ -45,17 +45,25 @@ the guide-line button applies a reproducible horizontal cut.
 ## Scalp root fields
 
 The root constraint has three explicit identities: `free`, `scalp_normal`, and
-`styled_side_part`. The styled field divides the scalp azimuth into eight
-sections, separates roots around a left side part, projects an authored lateral
-sweep into each root tangent plane, and adds bounded crown lift. It then mixes
-that direction with the original rest direction over the same two-segment root
-zone used by the scalp-normal director.
+`styled_side_part`. All modes use the deterministic `face_hairline_ellipsoid_v1`
+root layout: its central frontal polar reach is shallower than the old uniform
+73-degree cap, while side and rear coverage remains deeper. Roots sit 45 mm
+outside the analytic collision ellipsoid so they are visible on the realistic
+mannequin instead of emerging through it. The styled field divides the scalp
+azimuth into eight sections, separates a narrow left side part, sends crown
+roots backward, and sends frontal roots laterally while preserving positive
+outward growth.
 
 Use `rootField=styled-side-part` in a demo URL or select **Styled side part +
 sweep** in the panel. The legacy `rootDirector=1` query still resolves to
 `scalp_normal`. Receipts identify the exact field, section count, part location,
 target outward dot, target tangential magnitude, actual normal alignment, and
 actual field alignment.
+
+Styled mode also enables `front_midshaft_rest_projection_v1`. It constrains 64
+front-center guides outside a 0.58 m cheek half-width and behind the analytic
+`z=0.24 m` face plane over 22-68% of their length. `faceClear=0` is the explicit
+A/B opt-out. This is an authored face-volume proxy, not mesh collision.
 
 `just hair-root-field-ab` runs free, scalp-normal, and styled modes through one
 330-step cut/comb/rotating-wind replay. `just hair-styled-showcase` prints the
@@ -296,8 +304,12 @@ the crown read as rectangular ladders rather than hair. The v2 fiber path keeps
 one tapered owner, deterministically fades the other children in over the first
 4-27% of strand length, narrows half-width from 0.84 px at the root to 0.07 px
 at the tip, softens the analytic cross-section, and balances adjacent segment
-endpoints at half coverage. The smooth crown undercoat is cropped and reduced
-to 28% opacity so a part reveals scalp rather than a solid helmet.
+endpoints at half coverage. Screenshot review subsequently found that the
+replacement hairline cap had inward triangle winding and sat inside the
+realistic head. The current cap follows the same frontal hairline as the roots,
+faces outward, sits just inside the 45 mm root offset, and uses 62% opacity.
+Crown child fibers also emerge earlier than side fibers. This closes the
+accidental bald patch without restoring the old forehead helmet.
 
 The hero recipes now use 21 visible fibers per guide, or 5,376 fibers for the
 256-guide fixture. At fixed step 90, the physics digest remains
@@ -305,9 +317,9 @@ The hero recipes now use 21 visible fibers per guide, or 5,376 fibers for the
 digests `03bd29bb` / `a6ef84a3` / `b257ebcb` / `06dd4fcf`. One 560x720 browser
 sample observed 2.26 ms mean / 2.80 ms p99 / 2.90 ms maximum geometry update.
 The screenshot is materially finer and the part is clearer, but it is still
-not realistic hair: the front sections form a uniform face veil, the
-12-segment topology remains faintly readable at sharp bends, transparency is
-not order-independent, and there are no deep opacity/self-shadow maps.
+not realistic hair: the hairline cap remains visibly coarse, the 12-segment
+topology remains readable at sharp bends, transparency is not order-independent,
+and there are no deep opacity/self-shadow maps.
 
 `presentationLoop=1` restores the showcase as an animation: the deterministic
 fixture fades in, hydrates, simulates wind and the cut, fades out after step
