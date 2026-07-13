@@ -1,0 +1,90 @@
+{
+  "schema": "hair-hydration-audition/1",
+  "issue": 177,
+  "branch": "codex/hair-hydration-audition",
+  "hydration_field_identity": "staged_material_audition_hydration_v5",
+  "recipe_space_identity": "five_recipe_fiber_material_space_v1",
+  "physics_boundary": "Browser hydration only reads the recorded native guide nodes; it does not rerun or alter Box3D.",
+  "timeline": [
+    { "phase": "mechanical_skeleton", "start_s": 0, "end_s": 2 },
+    { "phase": "owner_guides", "start_s": 2, "end_s": 3.5 },
+    { "phase": "clump_locks", "start_s": 3.5, "end_s": 5 },
+    { "phase": "microfiber_fill", "start_s": 5, "end_s": 6.5 },
+    { "phase": "material_audition", "start_s": 6.5, "end_s": 11.5 },
+    { "phase": "selected_recipe_settle", "start_s": 11.5, "end_s": 12 },
+    { "phase": "strong_native_wind_orbit", "start_s": 12, "end_s": 18 },
+    { "phase": "moderate_native_wind_orbit", "start_s": 18, "end_s": 24 }
+  ],
+  "recipes": [
+    {
+      "id": "fine_silk",
+      "root_to_tip_width_scale": [0.58, 0.46],
+      "population_fraction": 1,
+      "opacity": 0.68,
+      "longitudinal_roughness": 0.22
+    },
+    {
+      "id": "natural_balanced",
+      "root_to_tip_width_scale": [0.78, 0.68],
+      "population_fraction": 1,
+      "opacity": 0.78,
+      "longitudinal_roughness": 0.34
+    },
+    {
+      "id": "coarse_matte",
+      "root_to_tip_width_scale": [1.24, 1.04],
+      "population_fraction": 0.82,
+      "opacity": 0.86,
+      "longitudinal_roughness": 0.49
+    },
+    {
+      "id": "glossy_cinematic",
+      "root_to_tip_width_scale": [0.82, 0.6],
+      "population_fraction": 0.94,
+      "opacity": 0.74,
+      "longitudinal_roughness": 0.17
+    },
+    {
+      "id": "wet_clumped",
+      "root_to_tip_width_scale": [1.62, 1.28],
+      "population_fraction": 0.38,
+      "opacity": 0.94,
+      "longitudinal_roughness": 0.2
+    }
+  ],
+  "native_clip": {
+    "trajectory_digest": "5aaf6c2db5806b28",
+    "binary_sha256": "bee02827d8533090f123b3a9fca681aaa5c5ab84c5db12e65e7d4fa9cc0aa68d",
+    "hydration_pre_roll_s": 12,
+    "strong_orbit_s": 6,
+    "moderate_orbit_s": 6
+  },
+  "canary_observation": {
+    "browser": "Google Chrome Canary 152.0.7948.0",
+    "viewport": [960, 900],
+    "capture_seconds": [1.2, 2.8, 4.2, 5.8, 7, 9, 11, 12.8, 18.8],
+    "javascript_exceptions": [],
+    "console_error_boundary": "Only the expected missing favicon.ico request returned 404.",
+    "dense_geometry_update_ms": {
+      "measured_frames": 600,
+      "mean": 8.7095,
+      "p99": 9.5,
+      "max": 14.1
+    },
+    "skeleton_geometry_update_ms": {
+      "measured_frames": 243,
+      "mean": 0.0654,
+      "p99": 0.2,
+      "max": 0.2
+    },
+    "renderer_draw_calls": 15,
+    "mannequin_status": "realistic_ready"
+  },
+  "verification": ["just lint", "just test", "nine-stage headless Chrome Canary capture"],
+  "bounded_claim": "The demo now exposes structural hydration stages and five materially distinct browser recipes before replaying both complete native wind orbits.",
+  "non_claims": [
+    "The ribbon renderer is not a production strand shader.",
+    "The realistic mannequin remains a visual plate without native head collision.",
+    "The recipe names are visual hypotheses, not calibrated fiber measurements."
+  ]
+}

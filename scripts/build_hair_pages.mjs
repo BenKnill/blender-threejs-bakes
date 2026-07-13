@@ -13,6 +13,8 @@ const canonicalParameters = new URLSearchParams([
   ["physicsClip", "box3d-scalp-256"],
   ["showcase", "1"],
   ["groomHydration", "1"],
+  ["hydrationRecipe", "natural-balanced"],
+  ["hydrationTour", "1"],
   ["guides", "256"],
   ["iterations", "6"],
   ["preset", "wavy"],

@@ -91,6 +91,8 @@ assert.ok(index.includes('"three": "./vendor/three.module.js"'));
 assert.ok(index.includes('"three/addons/": "./vendor/"'));
 assert.ok(index.includes("native-box3d-scalp-groom-two-orbit-playback"));
 assert.ok(index.includes("physicsClip=box3d-scalp-256"));
+assert.ok(index.includes("hydrationRecipe=natural-balanced"));
+assert.ok(index.includes("hydrationTour=1"));
 assert.ok(index.includes("guides=256"));
 assert.ok(index.includes("fibers=21"));
 assert.ok(!index.includes("windProgram=strong-then-moderate-orbits"));

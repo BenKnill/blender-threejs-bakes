@@ -415,6 +415,29 @@ are visible next boundaries rather than accepted realism claims. See
 `docs/receipts/hair_box3d_scalp_scale_v1.json` and
 `docs/HAIR_BOX3D_SWATCH.md`.
 
+## Multi-recipe display hydration
+
+`groomHydration=1` is no longer a single opacity guess. The canonical playback
+holds one native guide pose still for a twelve-second display audition:
+mechanical rods, owner guides, clump locks, microfiber fill, five one-second
+material recipes, and a selected-recipe settle. Only then does recorded motion
+begin, preserving the full six-second strong orbit and full six-second moderate
+orbit in the completed groom.
+
+`hydrationRecipe=fine-silk|natural-balanced|coarse-matte|glossy-cinematic|wet-clumped`
+selects the final recipe. `hydrationTour=0` skips automatic recipe substitution
+during the five-second audition while retaining the structural stages. Recipes
+vary root/tip screen-space gauge, visible population, opacity, longitudinal
+roughness, diffuse/primary/transmission/rim weights, multiple scattering fill,
+and undercoat scale. Every choice is recorded in the render receipt under
+`full_groom_hydration.material_recipe_space`.
+
+A nine-frame Chrome Canary pass observed the complete stage sequence with no
+JavaScript exceptions. The dense geometry update measured 8.71 ms mean / 9.50
+ms p99 / 14.10 ms maximum over 600 frames at 960x900. These are browser display
+measurements, not new Box3D performance or realism claims. See
+`docs/receipts/hair_hydration_audition_v1.json`.
+
 ## Hero mannequin and reel cameras
 
 The demo can now put that loop on a CC0 Blender Studio realistic head with
