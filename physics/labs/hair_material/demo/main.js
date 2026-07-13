@@ -8,8 +8,11 @@ import {
   COMB_MATERIAL_CONDITIONS,
   createReplayState,
   digestHairState,
+  PREVIEW_WIND_PROGRAM,
+  PREVIEW_WIND_PROGRAM_ID,
+  previewWindProgramAtStep,
   summarizeCombReceipt,
-} from "./replay.js?v=112";
+} from "./replay.js?v=113";
 import {
   buildUndercoatCoverageProfile,
   buildRootCoverageCurve,
@@ -40,7 +43,7 @@ import {
   REEL_CAMERA_FIELD_ID,
   sectionPosePresentationAtStep,
   summarizeGeometryTimings,
-} from "./rendering.js?v=119";
+} from "./rendering.js?v=121";
 import {
   buildGroomInterpolationBindings,
   groomBindingActiveSegments,
@@ -76,7 +79,7 @@ let mannequinMode = "primitive";
 let mannequinStatus = "primitive_ready";
 let heroMannequin;
 let reelShot = "free";
-const PRESENTATION_LOOP_END_STEP = 450;
+const PRESENTATION_LOOP_END_STEP = PREVIEW_WIND_PROGRAM.loopEndStep;
 const FATLINE_DYNAMIC_ATTRIBUTES = Object.freeze([
   "instanceStart",
   "instanceEnd",
@@ -1684,19 +1687,43 @@ function updateTelemetry(now) {
   assumptionMetric.textContent = receipt.assumption_receipt.status;
   assumptionMetric.dataset.status = receipt.assumption_receipt.status;
   drawCombTrace(receipt.comb.force_displacement_trace);
-  document.querySelector("#showcase-phase").textContent = fullGroomHydrationEnabled
-    ? fullGroomPresentation.phase === "mechanical_skeleton"
-      ? `mechanical rods · ${physicsSkeletonGuides.length} guides / ${physicsSkeletonGuides.length * solver.segments} links`
-      : `groom hydration · ${fullGroomPresentation.phase.replaceAll("_", " ")}`
-    : sectionControlTubeEnabled && sectionPresentation.phase !== "simulation"
-      ? `control tube · ${sectionPresentation.phase}`
-      : solver.comb.enabled
-        ? `${solver.comb.phase} comb pass`
-        : receipt.assumption_receipt.measurement_window === "comb_cycle"
-          ? "two-pass complete · wind orbit continues"
-          : receipt.assumption_receipt.measurement_window.replaceAll("_", " ");
-  document.querySelector("#showcase-wind").textContent =
-    `wind ${windDegrees.toFixed(0)}° · ${receipt.wind.magnitude.toFixed(2)}`;
+  const previewWind = deterministicReplay.config.previewWindProgram
+    ? previewWindProgramAtStep(
+        Math.max(0, deterministicReplay.state.step - 1),
+        deterministicReplay.config.previewWindProgram === true
+          ? undefined
+          : deterministicReplay.config.previewWindProgram
+      )
+    : null;
+  document.querySelector("#showcase-phase").textContent =
+    fullGroomHydrationEnabled && fullGroomPresentation.phase !== "hydrated"
+      ? fullGroomPresentation.phase === "mechanical_skeleton"
+        ? `mechanical rods · ${physicsSkeletonGuides.length} guides / ${physicsSkeletonGuides.length * solver.segments} links`
+        : `groom hydration · ${fullGroomPresentation.phase.replaceAll("_", " ")}`
+      : previewWind?.phase === "strong_orbit"
+        ? `STRONG breeze · orbit ${Math.round(previewWind.orbitProgress * 100)}%`
+        : previewWind?.phase === "moderate_orbit"
+          ? `MODERATE breeze · orbit ${Math.round(previewWind.orbitProgress * 100)}%`
+          : previewWind?.phase === "orbit_complete"
+            ? "two complete wind orbits · resetting"
+            : previewWind?.phase === "calm_setup"
+              ? "calm setup · wind begins after hydration"
+              : sectionControlTubeEnabled && sectionPresentation.phase !== "simulation"
+                ? `control tube · ${sectionPresentation.phase}`
+                : solver.comb.enabled
+                  ? `${solver.comb.phase} comb pass`
+                  : receipt.assumption_receipt.measurement_window === "comb_cycle"
+                    ? "two-pass complete · wind orbit continues"
+                    : receipt.assumption_receipt.measurement_window.replaceAll("_", " ");
+  const windStrength =
+    previewWind?.phase === "strong_orbit"
+      ? "STRONG"
+      : previewWind?.phase === "moderate_orbit" || previewWind?.phase === "orbit_complete"
+        ? "MODERATE"
+        : "setup";
+  document.querySelector("#showcase-wind").textContent = previewWind
+    ? `${windStrength} · ${windDegrees.toFixed(0)}° · force ${receipt.wind.magnitude.toFixed(2)}`
+    : `wind ${windDegrees.toFixed(0)}° · ${receipt.wind.magnitude.toFixed(2)}`;
   const stretchWindow = receipt.assumption_receipt.measurement_window;
   const stretchQualifier =
     stretchWindow === "full_simulation"
@@ -1936,6 +1963,25 @@ function applyQueryConfiguration() {
       cutDuration: Math.max(0.2, Number(params.get("cutDuration") ?? 1.4)),
       windAngle: Number(params.get("windAngle") ?? 0),
       windRotationRate: Number(params.get("windRotation") ?? 0),
+      previewWindProgram:
+        params.get("windProgram") === "strong-then-moderate-orbits"
+          ? {
+              strongMagnitude: Math.max(
+                0,
+                Math.min(
+                  2,
+                  Number(params.get("strongWind") ?? PREVIEW_WIND_PROGRAM.strongMagnitude)
+                )
+              ),
+              moderateMagnitude: Math.max(
+                0,
+                Math.min(
+                  2,
+                  Number(params.get("moderateWind") ?? PREVIEW_WIND_PROGRAM.moderateMagnitude)
+                )
+              ),
+            }
+          : undefined,
       sectionLiftCycle:
         params.get("liftCycle") === "1"
           ? {
@@ -2207,6 +2253,20 @@ function createRenderReceipt() {
       restarts: presentationLoopRestarts,
       physics_authority: "restarts_same_deterministic_fixture_only",
     },
+    wind_program: deterministicReplay.config.previewWindProgram
+      ? {
+          field_identity: PREVIEW_WIND_PROGRAM_ID,
+          ...PREVIEW_WIND_PROGRAM,
+          ...deterministicReplay.config.previewWindProgram,
+          current: previewWindProgramAtStep(
+            Math.max(0, deterministicReplay.state.step - 1),
+            deterministicReplay.config.previewWindProgram
+          ),
+          strong_orbit_angle_delta_radians: Math.PI * 2,
+          moderate_orbit_angle_delta_radians: Math.PI * 2,
+          physics_authority: "writes_solver_wind_magnitude_and_direction_only",
+        }
+      : null,
     mannequin: {
       requested_mode: mannequinMode,
       status: mannequinStatus,

@@ -1,8 +1,8 @@
 export const FATLINE_ROOT_HALF_WIDTH_PX = 0.84;
 export const FATLINE_TIP_HALF_WIDTH_PX = 0.07;
 export const HAIR_FIBER_SHADING_ID = "tangent_dual_lobe_root_emergence_v2";
-export const HAIR_PRESENTATION_LOOP_ID = "fade_reset_450_step_v1";
-export const REEL_CAMERA_FIELD_ID = "three_shot_orbit_450_step_v1";
+export const HAIR_PRESENTATION_LOOP_ID = "two_wind_orbits_1020_step_v2";
+export const REEL_CAMERA_FIELD_ID = "fixed_control_two_orbit_1020_step_v3";
 export const FULL_GROOM_HYDRATION_ID = "uniform_rod_joint_hydration_450_v3";
 export const PHYSICS_SKELETON_STYLE_ID = "uniform_world_space_rods_joints_v1";
 export const LOCK_AWARE_COVERAGE_ID = "live_root_cover_locks_catmull_rom_v3";
@@ -294,7 +294,7 @@ export function physicsSkeletonDepthWriteAt(phase, opacity) {
 
 export function presentationLoopOpacityAtStep(
   step,
-  { fadeInEndStep = 30, fadeOutStartStep = 420, endStep = 450 } = {}
+  { fadeInEndStep = 30, fadeOutStartStep = 990, endStep = 1020 } = {}
 ) {
   if (!(0 < fadeInEndStep && fadeInEndStep < fadeOutStartStep && fadeOutStartStep < endStep)) {
     throw new Error("presentation loop steps are invalid");
@@ -389,7 +389,7 @@ export function lockAwareFiberEmergenceScaleAt(
   return rootCoverage + (1 - rootCoverage) * smoothStep01(fraction / Math.max(0.001, end));
 }
 
-export function reelCameraPoseAtStep(step, shot, loopSteps = 450) {
+export function reelCameraPoseAtStep(step, shot, loopSteps = 1020) {
   if (!Number.isFinite(step) || !(loopSteps > 0)) throw new Error("reel camera step is invalid");
   if (!["beauty", "control", "cut"].includes(shot)) return null;
   const cycleStep = ((step % loopSteps) + loopSteps) % loopSteps;
@@ -404,9 +404,9 @@ export function reelCameraPoseAtStep(step, shot, loopSteps = 450) {
     height = 1.42 + 0.12 * Math.sin(phase * Math.PI * 2);
     targetHeight = 1.18;
   } else if (shot === "control") {
-    azimuth = -0.24 + 0.14 * Math.sin(phase * Math.PI * 2);
+    azimuth = -0.24;
     radius = 6.35;
-    height = 1.72 + 0.08 * Math.sin(phase * Math.PI * 2);
+    height = 1.72;
     targetHeight = 1.42;
   } else {
     const cutProgress = smoothStep01((cycleStep - 285) / 105);

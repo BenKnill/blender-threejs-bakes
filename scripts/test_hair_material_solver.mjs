@@ -97,6 +97,9 @@ import {
   COMB_MATERIAL_CONDITIONS,
   createReplayState,
   digestHairState,
+  PREVIEW_WIND_PROGRAM,
+  PREVIEW_WIND_PROGRAM_ID,
+  previewWindProgramAtStep,
   runHairReplay,
   sectionLiftEnvelopeAtStep,
   sectionPoseEnvelopeAtStep,
@@ -109,8 +112,9 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
 
 {
   assert.equal(HAIR_FIBER_SHADING_ID, "tangent_dual_lobe_root_emergence_v2");
-  assert.equal(HAIR_PRESENTATION_LOOP_ID, "fade_reset_450_step_v1");
-  assert.equal(REEL_CAMERA_FIELD_ID, "three_shot_orbit_450_step_v1");
+  assert.equal(HAIR_PRESENTATION_LOOP_ID, "two_wind_orbits_1020_step_v2");
+  assert.equal(REEL_CAMERA_FIELD_ID, "fixed_control_two_orbit_1020_step_v3");
+  assert.equal(PREVIEW_WIND_PROGRAM_ID, "hydrated_strong_then_moderate_full_orbits_v1");
   assert.equal(FULL_GROOM_HYDRATION_ID, "uniform_rod_joint_hydration_450_v3");
   assert.equal(PHYSICS_SKELETON_STYLE_ID, "uniform_world_space_rods_joints_v1");
   assert.equal(LOCK_AWARE_COVERAGE_ID, "live_root_cover_locks_catmull_rom_v3");
@@ -153,9 +157,36 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   nearlyEqual(presentationLoopOpacityAtStep(0), 0);
   nearlyEqual(presentationLoopOpacityAtStep(15), 0.5);
   nearlyEqual(presentationLoopOpacityAtStep(30), 1);
-  nearlyEqual(presentationLoopOpacityAtStep(420), 1);
-  nearlyEqual(presentationLoopOpacityAtStep(435), 0.5);
-  nearlyEqual(presentationLoopOpacityAtStep(450), 0);
+  nearlyEqual(presentationLoopOpacityAtStep(990), 1);
+  nearlyEqual(presentationLoopOpacityAtStep(1005), 0.5);
+  nearlyEqual(presentationLoopOpacityAtStep(1020), 0);
+  assert.deepEqual(previewWindProgramAtStep(0), {
+    fieldIdentity: PREVIEW_WIND_PROGRAM_ID,
+    phase: "calm_setup",
+    magnitude: PREVIEW_WIND_PROGRAM.setupMagnitude,
+    angleRadians: 0,
+    orbit: 0,
+    orbitProgress: 0,
+    completedOrbits: 0,
+  });
+  const strongStart = previewWindProgramAtStep(PREVIEW_WIND_PROGRAM.setupEndStep);
+  const strongHalf = previewWindProgramAtStep(
+    (PREVIEW_WIND_PROGRAM.setupEndStep + PREVIEW_WIND_PROGRAM.strongEndStep) / 2
+  );
+  const moderateStart = previewWindProgramAtStep(PREVIEW_WIND_PROGRAM.strongEndStep);
+  const moderateHalf = previewWindProgramAtStep(
+    (PREVIEW_WIND_PROGRAM.strongEndStep + PREVIEW_WIND_PROGRAM.moderateEndStep) / 2
+  );
+  const complete = previewWindProgramAtStep(PREVIEW_WIND_PROGRAM.moderateEndStep);
+  assert.equal(strongStart.phase, "strong_orbit");
+  nearlyEqual(strongStart.angleRadians, 0);
+  nearlyEqual(strongHalf.angleRadians, Math.PI);
+  assert.equal(moderateStart.phase, "moderate_orbit");
+  nearlyEqual(moderateStart.angleRadians, Math.PI * 2);
+  nearlyEqual(moderateHalf.angleRadians, Math.PI * 3);
+  assert.equal(complete.phase, "orbit_complete");
+  nearlyEqual(complete.angleRadians, Math.PI * 4);
+  assert.equal(complete.completedOrbits, 2);
   const root = hairFiberColorAt({ r: 0.4, g: 0.2, b: 0.1 }, 8, 3, 0);
   const tip = hairFiberColorAt({ r: 0.4, g: 0.2, b: 0.1 }, 8, 3, 1);
   assert.ok(root.r < tip.r);
@@ -172,8 +203,16 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.ok(lockAwareFiberEmergenceScaleAt(8, 3, 0.5, 12) > 0.8);
   assert.equal(lockAwareFiberEmergenceScaleAt(8, 3, 1, 12), 1);
   assert.ok(lockAwareFiberEmergenceScaleAt(8, 3, 0.5, 12) > fiberEmergenceScaleAt(8, 3, 0.5, 12));
-  assert.deepEqual(reelCameraPoseAtStep(0, "beauty"), reelCameraPoseAtStep(450, "beauty"));
-  assert.notDeepEqual(reelCameraPoseAtStep(0, "beauty"), reelCameraPoseAtStep(225, "beauty"));
+  assert.deepEqual(reelCameraPoseAtStep(0, "beauty"), reelCameraPoseAtStep(1020, "beauty"));
+  assert.notDeepEqual(reelCameraPoseAtStep(0, "beauty"), reelCameraPoseAtStep(510, "beauty"));
+  assert.deepEqual(
+    reelCameraPoseAtStep(240, "control").position,
+    reelCameraPoseAtStep(780, "control").position
+  );
+  assert.deepEqual(
+    reelCameraPoseAtStep(240, "control").target,
+    reelCameraPoseAtStep(780, "control").target
+  );
   assert.notDeepEqual(reelCameraPoseAtStep(330, "control"), reelCameraPoseAtStep(330, "cut"));
   assert.equal(reelCameraPoseAtStep(0, "free"), null);
   assert.deepEqual(fullGroomHydrationAtStep(0), {
