@@ -1,4 +1,5 @@
 export const SCALP_LAYOUT_ID = "face_hairline_ellipsoid_v1";
+export const SCALP_ROOT_PROJECTION_ID = "ellipsoid_shell_radial_v1";
 export const SCALP_CENTER = Object.freeze([0, 1.35, 0]);
 export const SCALP_RADII = Object.freeze([0.9, 1.12, 0.82]);
 export const SCALP_ROOT_OFFSET = 0.045;
@@ -50,6 +51,28 @@ export function scalpRootFrame(index, count) {
     -normal[1] * tangent[0],
   ];
   return { root, normal, tangent, bitangent, phi, theta, thetaLimit };
+}
+
+export function projectPointToScalpShell(
+  pointX,
+  pointY,
+  pointZ,
+  output = [],
+  outputOffset = 0,
+  shellOffset = SCALP_ROOT_OFFSET
+) {
+  const dx = pointX - SCALP_CENTER[0];
+  const dy = pointY - SCALP_CENTER[1];
+  const dz = pointZ - SCALP_CENTER[2];
+  const radiusX = SCALP_RADII[0] + shellOffset;
+  const radiusY = SCALP_RADII[1] + shellOffset;
+  const radiusZ = SCALP_RADII[2] + shellOffset;
+  const ellipsoidRadius = Math.hypot(dx / radiusX, dy / radiusY, dz / radiusZ);
+  const scale = ellipsoidRadius > 1e-9 ? 1 / ellipsoidRadius : 1;
+  output[outputOffset] = SCALP_CENTER[0] + dx * scale;
+  output[outputOffset + 1] = SCALP_CENTER[1] + dy * scale;
+  output[outputOffset + 2] = SCALP_CENTER[2] + dz * scale;
+  return output;
 }
 
 export function summarizeScalpLayout(rootNormals) {

@@ -11,6 +11,10 @@ import {
   summarizeCombReceipt,
 } from "./replay.js?v=112";
 import {
+  buildUndercoatCoverageProfile,
+  buildRootCoverageCurve,
+  catmullRomScalar,
+  FATLINE_ROOT_HALF_WIDTH_PX,
   fatlineHalfWidthAt,
   fiberEmergenceScaleAt,
   float32BufferDigest,
@@ -19,6 +23,11 @@ import {
   hairFiberColorAt,
   HAIR_FIBER_SHADING_ID,
   HAIR_PRESENTATION_LOOP_ID,
+  LOCK_AWARE_COVERAGE_ID,
+  lockAwareFiberEmergenceScaleAt,
+  LOCK_AWARE_RENDER_SUBDIVISIONS,
+  LOCK_AWARE_ROOT_COVER_LENGTH_METERS,
+  LOCK_AWARE_ROOT_COVER_SEGMENTS,
   physicsSkeletonDepthWriteAt,
   PHYSICS_SKELETON_STYLE,
   PHYSICS_SKELETON_STYLE_ID,
@@ -27,7 +36,7 @@ import {
   REEL_CAMERA_FIELD_ID,
   sectionPosePresentationAtStep,
   summarizeGeometryTimings,
-} from "./rendering.js?v=116";
+} from "./rendering.js?v=118";
 import {
   buildGroomInterpolationBindings,
   groomBindingActiveSegments,
@@ -36,12 +45,14 @@ import {
   interpolateGroomScalar,
 } from "./groom_interpolation.js?v=117";
 import {
+  projectPointToScalpShell,
   scalpPolarLimit,
   SCALP_CENTER,
   SCALP_LAYOUT_ID,
   SCALP_RADII,
+  SCALP_ROOT_PROJECTION_ID,
   SCALP_ROOT_OFFSET,
-} from "./scalp_layout.js?v=115";
+} from "./scalp_layout.js?v=116";
 
 let renderFibersPerGuide = 9;
 let hairRenderMode = "lines";
@@ -282,6 +293,11 @@ scene.add(windStreaks);
 let solver;
 let hair;
 let hairUndercoat;
+let hairUndercoatCoverageProfile = null;
+const lockCurvePoints = new Float64Array(12);
+const lockRootCoveragePoints = new Float64Array(12);
+const LOCK_ROOT_COVER_WIDTH_PROFILE = Object.freeze([0.56, 0.46, 0.34, 0.24]);
+const LOCK_UNDERCOAT_LAYER_OPACITIES = Object.freeze([0.5, 0.16, 0.05]);
 let hairPositions;
 let hairDrawCount = 0;
 let hairGeometryTimings = [];
@@ -482,7 +498,10 @@ function updateFullGroomPresentation() {
     hair.material.opacity = baseOpacity * fullGroomPresentation.hairHydration;
   }
   if (hairUndercoat) {
-    hairUndercoat.material.opacity = 0.62 * fullGroomPresentation.hairHydration;
+    for (const layer of hairUndercoat.children) {
+      layer.material.opacity =
+        layer.material.userData.baseOpacity * fullGroomPresentation.hairHydration;
+    }
     hairUndercoat.visible = fullGroomPresentation.hairHydration > 0.002;
   }
   const mechanicalWeight = fullGroomHydrationEnabled
@@ -597,15 +616,17 @@ function writeHydratedFiberStyle(
   cursor,
   guide,
   copy,
-  segment,
+  startParticle,
+  endParticle,
   activeSegments
 ) {
   const hydration = sectionHydrationForGuide(guide);
+  const middleParticle = (startParticle + endParticle) * 0.5;
   const hairColorAtSegment = hairFiberColorAt(
     fatlineBaseColor,
     guide,
     copy,
-    (segment + 0.5) / Math.max(1, activeSegments),
+    middleParticle / Math.max(1, activeSegments),
     hairFiberColorScratch
   );
   const proxy = 1 - hydration;
@@ -623,20 +644,15 @@ function writeHydratedFiberStyle(
     hairColorAtSegment.b * hairContribution + SECTION_CONTROL_TUBE_COLOR.b * proxy * 0.72
   );
   const widthScale = 0.12 + 0.88 * hydration;
+  const emergenceScaleAt = groomBindings ? lockAwareFiberEmergenceScaleAt : fiberEmergenceScaleAt;
   widthsStart[instance] =
-    fatlineHalfWidthAt(segment, activeSegments) *
+    fatlineHalfWidthAt(startParticle, activeSegments) *
     widthScale *
-    fiberEmergenceScaleAt(guide, copy, segment, activeSegments, solver.rootNormals[guide * 3 + 1]);
+    emergenceScaleAt(guide, copy, startParticle, activeSegments, solver.rootNormals[guide * 3 + 1]);
   widthsEnd[instance] =
-    fatlineHalfWidthAt(segment + 1, activeSegments) *
+    fatlineHalfWidthAt(endParticle, activeSegments) *
     widthScale *
-    fiberEmergenceScaleAt(
-      guide,
-      copy,
-      segment + 1,
-      activeSegments,
-      solver.rootNormals[guide * 3 + 1]
-    );
+    emergenceScaleAt(guide, copy, endParticle, activeSegments, solver.rootNormals[guide * 3 + 1]);
 }
 
 function updateSectionControlTube() {
@@ -852,8 +868,8 @@ function createFatlineMaterial() {
   });
 }
 
-function createHairlineUndercoatGeometry(rings = 14, slices = 72) {
-  const shellOffset = SCALP_ROOT_OFFSET - 0.006;
+function createHairlineUndercoatGeometry(layer, rings = 12, slices = 96) {
+  const shellOffset = SCALP_ROOT_OFFSET - 0.009 + layer * 0.0015;
   const positions = [
     SCALP_CENTER[0],
     SCALP_CENTER[1] + SCALP_RADII[1] + shellOffset,
@@ -864,7 +880,19 @@ function createHairlineUndercoatGeometry(rings = 14, slices = 72) {
     const ringFraction = ring / rings;
     for (let slice = 0; slice < slices; slice += 1) {
       const phi = (slice / slices) * Math.PI * 2;
-      const theta = 0.035 + (scalpPolarLimit(phi) - 0.035) * ringFraction;
+      const normalizedDensity = Math.max(
+        0,
+        Math.min(1, (hairUndercoatCoverageProfile.densityScales[slice] - 0.72) / 0.28)
+      );
+      const sectionVariation =
+        (hairUndercoatCoverageProfile.fadeStarts[slice] - 0.64) / (0.88 - 0.64);
+      const edgeFraction =
+        layer === 0
+          ? 0.78 + normalizedDensity * 0.045
+          : layer === 1
+            ? 0.87 + normalizedDensity * 0.045 + sectionVariation * 0.012
+            : Math.min(0.995, 0.93 + normalizedDensity * 0.035 + sectionVariation * 0.025);
+      const theta = 0.035 + (scalpPolarLimit(phi) - 0.035) * ringFraction * edgeFraction;
       const sinTheta = Math.sin(theta);
       const normalX = sinTheta * Math.cos(phi);
       const normalY = Math.cos(theta);
@@ -901,8 +929,35 @@ function createHairlineUndercoatGeometry(rings = 14, slices = 72) {
   return geometry;
 }
 
+function createHairlineUndercoat() {
+  const group = new THREE.Group();
+  const shadowColor = fatlineBaseColor.clone().lerp(new THREE.Color(0x08070a), 0.48);
+  for (let layer = 0; layer < LOCK_UNDERCOAT_LAYER_OPACITIES.length; layer += 1) {
+    const opacity = LOCK_UNDERCOAT_LAYER_OPACITIES[layer];
+    const material = new THREE.MeshStandardMaterial({
+      color: shadowColor.clone().multiplyScalar(0.72 + layer * 0.06),
+      roughness: 0.96,
+      metalness: 0,
+      transparent: true,
+      opacity: fullGroomHydrationEnabled ? 0 : opacity,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -1 - layer,
+      polygonOffsetUnits: -1 - layer,
+    });
+    material.userData.baseOpacity = opacity;
+    const mesh = new THREE.Mesh(createHairlineUndercoatGeometry(layer), material);
+    mesh.renderOrder = -3 + layer;
+    group.add(mesh);
+  }
+  return group;
+}
+
 function rebuildFatlineObject() {
-  const instanceCapacity = solver.guideCount * solver.segments * renderFibersPerGuide;
+  const renderSubdivisions = groomBindings ? LOCK_AWARE_RENDER_SUBDIVISIONS : 1;
+  const instanceCapacity =
+    solver.guideCount * solver.segments * renderFibersPerGuide * renderSubdivisions +
+    (groomBindings?.bindingCount ?? 0) * LOCK_AWARE_ROOT_COVER_SEGMENTS;
   const geometry = new THREE.InstancedBufferGeometry();
   geometry.setAttribute(
     "position",
@@ -926,20 +981,12 @@ function rebuildFatlineObject() {
   hair = new THREE.Mesh(geometry, createFatlineMaterial());
   hair.frustumCulled = false;
   scene.add(hair);
-  const undercoatGeometry = createHairlineUndercoatGeometry();
-  const undercoatMaterial = new THREE.MeshStandardMaterial({
-    color: fatlineBaseColor.clone().multiplyScalar(0.34),
-    roughness: 0.96,
-    metalness: 0,
-    transparent: true,
-    opacity: 0.62,
-    depthWrite: false,
-    polygonOffset: true,
-    polygonOffsetFactor: -1,
-    polygonOffsetUnits: -1,
-  });
-  hairUndercoat = new THREE.Mesh(undercoatGeometry, undercoatMaterial);
-  hairUndercoat.renderOrder = -1;
+  hairUndercoatCoverageProfile = buildUndercoatCoverageProfile(
+    solver.rootNormals,
+    solver.guideSections,
+    96
+  );
+  hairUndercoat = createHairlineUndercoat();
   scene.add(hairUndercoat);
 }
 
@@ -951,9 +998,12 @@ function rebuildHairObject() {
   }
   if (hairUndercoat) {
     scene.remove(hairUndercoat);
-    hairUndercoat.geometry.dispose();
-    hairUndercoat.material.dispose();
+    for (const layer of hairUndercoat.children) {
+      layer.geometry.dispose();
+      layer.material.dispose();
+    }
     hairUndercoat = null;
+    hairUndercoatCoverageProfile = null;
   }
   hairGeometryTimings = [];
   hairDrawCount = 0;
@@ -1181,6 +1231,7 @@ function updateFatlineGeometry() {
           strand,
           copy,
           segment,
+          segment + 1,
           activeSegments
         );
         instance += 1;
@@ -1192,6 +1243,48 @@ function updateFatlineGeometry() {
     geometry.attributes[name].needsUpdate = true;
   }
   hairDrawCount = instance;
+}
+
+function writeBlendedGroomCurvePoint(
+  target,
+  targetOffset,
+  owner,
+  neighbor,
+  secondaryNeighbor,
+  particle,
+  activeSegments,
+  neighborWeight,
+  secondaryNeighborWeight,
+  secondaryActiveSegments
+) {
+  const clampedParticle = Math.max(0, Math.min(activeSegments, particle));
+  const secondaryWeight = groomSecondaryWeightAt(
+    clampedParticle,
+    activeSegments,
+    secondaryNeighborWeight,
+    secondaryActiveSegments
+  );
+  const ownerPoint = solver.index(owner, clampedParticle);
+  const neighborPoint = solver.index(neighbor, clampedParticle);
+  const secondaryPoint = solver.index(secondaryNeighbor, clampedParticle);
+  for (let axis = 0; axis < 3; axis += 1) {
+    target[targetOffset + axis] = interpolateGroomScalar(
+      solver.positions[ownerPoint + axis],
+      solver.positions[neighborPoint + axis],
+      neighborWeight,
+      solver.positions[secondaryPoint + axis],
+      secondaryWeight
+    );
+  }
+  if (clampedParticle === 0) {
+    projectPointToScalpShell(
+      target[targetOffset],
+      target[targetOffset + 1],
+      target[targetOffset + 2],
+      target,
+      targetOffset
+    );
+  }
 }
 
 function updateSectionInterpolatedFatlineGeometry() {
@@ -1221,41 +1314,94 @@ function updateSectionInterpolatedFatlineGeometry() {
     );
     const secondaryActiveSegments = solver.activeSegments[secondaryNeighbor];
     const copy = binding % renderFibersPerGuide;
-    for (let segment = 0; segment < activeSegments; segment += 1) {
-      const secondaryStartWeight = groomSecondaryWeightAt(
-        segment,
-        activeSegments,
-        secondaryNeighborWeight,
-        secondaryActiveSegments
-      );
-      const secondaryEndWeight = groomSecondaryWeightAt(
-        segment + 1,
-        activeSegments,
-        secondaryNeighborWeight,
-        secondaryActiveSegments
-      );
-      const ownerStart = solver.index(owner, segment);
-      const neighborStart = solver.index(neighbor, segment);
-      const secondaryNeighborStart = solver.index(secondaryNeighbor, segment);
-      const ownerEnd = solver.index(owner, segment + 1);
-      const neighborEnd = solver.index(neighbor, segment + 1);
-      const secondaryNeighborEnd = solver.index(secondaryNeighbor, segment + 1);
-      const cursor = instance * 3;
+    writeBlendedGroomCurvePoint(
+      lockCurvePoints,
+      0,
+      owner,
+      neighbor,
+      secondaryNeighbor,
+      0,
+      activeSegments,
+      neighborWeight,
+      secondaryNeighborWeight,
+      secondaryActiveSegments
+    );
+    const ownerNormal = owner * 3;
+    const neighborNormal = neighbor * 3;
+    const secondaryNormal = secondaryNeighbor * 3;
+    let normalX = interpolateGroomScalar(
+      solver.rootNormals[ownerNormal],
+      solver.rootNormals[neighborNormal],
+      neighborWeight,
+      solver.rootNormals[secondaryNormal],
+      secondaryNeighborWeight
+    );
+    let normalY = interpolateGroomScalar(
+      solver.rootNormals[ownerNormal + 1],
+      solver.rootNormals[neighborNormal + 1],
+      neighborWeight,
+      solver.rootNormals[secondaryNormal + 1],
+      secondaryNeighborWeight
+    );
+    let normalZ = interpolateGroomScalar(
+      solver.rootNormals[ownerNormal + 2],
+      solver.rootNormals[neighborNormal + 2],
+      neighborWeight,
+      solver.rootNormals[secondaryNormal + 2],
+      secondaryNeighborWeight
+    );
+    const normalLength = Math.hypot(normalX, normalY, normalZ) || 1;
+    normalX /= normalLength;
+    normalY /= normalLength;
+    normalZ /= normalLength;
+    const targetStride = solver.rootDirector.zoneSegments * 3;
+    const ownerTarget = owner * targetStride;
+    const neighborTarget = neighbor * targetStride;
+    const secondaryTarget = secondaryNeighbor * targetStride;
+    const targetX = interpolateGroomScalar(
+      solver.rootDirectorTargets[ownerTarget],
+      solver.rootDirectorTargets[neighborTarget],
+      neighborWeight,
+      solver.rootDirectorTargets[secondaryTarget],
+      secondaryNeighborWeight
+    );
+    const targetY = interpolateGroomScalar(
+      solver.rootDirectorTargets[ownerTarget + 1],
+      solver.rootDirectorTargets[neighborTarget + 1],
+      neighborWeight,
+      solver.rootDirectorTargets[secondaryTarget + 1],
+      secondaryNeighborWeight
+    );
+    const targetZ = interpolateGroomScalar(
+      solver.rootDirectorTargets[ownerTarget + 2],
+      solver.rootDirectorTargets[neighborTarget + 2],
+      neighborWeight,
+      solver.rootDirectorTargets[secondaryTarget + 2],
+      secondaryNeighborWeight
+    );
+    buildRootCoverageCurve(
+      lockCurvePoints[0],
+      lockCurvePoints[1],
+      lockCurvePoints[2],
+      normalX,
+      normalY,
+      normalZ,
+      targetX,
+      targetY,
+      targetZ,
+      owner,
+      copy,
+      LOCK_AWARE_ROOT_COVER_LENGTH_METERS,
+      lockRootCoveragePoints
+    );
+    let cursor;
+    for (let coverSegment = 0; coverSegment < LOCK_AWARE_ROOT_COVER_SEGMENTS; coverSegment += 1) {
+      cursor = instance * 3;
+      const coverStart = coverSegment * 3;
+      const coverEnd = coverStart + 3;
       for (let axis = 0; axis < 3; axis += 1) {
-        starts[cursor + axis] = interpolateGroomScalar(
-          solver.positions[ownerStart + axis],
-          solver.positions[neighborStart + axis],
-          neighborWeight,
-          solver.positions[secondaryNeighborStart + axis],
-          secondaryStartWeight
-        );
-        ends[cursor + axis] = interpolateGroomScalar(
-          solver.positions[ownerEnd + axis],
-          solver.positions[neighborEnd + axis],
-          neighborWeight,
-          solver.positions[secondaryNeighborEnd + axis],
-          secondaryEndWeight
-        );
+        starts[cursor + axis] = lockRootCoveragePoints[coverStart + axis];
+        ends[cursor + axis] = lockRootCoveragePoints[coverEnd + axis];
       }
       writeHydratedFiberStyle(
         colors,
@@ -1265,10 +1411,69 @@ function updateSectionInterpolatedFatlineGeometry() {
         cursor,
         owner,
         copy,
-        segment,
+        0.45 + coverSegment * 0.38,
+        0.83 + coverSegment * 0.38,
         activeSegments
       );
+      const hydration = 0.12 + 0.88 * sectionHydrationForGuide(owner);
+      widthsStart[instance] =
+        FATLINE_ROOT_HALF_WIDTH_PX * LOCK_ROOT_COVER_WIDTH_PROFILE[coverSegment] * hydration;
+      widthsEnd[instance] =
+        FATLINE_ROOT_HALF_WIDTH_PX * LOCK_ROOT_COVER_WIDTH_PROFILE[coverSegment + 1] * hydration;
       instance += 1;
+    }
+    for (let segment = 0; segment < activeSegments; segment += 1) {
+      for (let controlPoint = 0; controlPoint < 4; controlPoint += 1) {
+        writeBlendedGroomCurvePoint(
+          lockCurvePoints,
+          controlPoint * 3,
+          owner,
+          neighbor,
+          secondaryNeighbor,
+          segment + controlPoint - 1,
+          activeSegments,
+          neighborWeight,
+          secondaryNeighborWeight,
+          secondaryActiveSegments
+        );
+      }
+      const tangentScale = segment === 0 ? 0.34 : 0.5;
+      for (let subdivision = 0; subdivision < LOCK_AWARE_RENDER_SUBDIVISIONS; subdivision += 1) {
+        const startFraction = subdivision / LOCK_AWARE_RENDER_SUBDIVISIONS;
+        const endFraction = (subdivision + 1) / LOCK_AWARE_RENDER_SUBDIVISIONS;
+        cursor = instance * 3;
+        for (let axis = 0; axis < 3; axis += 1) {
+          starts[cursor + axis] = catmullRomScalar(
+            lockCurvePoints[axis],
+            lockCurvePoints[3 + axis],
+            lockCurvePoints[6 + axis],
+            lockCurvePoints[9 + axis],
+            startFraction,
+            tangentScale
+          );
+          ends[cursor + axis] = catmullRomScalar(
+            lockCurvePoints[axis],
+            lockCurvePoints[3 + axis],
+            lockCurvePoints[6 + axis],
+            lockCurvePoints[9 + axis],
+            endFraction,
+            tangentScale
+          );
+        }
+        writeHydratedFiberStyle(
+          colors,
+          widthsStart,
+          widthsEnd,
+          instance,
+          cursor,
+          owner,
+          copy,
+          segment + startFraction,
+          segment + endFraction,
+          activeSegments
+        );
+        instance += 1;
+      }
     }
   }
   geometry.instanceCount = instance;
@@ -1884,6 +2089,7 @@ window.hairMaterialReplay = {
 };
 
 function createRenderReceipt() {
+  const lockCoverageEnabled = hairRenderMode === "fatline" && Boolean(groomBindings);
   const tubePositions =
     sectionControlTube?.geometry.attributes.position.array ?? new Float32Array();
   const hairAttributes = hair?.geometry.attributes;
@@ -1898,18 +2104,54 @@ function createRenderReceipt() {
     hair_shading: {
       mode: hairShadingMode,
       field_identity: HAIR_FIBER_SHADING_ID,
-      geometry: "screen_aligned_strand_ribbons",
+      geometry: groomBindings ? "screen_aligned_lock_curve_spans" : "screen_aligned_strand_ribbons",
       primary_lobe: "white_shifted_root_reflection",
       secondary_lobe: "hair_tinted_tip_transmission",
       longitudinal_roughness: 0.34,
       multiple_scattering_fill: 0.11,
       color_variation: "deterministic_fiber_plus_root_tip_v1",
-      root_emergence: "one tapered owner plus deterministic child fade over first 4-27pct",
+      root_emergence: groomBindings
+        ? "distributed_parent_roots_plus_short_styled_coverage_locks"
+        : "one tapered owner plus deterministic child fade over first 4-27pct",
       cross_section_coverage: "soft analytic alpha across each screen-space fiber",
-      joint_coverage: "half-coverage endpoints reconstruct adjacent segment continuity",
-      undercoat: "hairline-masked ellipsoid cap at 62pct opacity",
+      joint_coverage: groomBindings
+        ? "two_catmull_rom_spans_per_solver_link"
+        : "half-coverage endpoints reconstruct adjacent segment continuity",
+      undercoat: groomBindings
+        ? "three_layer_density_broken_scalp_shadow"
+        : "hairline-masked ellipsoid cap",
       scalp_layout_identity: SCALP_LAYOUT_ID,
+      distributed_root_projection_identity: groomBindings ? SCALP_ROOT_PROJECTION_ID : null,
       physics_authority: "none_renderer_only",
+    },
+    lock_aware_coverage: {
+      enabled: lockCoverageEnabled,
+      field_identity: LOCK_AWARE_COVERAGE_ID,
+      render_subdivisions_per_solver_link: groomBindings ? LOCK_AWARE_RENDER_SUBDIVISIONS : 1,
+      curve_interpolation: groomBindings ? "shared_parent_catmull_rom" : "none",
+      distributed_root_emergence: groomBindings
+        ? "distributed_8_to_16pct_root_width_then_full_width_within_first_half_link"
+        : "none",
+      root_coverage_strands: lockCoverageEnabled ? groomBindings.bindingCount : 0,
+      root_coverage_span_primitives:
+        (lockCoverageEnabled ? groomBindings.bindingCount : 0) * LOCK_AWARE_ROOT_COVER_SEGMENTS,
+      root_coverage_segments_per_strand: lockCoverageEnabled ? LOCK_AWARE_ROOT_COVER_SEGMENTS : 0,
+      root_coverage_nominal_length_meters: lockCoverageEnabled
+        ? LOCK_AWARE_ROOT_COVER_LENGTH_METERS
+        : 0,
+      undercoat_layer_opacities: lockCoverageEnabled ? LOCK_UNDERCOAT_LAYER_OPACITIES : [],
+      root_tangent_scale: 0.34,
+      shaft_tangent_scale: 0.5,
+      undercoat_profile: hairUndercoatCoverageProfile
+        ? {
+            slices: hairUndercoatCoverageProfile.slices,
+            section_count: hairUndercoatCoverageProfile.sectionCount,
+            minimum_fade_start_fraction: hairUndercoatCoverageProfile.minimumFadeStart,
+            maximum_fade_start_fraction: hairUndercoatCoverageProfile.maximumFadeStart,
+            mean_normalized_edge_density: hairUndercoatCoverageProfile.meanNormalizedDensity,
+          }
+        : null,
+      physics_authority: "none_renderer_only_reads_guide_positions_and_root_layout",
     },
     presentation_loop: {
       enabled: presentationLoopEnabled,

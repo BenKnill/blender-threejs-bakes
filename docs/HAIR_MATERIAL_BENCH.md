@@ -344,6 +344,18 @@ not realistic hair: the hairline cap remains visibly coarse, the 12-segment
 topology remains readable at sharp bends, transparency is not order-independent,
 and there are no deep opacity/self-shadow maps.
 
+The lock-aware v2 hydration pass fixes a subtler placement error underneath
+that appearance. Convex interpolation had placed 5,120 of 5,376 child roots
+slightly inside the analytic ellipsoid. Every blended root is now projected
+back to the 45 mm scalp shell before rendering. Each mechanical link is split
+into two Catmull-Rom spans, and every distributed root adds a deterministic
+three-span, nominal 0.24 m coverage lock that follows the styled tangent with
+positive outward lift. Three density-broken shadow layers replace the single
+cap. The uncut canonical fixture draws 145,152 spans; this is a renderer-only
+12.5% primitive increase over the curved solver spans and leaves the physics
+digest unchanged. See `docs/receipts/hair_lock_aware_coverage.md` for the
+placement audit and claim boundary.
+
 `presentationLoop=1` restores the showcase as an animation: the deterministic
 fixture fades in, hydrates, simulates wind and the cut, fades out after step
 420, then resets at step 450. One live browser observation crossed the boundary

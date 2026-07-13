@@ -204,6 +204,16 @@ strand rendering; do not add another many-hair operator first.
       minimum outward dot versus 0.258 tangential magnitude for scalp-normal.
       The 330-step cut/comb replay repeats at `810dcc040586fc06`, completes all
       256 cuts, and remains inside the 3.5% stretch gate.
+- [x] Replace the coarse hydrated cap and readable ribbon ladders with
+      lock-aware coverage. Cartesian child-root blends had put 5,120 of 5,376
+      canonical roots just inside the analytic scalp; the renderer now projects
+      every child root back to the shell, evaluates two Catmull-Rom spans per
+      mechanical link, and sprouts one short three-span coverage lock per
+      distributed root along the styled tangent field. The uncut 256 x 21
+      fixture draws 145,152 spans without adding solver particles. Projection
+      error is below `4.5e-16`, every coverage control point retains at least
+      11.1 mm outward clearance, and the unchanged styled replay repeats at
+      `810dcc040586fc06` with 3.4995% peak stretch.
 - [ ] Better scalp/strand contact and a clearer calibration path.
 - [x] Define three receipt-distinct reel shots before packaging video variants.
 - [ ] Package short 16:9 and vertical reels from those named moving shots.

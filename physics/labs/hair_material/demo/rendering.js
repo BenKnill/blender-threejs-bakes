@@ -5,6 +5,10 @@ export const HAIR_PRESENTATION_LOOP_ID = "fade_reset_450_step_v1";
 export const REEL_CAMERA_FIELD_ID = "three_shot_orbit_450_step_v1";
 export const FULL_GROOM_HYDRATION_ID = "uniform_rod_joint_hydration_450_v3";
 export const PHYSICS_SKELETON_STYLE_ID = "uniform_world_space_rods_joints_v1";
+export const LOCK_AWARE_COVERAGE_ID = "styled_root_cover_locks_catmull_rom_v2";
+export const LOCK_AWARE_RENDER_SUBDIVISIONS = 2;
+export const LOCK_AWARE_ROOT_COVER_SEGMENTS = 3;
+export const LOCK_AWARE_ROOT_COVER_LENGTH_METERS = 0.24;
 export const PHYSICS_SKELETON_STYLE = Object.freeze({
   guideLimit: 20,
   rodRadiusMeters: 0.011,
@@ -16,6 +20,183 @@ export const PHYSICS_SKELETON_STYLE = Object.freeze({
 function smoothStep01(value) {
   const t = Math.max(0, Math.min(1, value));
   return t * t * (3 - 2 * t);
+}
+
+function wrappedAngleDistance(left, right) {
+  const direct = Math.abs(left - right) % (Math.PI * 2);
+  return Math.min(direct, Math.PI * 2 - direct);
+}
+
+const ROOT_COVER_FRACTIONS = Object.freeze([0, 0.34, 0.7, 1]);
+const ROOT_COVER_LIFTS = Object.freeze([0, 0.055, 0.085, 0.065]);
+
+export function catmullRomScalar(p0, p1, p2, p3, t, tangentScale = 0.5) {
+  const clamped = Math.max(0, Math.min(1, t));
+  const t2 = clamped * clamped;
+  const t3 = t2 * clamped;
+  const m1 = (p2 - p0) * tangentScale;
+  const m2 = (p3 - p1) * tangentScale;
+  return (
+    (2 * t3 - 3 * t2 + 1) * p1 +
+    (t3 - 2 * t2 + clamped) * m1 +
+    (-2 * t3 + 3 * t2) * p2 +
+    (t3 - t2) * m2
+  );
+}
+
+export function buildRootCoverageCurve(
+  rootX,
+  rootY,
+  rootZ,
+  normalX,
+  normalY,
+  normalZ,
+  targetX,
+  targetY,
+  targetZ,
+  strand,
+  copy,
+  length,
+  output = new Float64Array(12)
+) {
+  const normalLength = Math.hypot(normalX, normalY, normalZ) || 1;
+  const nx = normalX / normalLength;
+  const ny = normalY / normalLength;
+  const nz = normalZ / normalLength;
+  const outward = targetX * nx + targetY * ny + targetZ * nz;
+  let tx = targetX - outward * nx;
+  let ty = targetY - outward * ny;
+  let tz = targetZ - outward * nz;
+  let tangentLength = Math.hypot(tx, ty, tz);
+  if (tangentLength < 1e-8) {
+    tx = nz;
+    ty = 0;
+    tz = -nx;
+    tangentLength = Math.hypot(tx, ty, tz) || 1;
+  }
+  tx /= tangentLength;
+  ty /= tangentLength;
+  tz /= tangentLength;
+  let bx = ny * tz - nz * ty;
+  let by = nz * tx - nx * tz;
+  let bz = nx * ty - ny * tx;
+  const binormalLength = Math.hypot(bx, by, bz) || 1;
+  bx /= binormalLength;
+  by /= binormalLength;
+  bz /= binormalLength;
+
+  let hash = Math.imul(strand + 1, 0x45d9f3b) ^ Math.imul(copy + 1, 0x27d4eb2d);
+  hash ^= hash >>> 16;
+  const unsigned = hash >>> 0;
+  const spreadAngle = (((unsigned & 0x3ff) / 1023) * 2 - 1) * 0.42;
+  const spreadCos = Math.cos(spreadAngle);
+  const spreadSin = Math.sin(spreadAngle);
+  const directionX = tx * spreadCos + bx * spreadSin;
+  const directionY = ty * spreadCos + by * spreadSin;
+  const directionZ = tz * spreadCos + bz * spreadSin;
+  const span = Math.max(0, length) * (0.84 + (((unsigned >>> 10) & 0xff) / 255) * 0.32);
+  const sideWave = ((((unsigned >>> 18) & 0xff) / 255) * 2 - 1) * span * 0.035;
+  for (let point = 0; point < 4; point += 1) {
+    const fraction = ROOT_COVER_FRACTIONS[point];
+    const wave = Math.sin(Math.PI * fraction) * sideWave;
+    const cursor = point * 3;
+    output[cursor] =
+      rootX + directionX * span * fraction + bx * wave + nx * span * ROOT_COVER_LIFTS[point];
+    output[cursor + 1] =
+      rootY + directionY * span * fraction + by * wave + ny * span * ROOT_COVER_LIFTS[point];
+    output[cursor + 2] =
+      rootZ + directionZ * span * fraction + bz * wave + nz * span * ROOT_COVER_LIFTS[point];
+  }
+  return output;
+}
+
+export function buildUndercoatCoverageProfile(
+  rootNormals,
+  guideSections,
+  slices = 96,
+  sectionCount = 8
+) {
+  const guideCount = rootNormals.length / 3;
+  if (
+    !Number.isInteger(guideCount) ||
+    guideSections.length !== guideCount ||
+    !Number.isInteger(slices) ||
+    slices < 8 ||
+    !Number.isInteger(sectionCount) ||
+    sectionCount < 1
+  ) {
+    throw new Error("undercoat coverage inputs are invalid");
+  }
+  const sectionEdgeDensity = new Float64Array(sectionCount);
+  const guidePhis = new Float64Array(guideCount);
+  const guideEdgeWeights = new Float64Array(guideCount);
+  for (let guide = 0; guide < guideCount; guide += 1) {
+    const normalX = rootNormals[guide * 3];
+    const normalY = rootNormals[guide * 3 + 1];
+    const normalZ = rootNormals[guide * 3 + 2];
+    const section = guideSections[guide] % sectionCount;
+    const edgeWeight = smoothStep01((0.9 - normalY) / 0.48);
+    guidePhis[guide] = Math.atan2(normalZ, normalX);
+    guideEdgeWeights[guide] = edgeWeight;
+    sectionEdgeDensity[section] += edgeWeight;
+  }
+  const maximumSectionDensity = Math.max(1e-9, ...sectionEdgeDensity);
+  const localDensity = new Float32Array(slices);
+  let maximumLocalDensity = 1e-9;
+  for (let slice = 0; slice < slices; slice += 1) {
+    const phi = (slice / slices) * Math.PI * 2;
+    let density = 0;
+    for (let guide = 0; guide < guideCount; guide += 1) {
+      const distance = wrappedAngleDistance(phi, guidePhis[guide]);
+      const angularWeight = Math.max(0, 1 - distance / 0.34);
+      density += angularWeight * angularWeight * guideEdgeWeights[guide];
+    }
+    localDensity[slice] = density;
+    maximumLocalDensity = Math.max(maximumLocalDensity, density);
+  }
+  const fadeStarts = new Float32Array(slices);
+  const densityScales = new Float32Array(slices);
+  let minimumFadeStart = 1;
+  let maximumFadeStart = 0;
+  let densitySum = 0;
+  for (let slice = 0; slice < slices; slice += 1) {
+    const phi = (slice / slices) * Math.PI * 2;
+    const section = Math.min(
+      sectionCount - 1,
+      Math.floor(((phi + Math.PI) / (Math.PI * 2)) * sectionCount) % sectionCount
+    );
+    const density = localDensity[slice] / maximumLocalDensity;
+    const sectionDensity = sectionEdgeDensity[section] / maximumSectionDensity;
+    let hash = Math.imul(slice + 1, 0x45d9f3b) ^ Math.imul(section + 1, 0x27d4eb2d);
+    hash ^= hash >>> 16;
+    const jitter = ((hash >>> 0) % 101) / 100 - 0.5;
+    const fadeStart = Math.max(
+      0.64,
+      Math.min(0.88, 0.68 + density * 0.13 + sectionDensity * 0.035 + jitter * 0.04)
+    );
+    fadeStarts[slice] = fadeStart;
+    densityScales[slice] = 0.72 + density * 0.22 + sectionDensity * 0.06;
+    minimumFadeStart = Math.min(minimumFadeStart, fadeStart);
+    maximumFadeStart = Math.max(maximumFadeStart, fadeStart);
+    densitySum += density;
+  }
+  return {
+    slices,
+    sectionCount,
+    fadeStarts,
+    densityScales,
+    minimumFadeStart,
+    maximumFadeStart,
+    meanNormalizedDensity: densitySum / slices,
+  };
+}
+
+export function undercoatCoverageAt(profile, ringFraction, slice) {
+  const index = ((slice % profile.slices) + profile.slices) % profile.slices;
+  const fraction = Math.max(0, Math.min(1, ringFraction));
+  const fadeStart = profile.fadeStarts[index];
+  const edgeFade = 1 - smoothStep01((fraction - fadeStart) / Math.max(1e-6, 1 - fadeStart));
+  return profile.densityScales[index] * edgeFade;
 }
 
 export function physicsSkeletonDepthWriteAt(phase, opacity) {
@@ -101,6 +282,24 @@ export function fiberEmergenceScaleAt(strand, copy, particle, activeSegments, ro
   const start = (0.035 + (unsigned % 7) * 0.011) * (1 - crown * 0.58);
   const end = start + (0.12 + ((unsigned >>> 4) % 5) * 0.012) * (1 - crown * 0.42);
   return smoothStep01((fraction - start) / Math.max(0.001, end - start));
+}
+
+export function lockAwareFiberEmergenceScaleAt(
+  strand,
+  copy,
+  particle,
+  activeSegments,
+  rootNormalY = 0
+) {
+  const fraction = Math.max(0, Math.min(1, particle / Math.max(1, activeSegments)));
+  let hash = Math.imul(strand + 1, 0x45d9f3b) ^ Math.imul(copy + 1, 0x27d4eb2d);
+  hash ^= hash >>> 16;
+  const unsigned = hash >>> 0;
+  const crown = smoothStep01((rootNormalY - 0.68) / 0.26);
+  const end =
+    copy === 0 ? 0.055 - crown * 0.012 : (0.024 + (unsigned % 7) * 0.004) * (1 - crown * 0.3);
+  const rootCoverage = copy === 0 ? 0.08 : 0.16;
+  return rootCoverage + (1 - rootCoverage) * smoothStep01(fraction / Math.max(0.001, end));
 }
 
 export function reelCameraPoseAtStep(step, shot, loopSteps = 450) {
