@@ -18,6 +18,9 @@ import { barycentricEndpointWeights } from "../physics/labs/hair_material/demo/f
 import { runHairRodReference } from "../physics/labs/hair_material/demo/rod_reference.js";
 import { spatialFrictionPerformanceReceipt } from "../physics/labs/hair_material/demo/spatial_friction.js";
 import {
+  buildUndercoatCoverageProfile,
+  buildRootCoverageCurve,
+  catmullRomScalar,
   fatlineColorScale,
   fatlineHalfWidthAt,
   fiberEmergenceScaleAt,
@@ -27,6 +30,11 @@ import {
   hairFiberColorAt,
   HAIR_FIBER_SHADING_ID,
   HAIR_PRESENTATION_LOOP_ID,
+  LOCK_AWARE_COVERAGE_ID,
+  lockAwareFiberEmergenceScaleAt,
+  LOCK_AWARE_RENDER_SUBDIVISIONS,
+  LOCK_AWARE_ROOT_COVER_LENGTH_METERS,
+  LOCK_AWARE_ROOT_COVER_SEGMENTS,
   physicsSkeletonDepthWriteAt,
   PHYSICS_SKELETON_STYLE,
   PHYSICS_SKELETON_STYLE_ID,
@@ -35,6 +43,7 @@ import {
   REEL_CAMERA_FIELD_ID,
   sectionPosePresentationAtStep,
   summarizeGeometryTimings,
+  undercoatCoverageAt,
 } from "../physics/labs/hair_material/demo/rendering.js";
 import {
   buildGroomInterpolationBindings,
@@ -55,9 +64,11 @@ import {
   summarizeRootTargets,
 } from "../physics/labs/hair_material/demo/root_style_field.js";
 import {
+  projectPointToScalpShell,
   scalpPolarLimit,
   scalpRootFrame,
   SCALP_LAYOUT_ID,
+  SCALP_ROOT_PROJECTION_ID,
   summarizeScalpLayout,
 } from "../physics/labs/hair_material/demo/scalp_layout.js";
 import {
@@ -98,6 +109,10 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.equal(REEL_CAMERA_FIELD_ID, "three_shot_orbit_450_step_v1");
   assert.equal(FULL_GROOM_HYDRATION_ID, "uniform_rod_joint_hydration_450_v3");
   assert.equal(PHYSICS_SKELETON_STYLE_ID, "uniform_world_space_rods_joints_v1");
+  assert.equal(LOCK_AWARE_COVERAGE_ID, "styled_root_cover_locks_catmull_rom_v2");
+  assert.equal(LOCK_AWARE_RENDER_SUBDIVISIONS, 2);
+  assert.equal(LOCK_AWARE_ROOT_COVER_SEGMENTS, 3);
+  nearlyEqual(LOCK_AWARE_ROOT_COVER_LENGTH_METERS, 0.24);
   assert.equal(PHYSICS_SKELETON_STYLE.guideLimit, 20);
   assert.equal(PHYSICS_SKELETON_STYLE.rootJointScale, 1);
   assert.ok(PHYSICS_SKELETON_STYLE.rodRadiusMeters > 0);
@@ -105,6 +120,22 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.equal(physicsSkeletonDepthWriteAt("mechanical_skeleton", 0.1), true);
   assert.equal(physicsSkeletonDepthWriteAt("hydrating", 0.8), true);
   assert.equal(physicsSkeletonDepthWriteAt("hydrating", 0.2), false);
+  nearlyEqual(catmullRomScalar(0, 1, 2, 3, 0), 1);
+  nearlyEqual(catmullRomScalar(0, 1, 2, 3, 0.5), 1.5);
+  nearlyEqual(catmullRomScalar(0, 1, 2, 3, 1), 2);
+  const rootCoverage = buildRootCoverageCurve(0, 2.5, 0, 0, 1, 0, 1, 0.6, 0, 8, 3, 0.24);
+  assert.deepEqual(Array.from(rootCoverage.slice(0, 3)), [0, 2.5, 0]);
+  assert.ok(rootCoverage[9] > 0.18);
+  assert.ok(rootCoverage[10] > 2.5);
+  assert.ok(Math.hypot(rootCoverage[9], rootCoverage[11]) < 0.3);
+  assert.deepEqual(
+    Array.from(rootCoverage),
+    Array.from(buildRootCoverageCurve(0, 2.5, 0, 0, 1, 0, 1, 0.6, 0, 8, 3, 0.24))
+  );
+  assert.notDeepEqual(
+    Array.from(rootCoverage),
+    Array.from(buildRootCoverageCurve(0, 2.5, 0, 0, 1, 0, 1, 0.6, 0, 8, 4, 0.24))
+  );
   nearlyEqual(presentationLoopOpacityAtStep(0), 0);
   nearlyEqual(presentationLoopOpacityAtStep(15), 0.5);
   nearlyEqual(presentationLoopOpacityAtStep(30), 1);
@@ -123,6 +154,10 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.equal(fiberEmergenceScaleAt(8, 3, 12, 12), 1);
   assert.ok(fiberEmergenceScaleAt(8, 3, 1, 12) <= fiberEmergenceScaleAt(8, 3, 2, 12));
   assert.ok(fiberEmergenceScaleAt(8, 3, 1, 12, 0.96) > fiberEmergenceScaleAt(8, 3, 1, 12));
+  nearlyEqual(lockAwareFiberEmergenceScaleAt(8, 3, 0, 12), 0.16);
+  assert.ok(lockAwareFiberEmergenceScaleAt(8, 3, 0.5, 12) > 0.8);
+  assert.equal(lockAwareFiberEmergenceScaleAt(8, 3, 1, 12), 1);
+  assert.ok(lockAwareFiberEmergenceScaleAt(8, 3, 0.5, 12) > fiberEmergenceScaleAt(8, 3, 0.5, 12));
   assert.deepEqual(reelCameraPoseAtStep(0, "beauty"), reelCameraPoseAtStep(450, "beauty"));
   assert.notDeepEqual(reelCameraPoseAtStep(0, "beauty"), reelCameraPoseAtStep(225, "beauty"));
   assert.notDeepEqual(reelCameraPoseAtStep(330, "control"), reelCameraPoseAtStep(330, "cut"));
@@ -154,6 +189,7 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
 
 {
   assert.equal(SCALP_LAYOUT_ID, "face_hairline_ellipsoid_v1");
+  assert.equal(SCALP_ROOT_PROJECTION_ID, "ellipsoid_shell_radial_v1");
   assert.ok(scalpPolarLimit(Math.PI / 2) < scalpPolarLimit(-Math.PI / 2));
   assert.ok(scalpPolarLimit(Math.PI / 2) < scalpPolarLimit(0));
   const frames = Array.from({ length: 256 }, (_, guide) => scalpRootFrame(guide, 256));
@@ -163,6 +199,27 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.ok(summary.frontCenterGuideCount > 0);
   assert.ok(summary.maximumFrontCenterTheta < 1.1);
   for (const frame of frames) assert.ok(frame.theta <= frame.thetaLimit + 1e-12);
+  const sections = Uint8Array.from(
+    frames.map((frame) => groomSectionId(frame.root[0], frame.root[2]))
+  );
+  const profile = buildUndercoatCoverageProfile(normals, sections, 96);
+  const repeatedProfile = buildUndercoatCoverageProfile(normals, sections, 96);
+  assert.deepEqual(profile.fadeStarts, repeatedProfile.fadeStarts);
+  assert.deepEqual(profile.densityScales, repeatedProfile.densityScales);
+  assert.ok(profile.minimumFadeStart >= 0.64);
+  assert.ok(profile.maximumFadeStart <= 0.88);
+  assert.ok(profile.meanNormalizedDensity > 0);
+  assert.ok(undercoatCoverageAt(profile, 0, 0) > 0.7);
+  assert.ok(undercoatCoverageAt(profile, 0.8, 0) >= 0);
+  nearlyEqual(undercoatCoverageAt(profile, 1, 0), 0);
+  const projectedScalpPoint = projectPointToScalpShell(0.2, 2.1, 0.3);
+  const projectedEllipsoidRadius = Math.hypot(
+    projectedScalpPoint[0] / 0.945,
+    (projectedScalpPoint[1] - 1.35) / 1.165,
+    projectedScalpPoint[2] / 0.865
+  );
+  nearlyEqual(projectedEllipsoidRadius, 1);
+  assert.ok(projectedScalpPoint[1] > 2.1);
 }
 
 {
