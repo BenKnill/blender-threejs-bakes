@@ -24,7 +24,7 @@ import {
   REEL_CAMERA_FIELD_ID,
   sectionPosePresentationAtStep,
   summarizeGeometryTimings,
-} from "./rendering.js?v=113";
+} from "./rendering.js?v=114";
 import {
   buildGroomInterpolationBindings,
   groomBindingActiveSegments,
@@ -85,6 +85,12 @@ scene.add(key);
 const rim = new THREE.PointLight(0x477dff, 45, 12);
 rim.position.set(-3, 1, 3);
 scene.add(rim);
+const physicsKey = new THREE.DirectionalLight(0xdffcff, 0);
+physicsKey.position.set(-4, 5, 6);
+scene.add(physicsKey);
+const physicsFill = new THREE.PointLight(0x63e6ff, 0, 10);
+physicsFill.position.set(3, 1.8, 4);
+scene.add(physicsFill);
 
 const porcelain = new THREE.MeshStandardMaterial({
   color: 0xb77569,
@@ -100,10 +106,12 @@ primitiveHeadGroup.add(head);
 const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.56, 1.3, 32), porcelain);
 neck.position.set(0, -0.03, 0);
 primitiveHeadGroup.add(neck);
-const bust = new THREE.Mesh(
-  new THREE.SphereGeometry(1, 40, 20),
-  new THREE.MeshStandardMaterial({ color: 0x172452, roughness: 0.68 })
-);
+const bustMaterial = new THREE.MeshStandardMaterial({
+  color: 0x172452,
+  roughness: 0.68,
+  transparent: true,
+});
+const bust = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 20), bustMaterial);
 bust.scale.set(2.15, 0.58, 0.86);
 bust.position.set(0, -0.9, 0.12);
 scene.add(bust);
@@ -276,15 +284,27 @@ let fullGroomPresentation = {
   tubeOpacity: 0,
 };
 let physicsGuideCage;
+let physicsJointMesh;
 let physicsGuidePositions = new Float32Array();
 let physicsGuideCageTimings = [];
-let physicsRootPoints;
-let physicsRootPositions = new Float32Array();
+let physicsSkeletonGuides = [];
 const SECTION_CONTROL_TUBE_RADIAL_SEGMENTS = 10;
 const SECTION_CONTROL_TUBE_COLOR = new THREE.Color(0x63e6ff);
+const PHYSICS_SKELETON_GUIDE_LIMIT = 32;
+const PHYSICS_ROD_RADIUS = 0.014;
+const PHYSICS_JOINT_RADIUS = 0.027;
 const PHYSICS_CAGE_SECTION_COLORS = Object.freeze([
   0x63e6ff, 0x9b87ff, 0xe879f9, 0xfb7185, 0xfbbf24, 0x86efac, 0x22d3ee, 0xc4b5fd,
 ]);
+const physicsRodStart = new THREE.Vector3();
+const physicsRodEnd = new THREE.Vector3();
+const physicsRodMidpoint = new THREE.Vector3();
+const physicsRodDirection = new THREE.Vector3();
+const physicsRodQuaternion = new THREE.Quaternion();
+const physicsRodScale = new THREE.Vector3();
+const physicsJointScale = new THREE.Vector3();
+const physicsInstanceMatrix = new THREE.Matrix4();
+const physicsUp = new THREE.Vector3(0, 1, 0);
 const fatlineBaseColor = new THREE.Color();
 const hairFiberColorScratch = { r: 0, g: 0, b: 0 };
 let paused = false;
@@ -387,73 +407,59 @@ function rebuildPhysicsGuideCage() {
     physicsGuideCage.geometry.dispose();
     physicsGuideCage.material.dispose();
   }
-  if (physicsRootPoints) {
-    scene.remove(physicsRootPoints);
-    physicsRootPoints.geometry.dispose();
-    physicsRootPoints.material.dispose();
+  if (physicsJointMesh) {
+    scene.remove(physicsJointMesh);
+    physicsJointMesh.geometry.dispose();
+    physicsJointMesh.material.dispose();
   }
   physicsGuideCageTimings = [];
-  physicsGuidePositions = new Float32Array(solver.guideCount * solver.segments * 2 * 3);
-  const guideColors = new Float32Array(physicsGuidePositions.length);
+  const sampleCount = Math.min(PHYSICS_SKELETON_GUIDE_LIMIT, solver.guideCount);
+  physicsSkeletonGuides = Array.from({ length: sampleCount }, (_, sample) =>
+    Math.min(solver.guideCount - 1, Math.floor(((sample + 0.5) * solver.guideCount) / sampleCount))
+  );
+  physicsGuidePositions = new Float32Array(sampleCount * (solver.segments + 1) * 3);
+  const rodCount = sampleCount * solver.segments;
+  const jointCount = sampleCount * (solver.segments + 1);
+  const rodGeometry = new THREE.CylinderGeometry(1, 1, 1, 8, 1, false);
+  const jointGeometry = new THREE.SphereGeometry(1, 10, 7);
+  const rodMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 0.26,
+    metalness: 0.14,
+    emissive: 0x12242b,
+    emissiveIntensity: 0.72,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+  });
+  const jointMaterial = rodMaterial.clone();
+  jointMaterial.roughness = 0.18;
+  jointMaterial.emissiveIntensity = 0.9;
+  physicsGuideCage = new THREE.InstancedMesh(rodGeometry, rodMaterial, rodCount);
+  physicsJointMesh = new THREE.InstancedMesh(jointGeometry, jointMaterial, jointCount);
+  physicsGuideCage.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  physicsJointMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   const color = new THREE.Color();
-  let cursor = 0;
-  for (let guide = 0; guide < solver.guideCount; guide += 1) {
+  for (let sample = 0; sample < sampleCount; sample += 1) {
+    const guide = physicsSkeletonGuides[sample];
     color.setHex(PHYSICS_CAGE_SECTION_COLORS[solver.guideSections[guide] % 8]);
     for (let segment = 0; segment < solver.segments; segment += 1) {
-      for (let endpoint = 0; endpoint < 2; endpoint += 1) {
-        guideColors[cursor] = color.r;
-        guideColors[cursor + 1] = color.g;
-        guideColors[cursor + 2] = color.b;
-        cursor += 3;
-      }
+      physicsGuideCage.setColorAt(sample * solver.segments + segment, color);
+    }
+    for (let particle = 0; particle <= solver.segments; particle += 1) {
+      physicsJointMesh.setColorAt(sample * (solver.segments + 1) + particle, color);
     }
   }
-  const guideGeometry = new THREE.BufferGeometry();
-  guideGeometry.setAttribute("position", new THREE.BufferAttribute(physicsGuidePositions, 3));
-  guideGeometry.setAttribute("color", new THREE.BufferAttribute(guideColors, 3));
-  physicsGuideCage = new THREE.LineSegments(
-    guideGeometry,
-    new THREE.LineBasicMaterial({
-      vertexColors: true,
-      transparent: true,
-      opacity: 0,
-      depthTest: false,
-      depthWrite: false,
-    })
-  );
+  physicsGuideCage.instanceColor.needsUpdate = true;
+  physicsJointMesh.instanceColor.needsUpdate = true;
   physicsGuideCage.frustumCulled = false;
+  physicsJointMesh.frustumCulled = false;
   physicsGuideCage.renderOrder = 9;
+  physicsJointMesh.renderOrder = 10;
   physicsGuideCage.visible = false;
+  physicsJointMesh.visible = false;
   scene.add(physicsGuideCage);
-
-  physicsRootPositions = new Float32Array(solver.guideCount * 3);
-  const rootColors = new Float32Array(physicsRootPositions.length);
-  for (let guide = 0; guide < solver.guideCount; guide += 1) {
-    color.setHex(PHYSICS_CAGE_SECTION_COLORS[solver.guideSections[guide] % 8]);
-    const root = guide * 3;
-    rootColors[root] = color.r;
-    rootColors[root + 1] = color.g;
-    rootColors[root + 2] = color.b;
-  }
-  const rootGeometry = new THREE.BufferGeometry();
-  rootGeometry.setAttribute("position", new THREE.BufferAttribute(physicsRootPositions, 3));
-  rootGeometry.setAttribute("color", new THREE.BufferAttribute(rootColors, 3));
-  physicsRootPoints = new THREE.Points(
-    rootGeometry,
-    new THREE.PointsMaterial({
-      vertexColors: true,
-      size: 0.035,
-      sizeAttenuation: true,
-      transparent: true,
-      opacity: 0,
-      depthTest: false,
-      depthWrite: false,
-    })
-  );
-  physicsRootPoints.frustumCulled = false;
-  physicsRootPoints.renderOrder = 10;
-  physicsRootPoints.visible = false;
-  scene.add(physicsRootPoints);
+  scene.add(physicsJointMesh);
 }
 
 function updateFullGroomPresentation() {
@@ -473,38 +479,77 @@ function updateFullGroomPresentation() {
     hairUndercoat.material.opacity = 0.28 * fullGroomPresentation.hairHydration;
     hairUndercoat.visible = fullGroomPresentation.hairHydration > 0.002;
   }
+  const mechanicalWeight = fullGroomHydrationEnabled
+    ? Math.max(0, Math.min(1, fullGroomPresentation.guideOpacity / 0.92))
+    : 0;
+  key.intensity = 3.8 - mechanicalWeight * 1.4;
+  rim.intensity = 45 - mechanicalWeight * 18;
+  physicsKey.intensity = mechanicalWeight * 5.2;
+  physicsFill.intensity = mechanicalWeight * 34;
+  for (const material of [porcelain, heroSkinMaterial, heroScleraMaterial, heroIrisMaterial]) {
+    material.transparent = mechanicalWeight > 0.002;
+    material.opacity = 1 - mechanicalWeight * 0.68;
+    material.depthWrite = mechanicalWeight < 0.002;
+  }
+  bustMaterial.opacity = 1 - mechanicalWeight * 0.78;
+  bustMaterial.depthWrite = mechanicalWeight < 0.002;
 }
 
 function updatePhysicsGuideCage() {
-  if (!physicsGuideCage || !physicsRootPoints) return;
+  if (!physicsGuideCage || !physicsJointMesh) return;
   const opacity = fullGroomPresentation.guideOpacity;
   physicsGuideCage.visible = fullGroomHydrationEnabled && opacity > 0.002;
-  physicsRootPoints.visible = physicsGuideCage.visible;
+  physicsJointMesh.visible = physicsGuideCage.visible;
   physicsGuideCage.material.opacity = opacity;
-  physicsRootPoints.material.opacity = Math.min(1, opacity + 0.08);
+  physicsJointMesh.material.opacity = Math.min(1, opacity + 0.06);
   if (!physicsGuideCage.visible) return;
   const started = performance.now();
-  let cursor = 0;
-  for (let guide = 0; guide < solver.guideCount; guide += 1) {
+  let positionCursor = 0;
+  for (let sample = 0; sample < physicsSkeletonGuides.length; sample += 1) {
+    const guide = physicsSkeletonGuides[sample];
     const activeSegments = solver.activeSegments[guide];
-    for (let segment = 0; segment < solver.segments; segment += 1) {
-      const displayedSegment = Math.min(segment, activeSegments - 1);
-      for (const particle of [displayedSegment, Math.min(activeSegments, displayedSegment + 1)]) {
-        const source = solver.index(guide, particle);
-        physicsGuidePositions[cursor] = solver.positions[source];
-        physicsGuidePositions[cursor + 1] = solver.positions[source + 1];
-        physicsGuidePositions[cursor + 2] = solver.positions[source + 2];
-        cursor += 3;
-      }
+    for (let particle = 0; particle <= solver.segments; particle += 1) {
+      const displayedParticle = Math.min(particle, activeSegments);
+      const point = solver.index(guide, displayedParticle);
+      physicsRodStart.fromArray(solver.positions, point);
+      physicsGuidePositions[positionCursor] = physicsRodStart.x;
+      physicsGuidePositions[positionCursor + 1] = physicsRodStart.y;
+      physicsGuidePositions[positionCursor + 2] = physicsRodStart.z;
+      positionCursor += 3;
+      const jointRadius = particle === 0 ? PHYSICS_JOINT_RADIUS * 1.65 : PHYSICS_JOINT_RADIUS;
+      const jointVisible = particle <= activeSegments ? jointRadius : 0.0001;
+      physicsJointScale.setScalar(jointVisible);
+      physicsInstanceMatrix.compose(
+        physicsRodStart,
+        physicsRodQuaternion.identity(),
+        physicsJointScale
+      );
+      physicsJointMesh.setMatrixAt(
+        sample * (solver.segments + 1) + particle,
+        physicsInstanceMatrix
+      );
+      if (particle === solver.segments) continue;
+      const nextParticle = Math.min(particle + 1, activeSegments);
+      const nextPoint = solver.index(guide, nextParticle);
+      physicsRodEnd.fromArray(solver.positions, nextPoint);
+      physicsRodDirection.subVectors(physicsRodEnd, physicsRodStart);
+      const length = physicsRodDirection.length();
+      physicsRodMidpoint.addVectors(physicsRodStart, physicsRodEnd).multiplyScalar(0.5);
+      physicsRodQuaternion.setFromUnitVectors(
+        physicsUp,
+        length > 1e-7 ? physicsRodDirection.multiplyScalar(1 / length) : physicsUp
+      );
+      physicsRodScale.set(
+        PHYSICS_ROD_RADIUS,
+        particle < activeSegments ? Math.max(length, 0.0001) : 0.0001,
+        PHYSICS_ROD_RADIUS
+      );
+      physicsInstanceMatrix.compose(physicsRodMidpoint, physicsRodQuaternion, physicsRodScale);
+      physicsGuideCage.setMatrixAt(sample * solver.segments + particle, physicsInstanceMatrix);
     }
-    const root = solver.index(guide, 0);
-    const target = guide * 3;
-    physicsRootPositions[target] = solver.positions[root];
-    physicsRootPositions[target + 1] = solver.positions[root + 1];
-    physicsRootPositions[target + 2] = solver.positions[root + 2];
   }
-  physicsGuideCage.geometry.attributes.position.needsUpdate = true;
-  physicsRootPoints.geometry.attributes.position.needsUpdate = true;
+  physicsGuideCage.instanceMatrix.needsUpdate = true;
+  physicsJointMesh.instanceMatrix.needsUpdate = true;
   physicsGuideCageTimings.push(performance.now() - started);
   if (physicsGuideCageTimings.length > 660) physicsGuideCageTimings.shift();
 }
@@ -1338,7 +1383,9 @@ function updateTelemetry(now) {
   assumptionMetric.dataset.status = receipt.assumption_receipt.status;
   drawCombTrace(receipt.comb.force_displacement_trace);
   document.querySelector("#showcase-phase").textContent = fullGroomHydrationEnabled
-    ? `groom hydration · ${fullGroomPresentation.phase.replaceAll("_", " ")}`
+    ? fullGroomPresentation.phase === "mechanical_skeleton"
+      ? `mechanical rods · ${physicsSkeletonGuides.length} guides / ${physicsSkeletonGuides.length * solver.segments} links`
+      : `groom hydration · ${fullGroomPresentation.phase.replaceAll("_", " ")}`
     : sectionControlTubeEnabled && sectionPresentation.phase !== "simulation"
       ? `control tube · ${sectionPresentation.phase}`
       : solver.comb.enabled
@@ -1837,16 +1884,30 @@ function createRenderReceipt() {
       hair_hydration: fullGroomPresentation.hairHydration,
       guide_opacity: fullGroomPresentation.guideOpacity,
       tube_opacity: fullGroomPresentation.tubeOpacity,
-      guide_count: solver.guideCount,
-      guide_segments: solver.guideCount * solver.segments,
-      root_point_count: solver.guideCount,
+      solver_guide_count: solver.guideCount,
+      displayed_guide_count: physicsSkeletonGuides.length,
+      rod_count: physicsSkeletonGuides.length * solver.segments,
+      joint_count: physicsSkeletonGuides.length * (solver.segments + 1),
+      rod_radius_meters: PHYSICS_ROD_RADIUS,
+      joint_radius_meters: PHYSICS_JOINT_RADIUS,
+      mannequin_opacity:
+        1 -
+        (fullGroomHydrationEnabled
+          ? Math.max(0, Math.min(1, fullGroomPresentation.guideOpacity / 0.92))
+          : 0) *
+          0.68,
+      dedicated_lighting: {
+        enabled: fullGroomHydrationEnabled && fullGroomPresentation.guideOpacity > 0.002,
+        rig: "cool_key_plus_cyan_fill",
+      },
       section_color_count: PHYSICS_CAGE_SECTION_COLORS.length,
       geometry_update: summarizeGeometryTimings(physicsGuideCageTimings),
       position_buffer_fnv1a32: float32BufferDigest(physicsGuidePositions),
       physics_authority: "none_renderer_only_reads_mechanical_guides",
     },
     section_control_tube: {
-      enabled: sectionControlTubeEnabled || fullGroomHydrationEnabled,
+      enabled: sectionControlTubeEnabled,
+      suppressed_by_full_groom: fullGroomHydrationEnabled,
       field_identity: "mean_guide_tube_hydration_v1",
       phase: sectionPresentation.phase,
       hydration: sectionPresentation.hydration,
