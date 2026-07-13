@@ -265,3 +265,64 @@ let HAIR_STYLED_ROOT_FIELD_RETAINS_OUTWARD_COMPONENT = prove
     FIRST_X_ASSUM(fun theorem -> REWRITE_TAC[theorem]) THEN
     ASM_REWRITE_TAC[] THEN
     CONV_TAC REAL_RING]);;
+
+(** A contact impulse is applied once to each body with opposite sign.  With
+    nonzero masses, this preserves the scalar component of pair momentum.  The
+    C fixture checks all three components; this theorem does not model Box3D's
+    floating-point body update. *)
+let HAIR_STICTION_EQUAL_OPPOSITE_PRESERVES_MOMENTUM = prove
+ (`!mass_a mass_b velocity_a velocity_b impulse:real.
+      ~(mass_a = &0) /\ ~(mass_b = &0)
+      ==> mass_a * (velocity_a - impulse / mass_a) +
+          mass_b * (velocity_b + impulse / mass_b) =
+          mass_a * velocity_a + mass_b * velocity_b`,
+  REPEAT STRIP_TAC THEN
+  REPEAT(POP_ASSUM MP_TAC) THEN
+  CONV_TAC REAL_FIELD);;
+
+(** Equal-and-opposite impulses applied at the same world point add no net
+    scalar torque about any chosen origin.  This is the local angular-balance
+    contract used by the executable operator test. *)
+let HAIR_STICTION_SAME_POINT_PRESERVES_ANGULAR_BALANCE = prove
+ (`!point origin impulse:real.
+      (point - origin) * (--impulse) +
+      (point - origin) * impulse = &0`,
+  CONV_TAC REAL_RING);;
+
+(** The kinetic ellipse is contained in the static ellipse axis by axis when
+    both use the same nonnegative normal impulse. *)
+let HAIR_STICTION_KINETIC_BOUND_INSIDE_STATIC = prove
+ (`!kinetic static normal_impulse:real.
+      &0 <= kinetic /\ kinetic <= static /\ &0 <= normal_impulse
+      ==> kinetic * normal_impulse <= static * normal_impulse`,
+  REPEAT STRIP_TAC THEN
+  MATCH_MP_TAC REAL_LE_RMUL THEN
+  ASM_REWRITE_TAC[]);;
+
+(** A genuine capture/release hysteresis band means every newly capturable
+    relative speed also lies strictly inside the release threshold. *)
+let HAIR_STICTION_CAPTURE_LIES_INSIDE_RELEASE_SPEED = prove
+ (`!speed capture release:real.
+      speed <= capture /\ capture < release ==> speed < release`,
+  REAL_ARITH_TAC);;
+
+(** Along the exact cancellation-impulse direction, scaling the impulse by a
+    factor in [0,1] cannot add tangential kinetic energy.  Here quadratic is
+    the nonnegative effective-mass quadratic form.  This deliberately leaves
+    SPD-matrix construction and C floating point to executable checks. *)
+let HAIR_STICTION_SCALED_CANCELLATION_WORK_NONPOSITIVE = prove
+ (`!scale quadratic:real.
+      &0 <= scale /\ scale <= &1 /\ &0 <= quadratic
+      ==> --scale * quadratic + (scale pow 2 * quadratic) / &2 <= &0`,
+  REPEAT STRIP_TAC THEN
+  SUBGOAL_THEN `&0 <= scale * (&2 - scale)` ASSUME_TAC THENL
+   [MATCH_MP_TAC REAL_LE_MUL THEN ASM_REAL_ARITH_TAC;
+    SUBGOAL_THEN `scale pow 2 <= &2 * scale` ASSUME_TAC THENL
+     [SUBGOAL_THEN
+       `&2 * scale - scale pow 2 = scale * (&2 - scale)`
+      ASSUME_TAC THENL [CONV_TAC REAL_RING; ASM_REAL_ARITH_TAC];
+      SUBGOAL_THEN
+       `scale pow 2 * quadratic <= (&2 * scale) * quadratic`
+      ASSUME_TAC THENL
+       [MATCH_MP_TAC REAL_LE_RMUL THEN ASM_REWRITE_TAC[];
+        ASM_REAL_ARITH_TAC]]]);;
