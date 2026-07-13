@@ -12,6 +12,7 @@ import {
 } from "./replay.js?v=112";
 import {
   fatlineHalfWidthAt,
+  fiberEmergenceScaleAt,
   float32BufferDigest,
   hairFiberColorAt,
   HAIR_FIBER_SHADING_ID,
@@ -21,7 +22,7 @@ import {
   REEL_CAMERA_FIELD_ID,
   sectionPosePresentationAtStep,
   summarizeGeometryTimings,
-} from "./rendering.js?v=110";
+} from "./rendering.js?v=112";
 import {
   buildGroomInterpolationBindings,
   groomBindingActiveSegments,
@@ -414,8 +415,14 @@ function writeHydratedFiberStyle(
     hairColorAtSegment.b * hairContribution + SECTION_CONTROL_TUBE_COLOR.b * proxy * 0.72
   );
   const widthScale = 0.12 + 0.88 * hydration;
-  widthsStart[instance] = fatlineHalfWidthAt(segment, activeSegments) * widthScale;
-  widthsEnd[instance] = fatlineHalfWidthAt(segment + 1, activeSegments) * widthScale;
+  widthsStart[instance] =
+    fatlineHalfWidthAt(segment, activeSegments) *
+    widthScale *
+    fiberEmergenceScaleAt(guide, copy, segment, activeSegments);
+  widthsEnd[instance] =
+    fatlineHalfWidthAt(segment + 1, activeSegments) *
+    widthScale *
+    fiberEmergenceScaleAt(guide, copy, segment + 1, activeSegments);
 }
 
 function updateSectionControlTube() {
@@ -524,6 +531,7 @@ function createFatlineMaterial() {
       varying vec3 vTangentView;
       varying vec3 vPositionView;
       varying float vAcross;
+      varying float vAlong;
 
       void main() {
         float along = position.x;
@@ -548,6 +556,7 @@ function createFatlineMaterial() {
         vTangentView = normalize(endView.xyz - startView.xyz);
         vPositionView = mix(startView.xyz, endView.xyz, along);
         vAcross = sideSign;
+        vAlong = along;
       }
     `,
     fragmentShader: `
@@ -562,6 +571,7 @@ function createFatlineMaterial() {
       varying vec3 vTangentView;
       varying vec3 vPositionView;
       varying float vAcross;
+      varying float vAlong;
 
       float strandDiffuse(vec3 tangent, vec3 lightDirection) {
         float cosine = clamp(dot(tangent, lightDirection), -1.0, 1.0);
@@ -574,8 +584,12 @@ function createFatlineMaterial() {
       }
 
       void main() {
+        float crossSection = sqrt(max(0.0, 1.0 - vAcross * vAcross));
+        float fiberCoverage = 1.0 - smoothstep(0.58, 1.0, abs(vAcross));
+        float jointCoverage = 0.5 + 0.5 * sin(3.14159265 * clamp(vAlong, 0.0, 1.0));
+        float fiberAlpha = fiberCoverage * jointCoverage * (0.72 + 0.22 * crossSection);
         if (shadingEnabled < 0.5) {
-          gl_FragColor = vec4(vColor, 1.0);
+          gl_FragColor = vec4(vColor, fiberAlpha);
           return;
         }
 
@@ -608,12 +622,14 @@ function createFatlineMaterial() {
         color += scatteringTint * keyColor * transmission * 0.1;
         color += rimColor * rimPrimary * cylinderEdge * 0.16;
         color += scatteringTint * multipleScatteringFill * (0.72 + 0.28 * diffuse);
+        color *= 0.9 + 0.1 * crossSection;
         color = color / (vec3(0.94) + color);
-        gl_FragColor = vec4(color, 1.0);
+        gl_FragColor = vec4(color, fiberAlpha);
       }
     `,
     depthTest: true,
-    depthWrite: true,
+    depthWrite: false,
+    transparent: true,
   });
 }
 
@@ -642,11 +658,14 @@ function rebuildFatlineObject() {
   hair = new THREE.Mesh(geometry, createFatlineMaterial());
   hair.frustumCulled = false;
   scene.add(hair);
-  const undercoatGeometry = new THREE.SphereGeometry(1, 48, 20, 0, Math.PI * 2, 0, 1.18);
+  const undercoatGeometry = new THREE.SphereGeometry(1, 48, 20, 0, Math.PI * 2, 0, 1.02);
   const undercoatMaterial = new THREE.MeshStandardMaterial({
-    color: fatlineBaseColor.clone().multiplyScalar(0.42),
+    color: fatlineBaseColor.clone().multiplyScalar(0.34),
     roughness: 0.96,
     metalness: 0,
+    transparent: true,
+    opacity: 0.28,
+    depthWrite: false,
   });
   hairUndercoat = new THREE.Mesh(undercoatGeometry, undercoatMaterial);
   hairUndercoat.scale.set(0.915, 1.138, 0.835);
@@ -1579,6 +1598,10 @@ window.hairMaterialReplay = {
 function createRenderReceipt() {
   const tubePositions =
     sectionControlTube?.geometry.attributes.position.array ?? new Float32Array();
+  const hairAttributes = hair?.geometry.attributes;
+  const hairColors = hairAttributes?.instanceColor?.array ?? new Float32Array();
+  const hairWidthsStart = hairAttributes?.instanceWidthStart?.array ?? new Float32Array();
+  const hairWidthsEnd = hairAttributes?.instanceWidthEnd?.array ?? new Float32Array();
   return {
     schema: "hair-render/1",
     hair_render_mode: hairRenderMode,
@@ -1593,6 +1616,10 @@ function createRenderReceipt() {
       longitudinal_roughness: 0.34,
       multiple_scattering_fill: 0.11,
       color_variation: "deterministic_fiber_plus_root_tip_v1",
+      root_emergence: "one tapered owner plus deterministic child fade over first 4-27pct",
+      cross_section_coverage: "soft analytic alpha across each screen-space fiber",
+      joint_coverage: "half-coverage endpoints reconstruct adjacent segment continuity",
+      undercoat: "cropped low-opacity density fill",
       physics_authority: "none_renderer_only",
     },
     presentation_loop: {
@@ -1652,6 +1679,9 @@ function createRenderReceipt() {
     geometry_update: summarizeGeometryTimings(hairGeometryTimings),
     renderer_draw_calls: renderer.info.render.calls,
     position_buffer_fnv1a32: float32BufferDigest(hairPositions),
+    color_buffer_fnv1a32: float32BufferDigest(hairColors),
+    width_start_buffer_fnv1a32: float32BufferDigest(hairWidthsStart),
+    width_end_buffer_fnv1a32: float32BufferDigest(hairWidthsEnd),
     physics_state_digest: digestHairState(solver),
   };
 }

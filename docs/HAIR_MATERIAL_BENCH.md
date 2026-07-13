@@ -272,6 +272,26 @@ both reached the browser's 120 fps ceiling in the 560×720 isolated gate. This
 is renderer-only and does not implement full Marschner/Chiang transport, deep
 hair shadows, or order-independent transparency.
 
+The reel screenshot pass exposed a more basic coverage failure beneath that
+shading model: all dense children shared each mechanical guide root, and every
+strand was twelve separately overlapping quads. Fifteen opaque children made
+the crown read as rectangular ladders rather than hair. The v2 fiber path keeps
+one tapered owner, deterministically fades the other children in over the first
+4-27% of strand length, narrows half-width from 0.84 px at the root to 0.07 px
+at the tip, softens the analytic cross-section, and balances adjacent segment
+endpoints at half coverage. The smooth crown undercoat is cropped and reduced
+to 28% opacity so a part reveals scalp rather than a solid helmet.
+
+The hero recipes now use 21 visible fibers per guide, or 5,376 fibers for the
+256-guide fixture. At fixed step 90, the physics digest remains
+`1b50f30cdfdff721`; the v2 receipt records position/color/start-width/end-width
+digests `03bd29bb` / `a6ef84a3` / `b257ebcb` / `06dd4fcf`. One 560x720 browser
+sample observed 2.26 ms mean / 2.80 ms p99 / 2.90 ms maximum geometry update.
+The screenshot is materially finer and the part is clearer, but it is still
+not realistic hair: the front sections form a uniform face veil, the
+12-segment topology remains faintly readable at sharp bends, transparency is
+not order-independent, and there are no deep opacity/self-shadow maps.
+
 `presentationLoop=1` restores the showcase as an animation: the deterministic
 fixture fades in, hydrates, simulates wind and the cut, fades out after step
 420, then resets at step 450. One live browser observation crossed the boundary

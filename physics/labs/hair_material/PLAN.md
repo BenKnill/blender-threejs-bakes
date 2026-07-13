@@ -94,6 +94,15 @@ proof boundaries must remain explicit.
       450-step loop, so a capture can be reconstructed from query parameters
       rather than hand-orbiting the viewport. Three `just hair-reel-*` recipes
       preserve the uninterrupted animation as the product experience.
+- [x] Remove the worst opaque-card artifact before encoding reels. Critical
+      narrow and widescreen screenshots showed 15 child ribbons stacking at
+      every shared guide root and every segment joint. The v2 renderer tapers
+      one owner from the scalp, deterministically fades children over the first
+      4-27% of length, narrows the 0.84 px root to a 0.07 px tip, softens fiber
+      cross-sections and joint coverage, and replaces the helmet undercoat with
+      a cropped 28%-opacity density fill. The reel recipes now use the existing
+      21-fiber ceiling (5,376 fibers); fixed step 90 retains physics digest
+      `1b50f30cdfdff721` and observes 2.8 ms geometry p99 in the narrow gate.
 - [x] Build a small explicit-guide rod/reference fixture before raising guide
       count or enabling spatial friction in the browser by default. The
       settled axial/transverse lanes reproduce exactly, remain under 1.9%
