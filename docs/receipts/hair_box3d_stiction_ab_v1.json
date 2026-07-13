@@ -1,0 +1,70 @@
+{
+  "schema": "hair-box3d-swatch-receipt/2",
+  "configuration": {"guides": 16, "links_per_guide": 8, "dynamic_capsules": 128, "spherical_joints": 128, "simulation_hz": 60, "substeps_per_step": 4, "duration_s": 12, "phase_duration_s": 6, "stiction_memory_capacity": 1024, "stiction_memory_ttl_steps": 3, "static_axial": 0.159999996, "static_transverse": 0.920000017, "kinetic_axial": 0.100000001, "kinetic_transverse": 0.620000005, "capture_speed_m_s": 0.119999997, "release_speed_m_s": 0.300000012},
+  "conditions": {
+    "calm_control": {
+      "trajectory_digest": "036bba371099fc91",
+      "simulation_cpu_ms": 224.049000,
+      "realtime_factor": 53.559712,
+      "finite": true,
+      "max_speed_m_s": 0.0448077321,
+      "max_angular_speed_rad_s": 0,
+      "max_joint_gap_m": 0.00132465363,
+      "max_horizontal_tip_displacement_m": 0,
+      "max_active_contacts": 528,
+      "contact_begins": 528,
+      "contact_ends": 0,
+      "strong_orbit": {"wind_speed_m_s": 6.0, "mean_horizontal_tip_displacement_m": 0, "max_horizontal_tip_displacement_m": 0, "mean_horizontal_tip_spread_m": 0, "max_horizontal_tip_spread_m": 0, "mean_wind_alignment": 0, "azimuth_bins_visited": 0},
+      "moderate_orbit": {"wind_speed_m_s": 3.25, "mean_horizontal_tip_displacement_m": 0, "max_horizontal_tip_displacement_m": 0, "mean_horizontal_tip_spread_m": 0, "max_horizontal_tip_spread_m": 0, "mean_wind_alignment": 0, "azimuth_bins_visited": 0},
+      "stiction": {"enabled": false, "memory_capacity": 1024, "max_active_entries": 0, "captures": 0, "releases": 0, "stick_services": 0, "slip_services": 0, "expirations": 0, "evictions": 0, "candidate_drops": 0, "invalid_solves": 0, "maximum_age_steps": 0, "axial_impulse_sum_n_s": 0, "transverse_impulse_sum_n_s": 0, "dissipated_energy_proxy_j": 0, "mean_relative_speed_before_m_s": 0, "mean_predicted_speed_after_m_s": 0, "energy_injection_violations": 0}
+    },
+    "rotating_wind_box3d": {
+      "trajectory_digest": "eb3ebea59ffbb5af",
+      "simulation_cpu_ms": 289.317000,
+      "realtime_factor": 41.476996,
+      "finite": true,
+      "max_speed_m_s": 4.77802038,
+      "max_angular_speed_rad_s": 15.9806242,
+      "max_joint_gap_m": 0.00239716563,
+      "max_horizontal_tip_displacement_m": 2.04672766,
+      "max_active_contacts": 553,
+      "contact_begins": 3154,
+      "contact_ends": 2729,
+      "strong_orbit": {"wind_speed_m_s": 6.0, "mean_horizontal_tip_displacement_m": 1.66190552, "max_horizontal_tip_displacement_m": 2.00465512, "mean_horizontal_tip_spread_m": 0.0435981477, "max_horizontal_tip_spread_m": 0.0891808942, "mean_wind_alignment": 0.967547245, "azimuth_bins_visited": 23},
+      "moderate_orbit": {"wind_speed_m_s": 3.25, "mean_horizontal_tip_displacement_m": 1.15635083, "max_horizontal_tip_displacement_m": 1.77052653, "mean_horizontal_tip_spread_m": 0.0298073776, "max_horizontal_tip_spread_m": 0.0522222705, "mean_wind_alignment": 0.967919143, "azimuth_bins_visited": 24},
+      "stiction": {"enabled": false, "memory_capacity": 1024, "max_active_entries": 0, "captures": 0, "releases": 0, "stick_services": 0, "slip_services": 0, "expirations": 0, "evictions": 0, "candidate_drops": 0, "invalid_solves": 0, "maximum_age_steps": 0, "axial_impulse_sum_n_s": 0, "transverse_impulse_sum_n_s": 0, "dissipated_energy_proxy_j": 0, "mean_relative_speed_before_m_s": 0, "mean_predicted_speed_after_m_s": 0, "energy_injection_violations": 0}
+    },
+    "rotating_wind_stiction": {
+      "trajectory_digest": "039c9dfa44a1f32b",
+      "simulation_cpu_ms": 308.050000,
+      "realtime_factor": 38.954715,
+      "finite": true,
+      "max_speed_m_s": 4.7777791,
+      "max_angular_speed_rad_s": 16.5826874,
+      "max_joint_gap_m": 0.00247345562,
+      "max_horizontal_tip_displacement_m": 2.04667354,
+      "max_active_contacts": 555,
+      "contact_begins": 3100,
+      "contact_ends": 2671,
+      "strong_orbit": {"wind_speed_m_s": 6.0, "mean_horizontal_tip_displacement_m": 1.6617093, "max_horizontal_tip_displacement_m": 2.00441217, "mean_horizontal_tip_spread_m": 0.0424208834, "max_horizontal_tip_spread_m": 0.0797925815, "mean_wind_alignment": 0.967474843, "azimuth_bins_visited": 23},
+      "moderate_orbit": {"wind_speed_m_s": 3.25, "mean_horizontal_tip_displacement_m": 1.15629323, "max_horizontal_tip_displacement_m": 1.76976717, "mean_horizontal_tip_spread_m": 0.0299660654, "max_horizontal_tip_spread_m": 0.0541667007, "mean_wind_alignment": 0.967932822, "azimuth_bins_visited": 24},
+      "stiction": {"enabled": true, "memory_capacity": 1024, "max_active_entries": 182, "captures": 1793, "releases": 1482, "stick_services": 8225, "slip_services": 33664, "expirations": 5738, "evictions": 0, "candidate_drops": 0, "invalid_solves": 0, "maximum_age_steps": 109, "axial_impulse_sum_n_s": 1.85827762, "transverse_impulse_sum_n_s": 1.01246043, "dissipated_energy_proxy_j": 0.13598836, "mean_relative_speed_before_m_s": 0.0559879063, "mean_predicted_speed_after_m_s": 0.0425455971, "energy_injection_violations": 0}
+    }
+  },
+  "comparison": {"stiction_cpu_overhead_ratio": 1.06474905, "strong_tip_displacement_ratio": 0.99988193, "moderate_tip_displacement_ratio": 0.999950187, "strong_tip_spread_ratio": 0.972997377, "moderate_tip_spread_ratio": 1.00532378},
+  "gates": {
+    "finite_and_bounded": true,
+    "wind_displacement_exceeds_calm": true,
+    "contact_manifolds_observed": true,
+    "baseline_digest_preserved": true,
+    "persistent_stick_and_slip_observed": true,
+    "memory_and_energy_bounds_hold": true,
+    "mean_predicted_tangential_speed_reduced": true,
+    "stiction_groom_remains_visibly_driven": true,
+    "stiction_cpu_overhead_below_4x": true,
+    "executable_operator_contracts": true,
+    "strong_orbit_visits_at_least_18_of_24_bins": true,
+    "moderate_orbit_visits_at_least_14_of_24_bins": true
+  },
+  "claim_boundary": "Native reduced-guide A/B with a bounded post-step contact impulse operator; no browser/WASM integration, dense hydration, calibrated fiber fit, or proof that C refines HOL Light."
+}

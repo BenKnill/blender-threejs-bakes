@@ -245,6 +245,17 @@ strand rendering; do not add another many-hair operator first.
       runs roughly 43× real time on the first accepted Apple Silicon release
       receipt. This proves responsiveness and leaves browser/WASM integration,
       calibration, hydration, and custom stiction explicitly open.
+- [x] Add bounded hair-specific stiction to that native swatch without freezing
+      its wind response. A deterministic three-step contact-ID memory drives a
+      coupled 2D axial/transverse stick/slip impulse at Box3D manifold points.
+      The accepted A/B observed 1,793 captures, 1,482 releases, 8,225 stick and
+      33,664 slip services; mean predicted contact-plane speed fell 24.0% while
+      strong/moderate tip displacement retained 99.99%/100.00% of baseline.
+      The table peaked at 182/1,024 entries with no drops, evictions, invalid
+      solves, or energy-injection violations; cost was 1.06× baseline. Five
+      narrow HOL Light contracts replay warm, explicitly as development rather
+      than cold final evidence. Browser integration and a stronger visible
+      collective-motion calibration remain open.
 - [ ] Better scalp/strand contact and a clearer calibration path.
 - [x] Define three receipt-distinct reel shots before packaging video variants.
 - [ ] Package short 16:9 and vertical reels from those named moving shots.

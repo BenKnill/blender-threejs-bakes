@@ -1,6 +1,7 @@
 # Box3D spherical-chain hair swatch
 
-Issue: [#171](https://github.com/BenKnill/blender-threejs-bakes/issues/171)
+Issues: [#171](https://github.com/BenKnill/blender-threejs-bakes/issues/171),
+[#173](https://github.com/BenKnill/blender-threejs-bakes/issues/173)
 
 ## Question
 
@@ -41,10 +42,14 @@ then writes:
 Both files are generated and ignored. The compact measured receipt from the
 first accepted run is preserved at
 `docs/receipts/hair_box3d_swatch_v1.json`.
+The contact-memory A/B is preserved at
+`docs/receipts/hair_box3d_stiction_ab_v1.json`.
 
-The same recipe regenerates the tracked seven-pose diagnostic plate at
+The same recipe regenerates the tracked aligned two-row diagnostic plate at
 `docs/images/hair_box3d_swatch_preview.svg`. It is a projection of the recorded
-Box3D transforms, not a second simulation.
+Box3D transforms, not a second simulation. The top row is ordinary Box3D
+contact; the lower row adds the hair-specific operator under the identical
+wind program.
 
 ## First result
 
@@ -63,28 +68,60 @@ This is much more motion than the current groom needs. That is useful: it proves
 the Box3D skeleton can be responsive before tuning spring stiffness, guide
 count, drag area, and hydration weight. It does not yet show good hair motion.
 
-## Contact and stiction boundary
+## Persistent anisotropic contact operator
 
-Box3D reported up to 553 simultaneously touching contact pairs and 3,154 begin
-events during the rotating lane. Those are ordinary isotropic Box3D contacts.
-There is no hair-specific static friction, anisotropic stick/slip ellipse,
-persistent contact memory, or hydration in this slice.
+The second experiment consumes Box3D's touching contact IDs, manifold feature
+IDs, points, normals, and normal impulses after each native solver step. A
+fixed-capacity open-addressed table remembers contacts for three steps. It is
+bounded to 1,024 entries and uses deterministic ordering, tombstones, expiry,
+and oldest-entry eviction rather than allocating in the simulation loop.
 
-The next operator should consume only Box3D's active contact IDs/manifolds and
-apply a bounded equal-and-opposite tangential impulse:
+At each admitted cross-guide contact, the operator:
 
-1. compute the impulse that would cancel relative tangential velocity;
-2. stick if it lies inside axial/transverse static-friction bounds;
-3. otherwise project onto smaller kinetic-friction bounds;
-4. use distinct capture/release speeds and expire inactive contact IDs;
-5. prove conservation, non-positive tangential work, and threshold ordering as
-   local HOL Light contracts, then test the C implementation against the same
-   scalar/vector oracle.
+1. derives the guide-axial tangent and its transverse contact-plane axis;
+2. builds the coupled 2×2 effective-mass response at the contact point;
+3. solves the impulse that would cancel relative tangential velocity;
+4. sticks if it lies inside the anisotropic static ellipse and the hysteretic
+   speed threshold, otherwise scales it onto the smaller kinetic ellipse;
+5. applies equal-and-opposite impulses at the same world point.
+
+The production coefficients deliberately make transverse friction much
+stronger than axial friction: static 0.92 versus 0.16 and kinetic 0.62 versus
+0.10. New contacts capture below 0.12 m/s; remembered contacts release above
+0.30 m/s.
+
+## Contact-memory A/B result
+
+The accepted Apple Silicon release A/B retained the original Box3D-only digest
+`eb3ebea59ffbb5af`. The stiction lane repeated at digest
+`039c9dfa44a1f32b`, observed 1,793 captures, 1,482 releases, 8,225 stick
+services, and 33,664 slip services. Contacts persisted for as many as 109
+steps while the table peaked at 182 entries, with zero candidate drops,
+evictions, invalid solves, or measured energy-injection violations.
+
+Mean predicted contact-plane relative speed fell from 0.05599 m/s to
+0.04255 m/s, a 24.0% reduction. Strong-wind mean tip displacement retained
+99.99% of baseline and moderate-wind displacement retained 100.00%, so the
+operator changed local relative motion without freezing the wind response.
+Strong-phase mean horizontal tip spread fell 2.7%; the moderate change was
+within noise at +0.5%. The stiction lane cost 1.06× the Box3D-only CPU time in
+this small fixture.
+
+The C self-test exercises static capture, kinetic projection, non-positive
+energy change, and equal-and-opposite linear and same-point angular balance.
+HOL Light supplies five deliberately local real-arithmetic contracts for
+momentum, same-point angular balance, nested friction bounds, hysteresis
+ordering, and non-positive scaled cancellation work. A warm OrbStack replay is
+development evidence only, not a cold final proof receipt or a refinement proof
+for the C implementation.
 
 ## Claim boundary
 
 This result establishes a fast, deterministic native reduced-guide fixture with
-real capsule inertia, spherical joints, contact, and direction-aware drag. It
-does not establish browser/WASM cost, thousands-of-body performance, realistic
-fiber calibration, dense render quality, or a refinement connection between
-the native code and HOL Light statements.
+real capsule inertia, spherical joints, contact, direction-aware drag, and a
+bounded post-step hair-specific stick/slip operator. It does not establish
+browser/WASM cost, thousands-of-body performance, realistic fiber calibration,
+dense render quality, or a refinement connection between the native code and
+HOL Light statements. The nearly unchanged overall tip path is useful but also
+means the current plate is a mechanics diagnostic, not yet a visually dramatic
+collective-hair result.

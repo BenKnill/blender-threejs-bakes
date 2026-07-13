@@ -13,7 +13,7 @@ endif()
 
 add_subdirectory("${BOX3D_SOURCE_DIR}" box3d EXCLUDE_FROM_ALL)
 
-add_executable(hair_box3d_swatch hair_box3d_swatch.c)
+add_executable(hair_box3d_swatch hair_box3d_swatch.c hair_stiction.c)
 target_compile_features(hair_box3d_swatch PRIVATE c_std_17)
 target_compile_options(hair_box3d_swatch PRIVATE -Wall -Wextra -Wpedantic)
 target_link_libraries(hair_box3d_swatch PRIVATE box3d::box3d m)
