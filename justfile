@@ -123,27 +123,27 @@ hair-section-pose-showcase:
 # Start the transient authoring-tube-to-hydrated-hair presentation.
 hair-control-tube-showcase:
     PORT=8199 ./scripts/serve.sh start
-    @echo "http://127.0.0.1:8199/physics/labs/hair_material/demo/?replay=1&showcase=1&presentationLoop=1&poseCycle=1&poseSection=7&poseLift=0.32&poseSweep=0.34&controlTube=1&cut=diagonal&cutAt=5.5&cutDuration=1.2&guides=256&iterations=6&preset=wavy&wetness=0.35&product=0.45&windProgram=strong-then-moderate-orbits&strongWind=0.58&moderateWind=0.29&hairRender=fatline&hairShade=fiber&fibers=21&groomVolume=1&rootField=styled-side-part&rootStrength=0.22&mannequin=realistic&reel=control&renderReceipt=1&scenario=fiber-shaded-looping-hydration"
+    @echo "http://127.0.0.1:8199/physics/labs/hair_material/demo/?replay=1&showcase=1&presentationLoop=1&poseCycle=1&poseSection=7&poseLift=0.32&poseSweep=0.34&controlTube=1&cut=diagonal&cutAt=5.5&cutDuration=1.2&guides=256&iterations=6&preset=wavy&wetness=0.35&product=0.45&windProgram=strong-then-moderate-orbits&strongWind=4&moderateWind=1.5&hairRender=fatline&hairShade=fiber&fibers=21&groomVolume=1&rootField=styled-side-part&rootStrength=0.22&mannequin=realistic&reel=control&renderReceipt=1&scenario=fiber-shaded-looping-hydration"
 
 # Start the globally separated physics-cage-to-dense-hair hydration showcase.
 hair-groom-hydration-showcase:
     PORT=8199 ./scripts/serve.sh start
-    @echo "http://127.0.0.1:8199/physics/labs/hair_material/demo/?replay=1&showcase=1&presentationLoop=1&poseCycle=1&poseSection=7&poseLift=0.32&poseSweep=0.34&groomHydration=1&guides=256&iterations=6&preset=wavy&wetness=0.35&product=0.45&windProgram=strong-then-moderate-orbits&strongWind=0.58&moderateWind=0.29&hairRender=fatline&hairShade=fiber&fibers=21&groomVolume=1&rootField=styled-side-part&rootStrength=0.22&mannequin=realistic&reel=control&renderReceipt=1&scenario=full-groom-physics-to-hair"
+    @echo "http://127.0.0.1:8199/physics/labs/hair_material/demo/?replay=1&showcase=1&presentationLoop=1&poseCycle=1&poseSection=7&poseLift=0.32&poseSweep=0.34&groomHydration=1&guides=256&iterations=6&preset=wavy&wetness=0.35&product=0.45&windProgram=strong-then-moderate-orbits&strongWind=4&moderateWind=1.5&hairRender=fatline&hairShade=fiber&fibers=21&groomVolume=1&rootField=styled-side-part&rootStrength=0.22&mannequin=realistic&reel=control&renderReceipt=1&scenario=full-groom-physics-to-hair"
 
 # Start the uninterrupted realistic-head beauty orbit for capture or live preview.
 hair-reel-beauty:
     PORT=8199 ./scripts/serve.sh start
-    @echo "http://127.0.0.1:8199/physics/labs/hair_material/demo/?replay=1&showcase=1&presentationLoop=1&poseCycle=1&poseSection=7&poseLift=0.32&poseSweep=0.34&guides=256&iterations=6&preset=wavy&wetness=0.35&product=0.45&windProgram=strong-then-moderate-orbits&strongWind=0.58&moderateWind=0.29&hairRender=fatline&hairShade=fiber&fibers=21&groomVolume=1&rootField=styled-side-part&rootStrength=0.22&mannequin=realistic&reel=beauty&renderReceipt=1&scenario=hero-beauty-orbit"
+    @echo "http://127.0.0.1:8199/physics/labs/hair_material/demo/?replay=1&showcase=1&presentationLoop=1&poseCycle=1&poseSection=7&poseLift=0.32&poseSweep=0.34&guides=256&iterations=6&preset=wavy&wetness=0.35&product=0.45&windProgram=strong-then-moderate-orbits&strongWind=4&moderateWind=1.5&hairRender=fatline&hairShade=fiber&fibers=21&groomVolume=1&rootField=styled-side-part&rootStrength=0.22&mannequin=realistic&reel=beauty&renderReceipt=1&scenario=hero-beauty-orbit"
 
 # Start the semi-transparent authoring control-volume shot before hair hydration.
 hair-reel-control:
     PORT=8199 ./scripts/serve.sh start
-    @echo "http://127.0.0.1:8199/physics/labs/hair_material/demo/?replay=1&showcase=1&presentationLoop=1&poseCycle=1&poseSection=7&poseLift=0.32&poseSweep=0.34&groomHydration=1&guides=256&iterations=6&preset=wavy&wetness=0.35&product=0.45&windProgram=strong-then-moderate-orbits&strongWind=0.58&moderateWind=0.29&hairRender=fatline&hairShade=fiber&fibers=21&groomVolume=1&rootField=styled-side-part&rootStrength=0.22&mannequin=realistic&reel=control&renderReceipt=1&scenario=hero-physics-cage-hydration"
+    @echo "http://127.0.0.1:8199/physics/labs/hair_material/demo/?replay=1&showcase=1&presentationLoop=1&poseCycle=1&poseSection=7&poseLift=0.32&poseSweep=0.34&groomHydration=1&guides=256&iterations=6&preset=wavy&wetness=0.35&product=0.45&windProgram=strong-then-moderate-orbits&strongWind=4&moderateWind=1.5&hairRender=fatline&hairShade=fiber&fibers=21&groomVolume=1&rootField=styled-side-part&rootStrength=0.22&mannequin=realistic&reel=control&renderReceipt=1&scenario=hero-physics-cage-hydration"
 
 # Start the hands-off cut-and-relaxation shot with the deterministic reel camera.
 hair-reel-cut:
     PORT=8199 ./scripts/serve.sh start
-    @echo "http://127.0.0.1:8199/physics/labs/hair_material/demo/?replay=1&showcase=1&presentationLoop=1&poseCycle=1&poseSection=7&poseLift=0.32&poseSweep=0.34&comb=1&cycle=1&cut=diagonal&cutAt=5.5&cutDuration=1.2&guides=256&iterations=6&preset=wavy&wetness=0.35&product=0.45&windProgram=strong-then-moderate-orbits&strongWind=0.58&moderateWind=0.29&hairRender=fatline&hairShade=fiber&fibers=21&groomVolume=1&rootField=styled-side-part&rootStrength=0.22&mannequin=realistic&reel=cut&renderReceipt=1&scenario=hero-cut-relaxation"
+    @echo "http://127.0.0.1:8199/physics/labs/hair_material/demo/?replay=1&showcase=1&presentationLoop=1&poseCycle=1&poseSection=7&poseLift=0.32&poseSweep=0.34&comb=1&cycle=1&cut=diagonal&cutAt=5.5&cutDuration=1.2&guides=256&iterations=6&preset=wavy&wetness=0.35&product=0.45&windProgram=strong-then-moderate-orbits&strongWind=4&moderateWind=1.5&hairRender=fatline&hairShade=fiber&fibers=21&groomVolume=1&rootField=styled-side-part&rootStrength=0.22&mannequin=realistic&reel=cut&renderReceipt=1&scenario=hero-cut-relaxation"
 
 # Run the fixed 256-guide section-pose acceptance gate.
 hair-section-pose-ab:

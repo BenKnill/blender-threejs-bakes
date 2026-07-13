@@ -71,10 +71,10 @@ assert.ok(visitedModules.has(path.join(output, "vendor/utils/BufferGeometryUtils
 const index = await readFile(path.join(output, "index.html"), "utf8");
 assert.ok(index.includes('"three": "./vendor/three.module.js"'));
 assert.ok(index.includes('"three/addons/": "./vendor/"'));
-assert.ok(index.includes("canonical-two-orbit-wind-demo"));
+assert.ok(index.includes("canonical-visible-two-orbit-wind-demo"));
 assert.ok(index.includes("windProgram=strong-then-moderate-orbits"));
-assert.ok(index.includes("strongWind=0.58"));
-assert.ok(index.includes("moderateWind=0.29"));
+assert.ok(!index.includes("strongWind="));
+assert.ok(!index.includes("moderateWind="));
 assert.ok(!index.includes("../../../../editor/vendor"));
 
 const receipt = JSON.parse(await readFile(path.join(output, "build.json"), "utf8"));
