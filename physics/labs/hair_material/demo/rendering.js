@@ -1,6 +1,6 @@
-export const FATLINE_ROOT_HALF_WIDTH_PX = 1.22;
-export const FATLINE_TIP_HALF_WIDTH_PX = 0.2;
-export const HAIR_FIBER_SHADING_ID = "tangent_dual_lobe_ms_fill_v1";
+export const FATLINE_ROOT_HALF_WIDTH_PX = 0.84;
+export const FATLINE_TIP_HALF_WIDTH_PX = 0.07;
+export const HAIR_FIBER_SHADING_ID = "tangent_dual_lobe_root_emergence_v2";
 export const HAIR_PRESENTATION_LOOP_ID = "fade_reset_450_step_v1";
 export const REEL_CAMERA_FIELD_ID = "three_shot_orbit_450_step_v1";
 
@@ -29,6 +29,17 @@ export function hairFiberColorAt(baseColor, strand, copy, rootFraction, target =
   target.g = Math.min(1, baseColor.g * variation * rootToTip * (1 + 0.025 * fraction));
   target.b = Math.min(1, baseColor.b * variation * rootToTip * (1 - 0.035 * fraction));
   return target;
+}
+
+export function fiberEmergenceScaleAt(strand, copy, particle, activeSegments) {
+  const fraction = Math.max(0, Math.min(1, particle / Math.max(1, activeSegments)));
+  if (copy === 0) return smoothStep01(fraction / 0.085);
+  let hash = Math.imul(strand + 1, 0x45d9f3b) ^ Math.imul(copy + 1, 0x27d4eb2d);
+  hash ^= hash >>> 16;
+  const unsigned = hash >>> 0;
+  const start = 0.035 + (unsigned % 7) * 0.011;
+  const end = start + 0.12 + ((unsigned >>> 4) % 5) * 0.012;
+  return smoothStep01((fraction - start) / Math.max(0.001, end - start));
 }
 
 export function reelCameraPoseAtStep(step, shot, loopSteps = 450) {

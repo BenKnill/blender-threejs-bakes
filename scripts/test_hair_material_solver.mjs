@@ -20,6 +20,7 @@ import { spatialFrictionPerformanceReceipt } from "../physics/labs/hair_material
 import {
   fatlineColorScale,
   fatlineHalfWidthAt,
+  fiberEmergenceScaleAt,
   float32BufferDigest,
   hairFiberColorAt,
   HAIR_FIBER_SHADING_ID,
@@ -81,7 +82,7 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
 }
 
 {
-  assert.equal(HAIR_FIBER_SHADING_ID, "tangent_dual_lobe_ms_fill_v1");
+  assert.equal(HAIR_FIBER_SHADING_ID, "tangent_dual_lobe_root_emergence_v2");
   assert.equal(HAIR_PRESENTATION_LOOP_ID, "fade_reset_450_step_v1");
   assert.equal(REEL_CAMERA_FIELD_ID, "three_shot_orbit_450_step_v1");
   nearlyEqual(presentationLoopOpacityAtStep(0), 0);
@@ -96,6 +97,11 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.ok(root.g < tip.g);
   assert.ok(root.b < tip.b);
   assert.deepEqual(tip, hairFiberColorAt({ r: 0.4, g: 0.2, b: 0.1 }, 8, 3, 1));
+  assert.equal(fiberEmergenceScaleAt(8, 0, 0, 12), 0);
+  assert.ok(fiberEmergenceScaleAt(8, 0, 1, 12) > 0.99);
+  assert.equal(fiberEmergenceScaleAt(8, 3, 0, 12), 0);
+  assert.equal(fiberEmergenceScaleAt(8, 3, 12, 12), 1);
+  assert.ok(fiberEmergenceScaleAt(8, 3, 1, 12) <= fiberEmergenceScaleAt(8, 3, 2, 12));
   assert.deepEqual(reelCameraPoseAtStep(0, "beauty"), reelCameraPoseAtStep(450, "beauty"));
   assert.notDeepEqual(reelCameraPoseAtStep(0, "beauty"), reelCameraPoseAtStep(225, "beauty"));
   assert.notDeepEqual(reelCameraPoseAtStep(330, "control"), reelCameraPoseAtStep(330, "cut"));
@@ -134,6 +140,8 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
 {
   assert.ok(fatlineHalfWidthAt(0, 12) > fatlineHalfWidthAt(6, 12));
   assert.ok(fatlineHalfWidthAt(6, 12) > fatlineHalfWidthAt(12, 12));
+  nearlyEqual(fatlineHalfWidthAt(0, 12), 0.84);
+  nearlyEqual(fatlineHalfWidthAt(12, 12), 0.07);
   nearlyEqual(fatlineHalfWidthAt(12, 12), fatlineHalfWidthAt(24, 12));
   assert.equal(fatlineColorScale(8, 3), fatlineColorScale(8, 3));
   assert.notEqual(fatlineColorScale(8, 3), fatlineColorScale(8, 4));
