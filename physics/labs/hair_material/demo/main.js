@@ -13,6 +13,7 @@ import {
 import {
   buildUndercoatCoverageProfile,
   buildRootCoverageCurve,
+  blendRootCoverageFlow,
   catmullRomScalar,
   FATLINE_ROOT_HALF_WIDTH_PX,
   fatlineHalfWidthAt,
@@ -27,6 +28,9 @@ import {
   lockAwareFiberEmergenceScaleAt,
   LOCK_AWARE_RENDER_SUBDIVISIONS,
   LOCK_AWARE_ROOT_COVER_LENGTH_METERS,
+  LOCK_AWARE_ROOT_COVER_LIVE_WEIGHT,
+  LOCK_AWARE_ROOT_COVER_MIN_AUTHORED_DOT,
+  LOCK_AWARE_ROOT_COVER_PROBE_PARTICLE,
   LOCK_AWARE_ROOT_COVER_SEGMENTS,
   physicsSkeletonDepthWriteAt,
   PHYSICS_SKELETON_STYLE,
@@ -36,7 +40,7 @@ import {
   REEL_CAMERA_FIELD_ID,
   sectionPosePresentationAtStep,
   summarizeGeometryTimings,
-} from "./rendering.js?v=118";
+} from "./rendering.js?v=119";
 import {
   buildGroomInterpolationBindings,
   groomBindingActiveSegments,
@@ -296,6 +300,8 @@ let hairUndercoat;
 let hairUndercoatCoverageProfile = null;
 const lockCurvePoints = new Float64Array(12);
 const lockRootCoveragePoints = new Float64Array(12);
+const lockRootCoverageProbe = new Float64Array(3);
+const lockRootCoverageFlow = new Float64Array(3);
 const LOCK_ROOT_COVER_WIDTH_PROFILE = Object.freeze([0.56, 0.46, 0.34, 0.24]);
 const LOCK_UNDERCOAT_LAYER_OPACITIES = Object.freeze([0.5, 0.16, 0.05]);
 let hairPositions;
@@ -1379,6 +1385,31 @@ function updateSectionInterpolatedFatlineGeometry() {
       solver.rootDirectorTargets[secondaryTarget + 2],
       secondaryNeighborWeight
     );
+    writeBlendedGroomCurvePoint(
+      lockRootCoverageProbe,
+      0,
+      owner,
+      neighbor,
+      secondaryNeighbor,
+      Math.min(LOCK_AWARE_ROOT_COVER_PROBE_PARTICLE, activeSegments),
+      activeSegments,
+      neighborWeight,
+      secondaryNeighborWeight,
+      secondaryActiveSegments
+    );
+    blendRootCoverageFlow(
+      normalX,
+      normalY,
+      normalZ,
+      targetX,
+      targetY,
+      targetZ,
+      lockRootCoverageProbe[0] - lockCurvePoints[0],
+      lockRootCoverageProbe[1] - lockCurvePoints[1],
+      lockRootCoverageProbe[2] - lockCurvePoints[2],
+      LOCK_AWARE_ROOT_COVER_LIVE_WEIGHT,
+      lockRootCoverageFlow
+    );
     buildRootCoverageCurve(
       lockCurvePoints[0],
       lockCurvePoints[1],
@@ -1386,9 +1417,9 @@ function updateSectionInterpolatedFatlineGeometry() {
       normalX,
       normalY,
       normalZ,
-      targetX,
-      targetY,
-      targetZ,
+      lockRootCoverageFlow[0],
+      lockRootCoverageFlow[1],
+      lockRootCoverageFlow[2],
       owner,
       copy,
       LOCK_AWARE_ROOT_COVER_LENGTH_METERS,
@@ -2139,6 +2170,18 @@ function createRenderReceipt() {
       root_coverage_nominal_length_meters: lockCoverageEnabled
         ? LOCK_AWARE_ROOT_COVER_LENGTH_METERS
         : 0,
+      root_coverage_live_tangent_weight: lockCoverageEnabled
+        ? LOCK_AWARE_ROOT_COVER_LIVE_WEIGHT
+        : 0,
+      root_coverage_live_probe_particle: lockCoverageEnabled
+        ? LOCK_AWARE_ROOT_COVER_PROBE_PARTICLE
+        : 0,
+      root_coverage_minimum_authored_direction_dot: lockCoverageEnabled
+        ? LOCK_AWARE_ROOT_COVER_MIN_AUTHORED_DOT
+        : 0,
+      root_coverage_motion_source: lockCoverageEnabled
+        ? "live_midshaft_tangent_blended_with_authored_root_field"
+        : "none",
       undercoat_layer_opacities: lockCoverageEnabled ? LOCK_UNDERCOAT_LAYER_OPACITIES : [],
       root_tangent_scale: 0.34,
       shaft_tangent_scale: 0.5,

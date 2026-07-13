@@ -356,6 +356,17 @@ cap. The uncut canonical fixture draws 145,152 spans; this is a renderer-only
 digest unchanged. See `docs/receipts/hair_lock_aware_coverage.md` for the
 placement audit and claim boundary.
 
+The v3 coverage field also follows live wind deformation. The initial short
+coverage locks were rooted correctly but used only the baked style direction,
+so they stayed still while the simulated shafts moved. Each coverage direction
+now blends 86% of the current interpolated particle-7 tangent with 14% of the
+authored root field, bounded to a 0.34 authored-direction dot. In the fixed step
+270-285 canonical interval, coverage endpoints move 4.61 mm RMS / 8.86 mm p95
+instead of exactly zero; simulated guide tips move 69.0 mm RMS. This exposes
+existing mechanics in hydration and does not add wind force, particles, or
+constraints. See
+`docs/receipts/hair_hydrated_wind_response.md`.
+
 `presentationLoop=1` restores the showcase as an animation: the deterministic
 fixture fades in, hydrates, simulates wind and the cut, fades out after step
 420, then resets at step 450. One live browser observation crossed the boundary
