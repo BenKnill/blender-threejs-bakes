@@ -26,9 +26,16 @@ import {
   float32BufferDigest,
   fullGroomHydrationAtStep,
   FULL_GROOM_HYDRATION_ID,
-  HAIR_HYDRATION_RECIPES,
+  HAIR_BREADTH_TOUR,
+  HAIR_BREADTH_TOUR_ORDER,
+  HAIR_COLOR_PROFILES,
+  HAIR_DETAIL_PROFILES,
+  HAIR_GEOMETRY_PROFILES,
+  HAIR_HYDRATION_BREADTH_ID,
+  HAIR_HYDRATION_COMPOSITION_COUNT,
   HAIR_HYDRATION_RECIPE_ID,
   HAIR_HYDRATION_RECIPE_ORDER,
+  HAIR_OPTICAL_MODELS,
   hairFiberColorAt,
   HAIR_FIBER_SHADING_ID,
   HAIR_PRESENTATION_LOOP_ID,
@@ -40,10 +47,11 @@ import {
   LOCK_AWARE_ROOT_COVER_MIN_AUTHORED_DOT,
   LOCK_AWARE_ROOT_COVER_PROBE_PARTICLE,
   LOCK_AWARE_ROOT_COVER_SEGMENTS,
-  hydrationFiberPopulationScale,
+  hydrationFiberFamilyScale,
   hydrationRecipe,
-  hydrationRecipeAtStep,
+  hydrationRecipeSelection,
   hydrationRecipeWidthScaleAt,
+  hydrationSelectionAtStep,
   nativeClipPresentationAtTime,
   NATIVE_HYDRATION_PRE_ROLL_SECONDS,
   physicsSkeletonDepthWriteAt,
@@ -52,6 +60,7 @@ import {
   presentationLoopOpacityAtStep,
   reelCameraPoseAtStep,
   REEL_CAMERA_FIELD_ID,
+  resolveHairHydrationState,
   sectionPosePresentationAtStep,
   summarizeGeometryTimings,
 } from "./rendering.js?v=127";
@@ -85,7 +94,12 @@ let sectionControlTubeEnabled = false;
 let fullGroomHydrationEnabled = false;
 let hairShadingMode = "fiber_lobes";
 let hydrationRecipeId = "natural_balanced";
-let activeHydrationRecipeId = hydrationRecipeId;
+let hydrationGeometryId = "balanced_full";
+let hydrationOpticalId = "artist_dual";
+let hydrationColorId = "chestnut";
+let hydrationDetailId = "natural_variation";
+let activeHydrationSelection = hydrationRecipeSelection(hydrationRecipeId);
+let activeHydrationState = resolveHairHydrationState(activeHydrationSelection);
 let hydrationTourEnabled = true;
 let presentationLoopEnabled = false;
 let presentationLoopRestarts = 0;
@@ -336,6 +350,9 @@ const LOCK_UNDERCOAT_LAYER_OPACITIES = Object.freeze([0.5, 0.16, 0.05]);
 let hairPositions;
 let hairDrawCount = 0;
 let hairGeometryTimings = [];
+let hydrationDetailOffsets = new Float32Array();
+let hydrationDetailOffsetCacheKey = "";
+let hydrationFamilyScales = new Float32Array();
 let sectionControlTube;
 let sectionControlTubeTimings = [];
 let sectionPresentation = { phase: "off", hydration: 1, tubeOpacity: 0 };
@@ -349,7 +366,11 @@ let fullGroomPresentation = {
   widthScale: 1,
   shadingMix: 1,
   undercoatHydration: 1,
-  auditionRecipeId: null,
+  ownerHydration: 1,
+  clumpHydration: 1,
+  microfiberHydration: 1,
+  flyawayHydration: 1,
+  auditionStateId: null,
 };
 let physicsGuideCage;
 let physicsJointMesh;
@@ -363,6 +384,84 @@ const PHYSICS_CAGE_SECTION_COLORS = Object.freeze([
 ]);
 const physicsRodStart = new THREE.Vector3();
 const physicsRodEnd = new THREE.Vector3();
+
+function setHydrationSelection(selection, syncControls = true) {
+  hydrationGeometryId = HAIR_GEOMETRY_PROFILES[selection.geometryId]
+    ? selection.geometryId
+    : "balanced_full";
+  hydrationOpticalId = HAIR_OPTICAL_MODELS[selection.opticalId]
+    ? selection.opticalId
+    : "artist_dual";
+  hydrationColorId = HAIR_COLOR_PROFILES[selection.colorId] ? selection.colorId : "chestnut";
+  hydrationDetailId = HAIR_DETAIL_PROFILES[selection.detailId]
+    ? selection.detailId
+    : "natural_variation";
+  activeHydrationSelection = {
+    geometryId: hydrationGeometryId,
+    opticalId: hydrationOpticalId,
+    colorId: hydrationColorId,
+    detailId: hydrationDetailId,
+  };
+  activeHydrationState = resolveHairHydrationState(activeHydrationSelection);
+  if (!syncControls) return;
+  document.querySelector("#hydration-geometry").value = hydrationGeometryId;
+  document.querySelector("#hydration-optical").value = hydrationOpticalId;
+  document.querySelector("#hydration-color").value = hydrationColorId;
+  document.querySelector("#hydration-detail").value = hydrationDetailId;
+}
+
+function setHydrationRecipe(recipeId, syncControls = true) {
+  hydrationRecipeId = hydrationRecipe(recipeId).id;
+  setHydrationSelection(hydrationRecipeSelection(hydrationRecipeId), syncControls);
+  if (syncControls) document.querySelector("#hydration-recipe").value = hydrationRecipeId;
+}
+
+function ensureHydrationDetailOffsets() {
+  const cacheKey = `${solver.guideCount}:${solver.segments}:${renderFibersPerGuide}:${activeHydrationState.detail.id}`;
+  if (cacheKey === hydrationDetailOffsetCacheKey) return;
+  const particlesPerGuide = solver.segments + 1;
+  const stride = renderFibersPerGuide * particlesPerGuide;
+  hydrationDetailOffsets = new Float32Array(solver.guideCount * stride * 3);
+  const detail = activeHydrationState.detail;
+  const flyawayStart = Math.max(2, Math.floor(renderFibersPerGuide * 0.86));
+  for (let owner = 0; owner < solver.guideCount; owner += 1) {
+    const normalOffset = owner * 3;
+    const nx = solver.rootNormals[normalOffset];
+    const ny = solver.rootNormals[normalOffset + 1];
+    const nz = solver.rootNormals[normalOffset + 2];
+    const horizontalLength = Math.hypot(nx, nz) || 1;
+    const tangentX = -nz / horizontalLength;
+    const tangentZ = nx / horizontalLength;
+    const binormalX = ny * tangentZ;
+    const binormalY = nz * tangentX - nx * tangentZ;
+    const binormalZ = -ny * tangentX;
+    for (let copy = 0; copy < renderFibersPerGuide; copy += 1) {
+      const phase = owner * 1.61803398875 + copy * 2.39996322973;
+      const flyawayVariation = 0.72 + 0.28 * Math.sin(phase * 5.7);
+      for (let particle = 1; particle <= solver.segments; particle += 1) {
+        const fraction = particle / solver.segments;
+        const rootFade = fraction * fraction * (3 - 2 * fraction);
+        const curlAngle = phase + fraction * detail.curlFrequency * Math.PI * 2;
+        const curlOffset = detail.curlAmplitude * rootFade;
+        const frizz =
+          detail.frizzAmplitude *
+          rootFade *
+          Math.sin(phase * 3.1 + fraction * 43.7 + Math.sin(fraction * 17.3 + phase));
+        const flyaway =
+          copy >= flyawayStart
+            ? detail.flyawayAmplitude * Math.pow(fraction, 1.35) * flyawayVariation
+            : 0;
+        const tangentOffset = Math.cos(curlAngle) * curlOffset + frizz + flyaway;
+        const binormalOffset = Math.sin(curlAngle) * curlOffset + frizz * 0.48 - flyaway * 0.32;
+        const offset = (owner * stride + copy * particlesPerGuide + particle) * 3;
+        hydrationDetailOffsets[offset] = tangentX * tangentOffset + binormalX * binormalOffset;
+        hydrationDetailOffsets[offset + 1] = binormalY * binormalOffset + ny * flyaway * 0.18;
+        hydrationDetailOffsets[offset + 2] = tangentZ * tangentOffset + binormalZ * binormalOffset;
+      }
+    }
+  }
+  hydrationDetailOffsetCacheKey = cacheKey;
+}
 const physicsRodMidpoint = new THREE.Vector3();
 const physicsRodDirection = new THREE.Vector3();
 const physicsRodQuaternion = new THREE.Quaternion();
@@ -371,6 +470,8 @@ const physicsJointScale = new THREE.Vector3();
 const physicsInstanceMatrix = new THREE.Matrix4();
 const physicsUp = new THREE.Vector3(0, 1, 0);
 const fatlineBaseColor = new THREE.Color();
+const undercoatColorScratch = new THREE.Color();
+const undercoatShadowTarget = new THREE.Color(0x08070a);
 const hairFiberColorScratch = { r: 0, g: 0, b: 0 };
 let paused = false;
 let cutting = false;
@@ -543,26 +644,57 @@ function updateFullGroomPresentation() {
         widthScale: 1,
         shadingMix: 1,
         undercoatHydration: 1,
-        auditionRecipeId: null,
+        ownerHydration: 1,
+        clumpHydration: 1,
+        microfiberHydration: 1,
+        flyawayHydration: 1,
+        auditionStateId: null,
       };
-  activeHydrationRecipeId = hydrationRecipeAtStep(
+  activeHydrationSelection = hydrationSelectionAtStep(
     step,
-    hydrationRecipeId,
+    {
+      geometryId: hydrationGeometryId,
+      opticalId: hydrationOpticalId,
+      colorId: hydrationColorId,
+      detailId: hydrationDetailId,
+    },
     fullGroomHydrationEnabled && hydrationTourEnabled
   );
-  const activeRecipe = hydrationRecipe(activeHydrationRecipeId);
+  activeHydrationState = resolveHairHydrationState(activeHydrationSelection);
+  fatlineBaseColor.setHex(activeHydrationState.baseColor);
+  ensureHydrationDetailOffsets();
+  if (hydrationFamilyScales.length !== renderFibersPerGuide) {
+    hydrationFamilyScales = new Float32Array(renderFibersPerGuide);
+  }
+  for (let copy = 0; copy < renderFibersPerGuide; copy += 1) {
+    hydrationFamilyScales[copy] = fullGroomHydrationEnabled
+      ? hydrationFiberFamilyScale(
+          copy,
+          renderFibersPerGuide,
+          fullGroomPresentation,
+          activeHydrationState
+        )
+      : 1;
+  }
   if (hairRenderMode === "fatline" && hair?.material.uniforms?.presentationHydration) {
     const uniforms = hair.material.uniforms;
     uniforms.presentationHydration.value =
-      fullGroomPresentation.hairHydration * activeRecipe.opacity;
+      fullGroomPresentation.hairHydration * activeHydrationState.opacity;
     uniforms.shadingEnabled.value =
-      hairShadingMode === "fiber_lobes" ? fullGroomPresentation.shadingMix : 0;
-    uniforms.longitudinalRoughness.value = activeRecipe.longitudinalRoughness;
-    uniforms.diffuseWeight.value = activeRecipe.diffuseWeight;
-    uniforms.primaryWeight.value = activeRecipe.primaryWeight;
-    uniforms.transmissionWeight.value = activeRecipe.transmissionWeight;
-    uniforms.rimWeight.value = activeRecipe.rimWeight;
-    uniforms.multipleScatteringFill.value = activeRecipe.multipleScatteringFill;
+      hairShadingMode === "fiber_lobes"
+        ? fullGroomPresentation.shadingMix * activeHydrationState.shadingMix
+        : 0;
+    uniforms.longitudinalRoughness.value = activeHydrationState.longitudinalRoughness;
+    uniforms.azimuthalRoughness.value = activeHydrationState.azimuthalRoughness;
+    uniforms.cuticleTilt.value = activeHydrationState.cuticleTilt;
+    uniforms.diffuseWeight.value = activeHydrationState.diffuseWeight;
+    uniforms.reflectionWeight.value = activeHydrationState.reflectionWeight;
+    uniforms.transmissionWeight.value = activeHydrationState.transmissionWeight;
+    uniforms.internalReflectionWeight.value = activeHydrationState.internalReflectionWeight;
+    uniforms.rimWeight.value = activeHydrationState.rimWeight;
+    uniforms.multipleScatteringFill.value = activeHydrationState.multipleScatteringFill;
+    uniforms.glintStrength.value = activeHydrationState.glintStrength;
+    uniforms.absorptionTint.value.fromArray(activeHydrationState.absorptionTint);
   } else if (hair?.material) {
     const baseOpacity = hair.material.userData.baseOpacity ?? 1;
     hair.material.opacity = baseOpacity * fullGroomPresentation.hairHydration;
@@ -572,7 +704,11 @@ function updateFullGroomPresentation() {
       layer.material.opacity =
         layer.material.userData.baseOpacity *
         fullGroomPresentation.undercoatHydration *
-        activeRecipe.undercoatScale;
+        activeHydrationState.undercoatScale;
+      layer.material.color
+        .copy(undercoatColorScratch.setHex(activeHydrationState.baseColor))
+        .lerp(undercoatShadowTarget, 0.48)
+        .multiplyScalar(0.72 + layer.userData.hydrationLayer * 0.06);
     }
     hairUndercoat.visible = fullGroomPresentation.undercoatHydration > 0.002;
   }
@@ -693,15 +829,7 @@ function writeHydratedFiberStyle(
   activeSegments
 ) {
   const hydration = sectionHydrationForGuide(guide);
-  const activeRecipe = hydrationRecipe(activeHydrationRecipeId);
-  const visiblePopulation = fullGroomHydrationEnabled
-    ? fullGroomPresentation.populationFraction * activeRecipe.populationFraction
-    : 1;
-  const populationScale = hydrationFiberPopulationScale(
-    copy,
-    renderFibersPerGuide,
-    visiblePopulation
-  );
+  const familyScale = hydrationFamilyScales[copy];
   const middleParticle = (startParticle + endParticle) * 0.5;
   const hairColorAtSegment = hairFiberColorAt(
     fatlineBaseColor,
@@ -731,14 +859,14 @@ function writeHydratedFiberStyle(
   widthsStart[instance] =
     fatlineHalfWidthAt(startParticle, activeSegments) *
     presentationWidthScale *
-    populationScale *
-    hydrationRecipeWidthScaleAt(activeRecipe, startParticle / Math.max(1, activeSegments)) *
+    familyScale *
+    hydrationRecipeWidthScaleAt(activeHydrationState, startParticle / Math.max(1, activeSegments)) *
     emergenceScaleAt(guide, copy, startParticle, activeSegments, solver.rootNormals[guide * 3 + 1]);
   widthsEnd[instance] =
     fatlineHalfWidthAt(endParticle, activeSegments) *
     presentationWidthScale *
-    populationScale *
-    hydrationRecipeWidthScaleAt(activeRecipe, endParticle / Math.max(1, activeSegments)) *
+    familyScale *
+    hydrationRecipeWidthScaleAt(activeHydrationState, endParticle / Math.max(1, activeSegments)) *
     emergenceScaleAt(guide, copy, endParticle, activeSegments, solver.rootNormals[guide * 3 + 1]);
 }
 
@@ -838,11 +966,16 @@ function createFatlineMaterial() {
       keyColor: { value: new THREE.Color(0xffddcf) },
       rimColor: { value: new THREE.Color(0x667dd8) },
       longitudinalRoughness: { value: 0.34 },
+      azimuthalRoughness: { value: 0.38 },
+      cuticleTilt: { value: 0.085 },
       diffuseWeight: { value: 0.62 },
-      primaryWeight: { value: 0.23 },
+      reflectionWeight: { value: 0.23 },
       transmissionWeight: { value: 0.1 },
+      internalReflectionWeight: { value: 0.09 },
       rimWeight: { value: 0.16 },
       multipleScatteringFill: { value: 0.11 },
+      glintStrength: { value: 0.04 },
+      absorptionTint: { value: new THREE.Color(0.78, 0.38, 0.3) },
     },
     vertexShader: `
       uniform vec2 resolution;
@@ -891,11 +1024,16 @@ function createFatlineMaterial() {
       uniform vec3 keyColor;
       uniform vec3 rimColor;
       uniform float longitudinalRoughness;
+      uniform float azimuthalRoughness;
+      uniform float cuticleTilt;
       uniform float diffuseWeight;
-      uniform float primaryWeight;
+      uniform float reflectionWeight;
       uniform float transmissionWeight;
+      uniform float internalReflectionWeight;
       uniform float rimWeight;
       uniform float multipleScatteringFill;
+      uniform float glintStrength;
+      uniform vec3 absorptionTint;
       varying vec3 vColor;
       varying vec3 vTangentView;
       varying vec3 vPositionView;
@@ -928,25 +1066,39 @@ function createFatlineMaterial() {
         float tangentRimHalf = dot(tangent, rimHalf);
 
         float diffuse = strandDiffuse(tangent, keyDirection);
-        float primary = longitudinalLobe(tangentKeyHalf, 0.10, longitudinalRoughness);
+        float reflection = longitudinalLobe(
+          tangentKeyHalf,
+          cuticleTilt,
+          longitudinalRoughness
+        );
         float transmission = longitudinalLobe(
           tangentKeyHalf,
-          -0.16,
+          -cuticleTilt * 0.7,
           longitudinalRoughness * 1.65
+        );
+        float internalReflection = longitudinalLobe(
+          tangentKeyHalf,
+          cuticleTilt * 1.8,
+          longitudinalRoughness * 1.32
         );
         float rimPrimary = longitudinalLobe(
           tangentRimHalf,
-          0.08,
+          cuticleTilt * 0.9,
           longitudinalRoughness * 1.15
         );
-        float cylinderEdge = 0.68 + 0.32 * abs(vAcross);
-        vec3 scatteringTint = pow(max(vColor, vec3(0.0)), vec3(0.46));
+        float azimuthalWidth = mix(7.5, 1.2, clamp(azimuthalRoughness, 0.0, 1.0));
+        float azimuthal = exp(-abs(vAcross) * azimuthalWidth);
+        float cylinderEdge = mix(0.62 + 0.38 * abs(vAcross), 1.0, azimuthal);
+        vec3 scatteringTint = pow(max(vColor * absorptionTint, vec3(0.0)), vec3(0.42));
+        float glint = pow(max(0.0, sin(vAlong * 71.0 + vAcross * 19.0)), 18.0);
 
         vec3 color = vColor * (0.34 + diffuseWeight * diffuse);
-        color += keyColor * primary * cylinderEdge * primaryWeight;
+        color += keyColor * reflection * cylinderEdge * reflectionWeight;
         color += scatteringTint * keyColor * transmission * transmissionWeight;
+        color += scatteringTint * rimColor * internalReflection * internalReflectionWeight;
         color += rimColor * rimPrimary * cylinderEdge * rimWeight;
         color += scatteringTint * multipleScatteringFill * (0.72 + 0.28 * diffuse);
+        color += keyColor * glint * glintStrength;
         color *= 0.9 + 0.1 * crossSection;
         color = color / (vec3(0.94) + color);
         gl_FragColor = vec4(mix(vColor, color, clamp(shadingEnabled, 0.0, 1.0)), fiberAlpha);
@@ -1037,6 +1189,7 @@ function createHairlineUndercoat() {
     });
     material.userData.baseOpacity = opacity;
     const mesh = new THREE.Mesh(createHairlineUndercoatGeometry(layer), material);
+    mesh.userData.hydrationLayer = layer;
     mesh.renderOrder = -3 + layer;
     group.add(mesh);
   }
@@ -1135,6 +1288,7 @@ function rebuildSolver() {
     rootDirectorStrength,
     faceClearGroomEnabled,
   });
+  hydrationDetailOffsetCacheKey = "";
   groomBindings = groomMode.startsWith("section_")
     ? buildGroomInterpolationBindings(solver.roots, solver.guideCount, renderFibersPerGuide, {
         parentCount: groomMode === "section_volume" ? 3 : 2,
@@ -1341,6 +1495,7 @@ function writeBlendedGroomCurvePoint(
   owner,
   neighbor,
   secondaryNeighbor,
+  copy,
   particle,
   activeSegments,
   neighborWeight,
@@ -1374,7 +1529,17 @@ function writeBlendedGroomCurvePoint(
       target,
       targetOffset
     );
+    return;
   }
+  const particlesPerGuide = solver.segments + 1;
+  const detailOffset =
+    (owner * renderFibersPerGuide * particlesPerGuide +
+      copy * particlesPerGuide +
+      Math.min(solver.segments, clampedParticle)) *
+    3;
+  target[targetOffset] += hydrationDetailOffsets[detailOffset];
+  target[targetOffset + 1] += hydrationDetailOffsets[detailOffset + 1];
+  target[targetOffset + 2] += hydrationDetailOffsets[detailOffset + 2];
 }
 
 function updateSectionInterpolatedFatlineGeometry() {
@@ -1396,6 +1561,12 @@ function updateSectionInterpolatedFatlineGeometry() {
     const secondaryNeighbor = secondaryNeighbors[binding];
     const neighborWeight = weights[binding];
     const secondaryNeighborWeight = secondaryWeights[binding];
+    const displaySpread = activeHydrationState.spreadScale ?? 1;
+    const displayNeighborWeight = Math.max(0, Math.min(1, neighborWeight * displaySpread));
+    const displaySecondaryWeight = Math.max(
+      0,
+      Math.min(1 - displayNeighborWeight, secondaryNeighborWeight * displaySpread)
+    );
     const activeSegments = groomBindingActiveSegments(
       solver.activeSegments,
       owner,
@@ -1410,10 +1581,11 @@ function updateSectionInterpolatedFatlineGeometry() {
       owner,
       neighbor,
       secondaryNeighbor,
+      copy,
       0,
       activeSegments,
-      neighborWeight,
-      secondaryNeighborWeight,
+      displayNeighborWeight,
+      displaySecondaryWeight,
       secondaryActiveSegments
     );
     const ownerNormal = owner * 3;
@@ -1475,10 +1647,11 @@ function updateSectionInterpolatedFatlineGeometry() {
       owner,
       neighbor,
       secondaryNeighbor,
+      copy,
       Math.min(LOCK_AWARE_ROOT_COVER_PROBE_PARTICLE, activeSegments),
       activeSegments,
-      neighborWeight,
-      secondaryNeighborWeight,
+      displayNeighborWeight,
+      displaySecondaryWeight,
       secondaryActiveSegments
     );
     blendRootCoverageFlow(
@@ -1530,30 +1703,22 @@ function updateSectionInterpolatedFatlineGeometry() {
         0.83 + coverSegment * 0.38,
         activeSegments
       );
-      const activeRecipe = hydrationRecipe(activeHydrationRecipeId);
-      const visiblePopulation = fullGroomHydrationEnabled
-        ? fullGroomPresentation.populationFraction * activeRecipe.populationFraction
-        : 1;
-      const populationScale = hydrationFiberPopulationScale(
-        copy,
-        renderFibersPerGuide,
-        visiblePopulation
-      );
+      const familyScale = hydrationFamilyScales[copy];
       const hydration = fullGroomHydrationEnabled
         ? fullGroomPresentation.widthScale
         : 0.12 + 0.88 * sectionHydrationForGuide(owner);
-      const rootRecipeScale = hydrationRecipeWidthScaleAt(activeRecipe, 0);
+      const rootRecipeScale = hydrationRecipeWidthScaleAt(activeHydrationState, 0);
       widthsStart[instance] =
         FATLINE_ROOT_HALF_WIDTH_PX *
         LOCK_ROOT_COVER_WIDTH_PROFILE[coverSegment] *
         hydration *
-        populationScale *
+        familyScale *
         rootRecipeScale;
       widthsEnd[instance] =
         FATLINE_ROOT_HALF_WIDTH_PX *
         LOCK_ROOT_COVER_WIDTH_PROFILE[coverSegment + 1] *
         hydration *
-        populationScale *
+        familyScale *
         rootRecipeScale;
       instance += 1;
     }
@@ -1565,10 +1730,11 @@ function updateSectionInterpolatedFatlineGeometry() {
           owner,
           neighbor,
           secondaryNeighbor,
+          copy,
           segment + controlPoint - 1,
           activeSegments,
-          neighborWeight,
-          secondaryNeighborWeight,
+          displayNeighborWeight,
+          displaySecondaryWeight,
           secondaryActiveSegments
         );
       }
@@ -1735,9 +1901,8 @@ function updateTelemetry(now) {
   document.querySelector("#metric-groom-mode").textContent = groomMode;
   document.querySelector("#metric-hair-surface").textContent =
     `${hairShadingMode.replaceAll("_", " ")} · ${presentationLoopEnabled ? `loop ${presentationLoopRestarts + 1}` : "continuous"}`;
-  const activeHydrationRecipe = hydrationRecipe(activeHydrationRecipeId);
   document.querySelector("#metric-hydration-recipe").textContent =
-    `${activeHydrationRecipe.label} · ${activeHydrationRecipe.rootWidthScale.toFixed(2)}→${activeHydrationRecipe.tipWidthScale.toFixed(2)}× · ${Math.round(activeHydrationRecipe.populationFraction * 100)}% fibers`;
+    `${activeHydrationState.geometry.label} · ${activeHydrationState.optical.label} · ${activeHydrationState.color.label} · ${activeHydrationState.detail.label}`;
   document.querySelector("#metric-reel-presentation").textContent =
     `${mannequinStatus.replaceAll("_", " ")} · ${reelShot.replaceAll("_", " ")}`;
   document.querySelector("#metric-root-director").textContent = rootDirectorReceipt.enabled
@@ -1756,7 +1921,7 @@ function updateTelemetry(now) {
       ? "off"
       : `${receipt.section_pose.phase} · s${receipt.section_pose.selected_section} · ${receipt.section_pose.affected_guides} guides · ${receipt.section_pose.lift_meters.toFixed(2)} / ${receipt.section_pose.tangential_sweep_meters.toFixed(2)} m`;
   document.querySelector("#metric-control-tube").textContent = fullGroomHydrationEnabled
-    ? `${fullGroomPresentation.phase.replaceAll("_", " ")} · ${Math.round(fullGroomPresentation.populationFraction * activeHydrationRecipe.populationFraction * 100)}% population · ${(fullGroomPresentation.guideOpacity * 100).toFixed(0)}% guides`
+    ? `${fullGroomPresentation.phase.replaceAll("_", " ")} · O/C/M/F ${Math.round(fullGroomPresentation.ownerHydration * 100)}/${Math.round(fullGroomPresentation.clumpHydration * 100)}/${Math.round(fullGroomPresentation.microfiberHydration * 100)}/${Math.round(fullGroomPresentation.flyawayHydration * 100)}% · ${(fullGroomPresentation.guideOpacity * 100).toFixed(0)}% rods`
     : sectionControlTubeEnabled
       ? `${sectionPresentation.phase} · ${(sectionPresentation.hydration * 100).toFixed(0)}% hair · ${(sectionPresentation.tubeOpacity * 100).toFixed(0)}% tube`
       : "off";
@@ -1807,13 +1972,13 @@ function updateTelemetry(now) {
       ? nativeClipWindAtTime(nativeClipPlayback.sampleTime)
       : null;
   document.querySelector("#showcase-material").textContent =
-    `${activeHydrationRecipe.label} · ${activeHydrationRecipe.rootWidthScale.toFixed(2)}→${activeHydrationRecipe.tipWidthScale.toFixed(2)}× shafts · ${Math.round(activeHydrationRecipe.populationFraction * 100)}% population`;
+    `${activeHydrationState.geometry.label} · ${activeHydrationState.optical.label} · ${activeHydrationState.color.label} · ${activeHydrationState.detail.label}`;
   document.querySelector("#showcase-phase").textContent =
     fullGroomHydrationEnabled && fullGroomPresentation.phase !== "hydrated"
       ? fullGroomPresentation.phase === "mechanical_skeleton"
         ? `mechanical rods · ${physicsSkeletonGuides.length} guides / ${physicsSkeletonGuides.length * solver.segments} links`
         : fullGroomPresentation.phase === "material_audition"
-          ? `material audition · ${HAIR_HYDRATION_RECIPE_ORDER.indexOf(activeHydrationRecipeId) + 1}/${HAIR_HYDRATION_RECIPE_ORDER.length}`
+          ? `breadth lab · ${Math.max(1, HAIR_BREADTH_TOUR_ORDER.indexOf(fullGroomPresentation.auditionStateId) + 1)}/${HAIR_BREADTH_TOUR.length} · ${HAIR_BREADTH_TOUR.find((state) => state.id === fullGroomPresentation.auditionStateId)?.label ?? "selected composition"}`
           : `groom hydration · ${fullGroomPresentation.phase.replaceAll("_", " ")}`
       : previewWind?.phase === "strong_orbit"
         ? `STRONG breeze · orbit ${Math.round(previewWind.orbitProgress * 100)}%`
@@ -2150,9 +2315,23 @@ function applyQueryConfiguration() {
   hydrationRecipeId = HAIR_HYDRATION_RECIPE_ORDER.includes(requestedHydrationRecipe)
     ? requestedHydrationRecipe
     : "natural_balanced";
-  activeHydrationRecipeId = hydrationRecipeId;
+  const recipeSelection = hydrationRecipeSelection(hydrationRecipeId);
+  setHydrationSelection(
+    {
+      geometryId:
+        params.get("hydrationGeometry")?.replaceAll("-", "_") ?? recipeSelection.geometryId,
+      opticalId: params.get("hydrationOptical")?.replaceAll("-", "_") ?? recipeSelection.opticalId,
+      colorId: params.get("hydrationColor")?.replaceAll("-", "_") ?? recipeSelection.colorId,
+      detailId: params.get("hydrationDetail")?.replaceAll("-", "_") ?? recipeSelection.detailId,
+    },
+    false
+  );
   hydrationTourEnabled = params.get("hydrationTour") !== "0";
   document.querySelector("#hydration-recipe").value = hydrationRecipeId;
+  document.querySelector("#hydration-geometry").value = hydrationGeometryId;
+  document.querySelector("#hydration-optical").value = hydrationOpticalId;
+  document.querySelector("#hydration-color").value = hydrationColorId;
+  document.querySelector("#hydration-detail").value = hydrationDetailId;
   document.querySelector("#hydration-tour").checked = hydrationTourEnabled;
   setMannequinMode(params.get("mannequin") === "realistic" ? "realistic" : "primitive");
   document.querySelector("#mannequin").value = mannequinMode;
@@ -2314,9 +2493,24 @@ document.querySelector("#hair-surface").addEventListener("change", (event) => {
   }
 });
 document.querySelector("#hydration-recipe").addEventListener("change", (event) => {
-  hydrationRecipeId = hydrationRecipe(event.currentTarget.value).id;
-  activeHydrationRecipeId = hydrationRecipeId;
+  setHydrationRecipe(event.currentTarget.value);
 });
+for (const [selector, key] of [
+  ["#hydration-geometry", "geometryId"],
+  ["#hydration-optical", "opticalId"],
+  ["#hydration-color", "colorId"],
+  ["#hydration-detail", "detailId"],
+]) {
+  document.querySelector(selector).addEventListener("change", (event) => {
+    setHydrationSelection({
+      geometryId: hydrationGeometryId,
+      opticalId: hydrationOpticalId,
+      colorId: hydrationColorId,
+      detailId: hydrationDetailId,
+      [key]: event.currentTarget.value,
+    });
+  });
+}
 document.querySelector("#hydration-tour").addEventListener("change", (event) => {
   hydrationTourEnabled = event.currentTarget.checked;
 });
@@ -2410,12 +2604,38 @@ window.hairMaterialReplay = {
   renderReceipt() {
     return createRenderReceipt();
   },
+  seekPresentation(seconds) {
+    if (!nativeClipPlayback.clip) throw new Error("native Box3D clip is not ready");
+    paused = true;
+    nativeClipPlayback.elapsed = Math.max(0, Number(seconds) || 0);
+    advanceNativeClip(0);
+    updateHairGeometry();
+    if (reelShot !== "free") {
+      const pose = reelCameraPoseAtStep(deterministicReplay.state.step, reelShot);
+      camera.position.fromArray(pose.position);
+      controls.target.fromArray(pose.target);
+      controls.update();
+    }
+    renderer.render(scene, camera);
+    telemetryClock = -Infinity;
+    updateTelemetry(performance.now());
+    return {
+      elapsed: nativeClipPlayback.elapsed,
+      phase: fullGroomPresentation.phase,
+      composition: activeHydrationState.id,
+    };
+  },
 };
 
 function createRenderReceipt() {
   const lockCoverageEnabled = hairRenderMode === "fatline" && Boolean(groomBindings);
   const selectedHydrationRecipe = hydrationRecipe(hydrationRecipeId);
-  const activeHydrationRecipe = hydrationRecipe(activeHydrationRecipeId);
+  const selectedHydrationState = resolveHairHydrationState({
+    geometryId: hydrationGeometryId,
+    opticalId: hydrationOpticalId,
+    colorId: hydrationColorId,
+    detailId: hydrationDetailId,
+  });
   const tubePositions =
     sectionControlTube?.geometry.attributes.position.array ?? new Float32Array();
   const hairAttributes = hair?.geometry.attributes;
@@ -2445,14 +2665,19 @@ function createRenderReceipt() {
       mode: hairShadingMode,
       field_identity: HAIR_FIBER_SHADING_ID,
       geometry: groomBindings ? "screen_aligned_lock_curve_spans" : "screen_aligned_strand_ribbons",
-      primary_lobe: "white_shifted_root_reflection",
-      secondary_lobe: "hair_tinted_tip_transmission",
-      longitudinal_roughness: activeHydrationRecipe.longitudinalRoughness,
-      diffuse_weight: activeHydrationRecipe.diffuseWeight,
-      primary_weight: activeHydrationRecipe.primaryWeight,
-      transmission_weight: activeHydrationRecipe.transmissionWeight,
-      rim_weight: activeHydrationRecipe.rimWeight,
-      multiple_scattering_fill: activeHydrationRecipe.multipleScatteringFill,
+      model: activeHydrationState.optical,
+      lobe_boundary: "real_time_R_TT_TRT_inspired_proxy_not_a_path_traced_BFSDF",
+      longitudinal_roughness: activeHydrationState.longitudinalRoughness,
+      azimuthal_roughness: activeHydrationState.azimuthalRoughness,
+      cuticle_tilt_proxy: activeHydrationState.cuticleTilt,
+      diffuse_weight: activeHydrationState.diffuseWeight,
+      reflection_weight: activeHydrationState.reflectionWeight,
+      transmission_weight: activeHydrationState.transmissionWeight,
+      internal_reflection_weight: activeHydrationState.internalReflectionWeight,
+      rim_weight: activeHydrationState.rimWeight,
+      multiple_scattering_fill: activeHydrationState.multipleScatteringFill,
+      glint_strength: activeHydrationState.glintStrength,
+      absorption_tint: activeHydrationState.absorptionTint,
       color_variation: "deterministic_fiber_plus_root_tip_v1",
       root_emergence: groomBindings
         ? "distributed_parent_roots_plus_short_styled_coverage_locks"
@@ -2571,14 +2796,22 @@ function createRenderReceipt() {
       width_scale: fullGroomPresentation.widthScale,
       shading_mix: fullGroomPresentation.shadingMix,
       undercoat_hydration: fullGroomPresentation.undercoatHydration,
-      material_recipe_space: {
+      fiber_family_hydration: {
+        owner: fullGroomPresentation.ownerHydration,
+        clump: fullGroomPresentation.clumpHydration,
+        microfiber: fullGroomPresentation.microfiberHydration,
+        flyaway: fullGroomPresentation.flyawayHydration,
+      },
+      breadth_lab: {
         field_identity: HAIR_HYDRATION_RECIPE_ID,
-        selected_recipe: selectedHydrationRecipe,
-        active_recipe: activeHydrationRecipe,
+        architecture_identity: HAIR_HYDRATION_BREADTH_ID,
+        composition_count: HAIR_HYDRATION_COMPOSITION_COUNT,
+        selected_recipe_shortcut: selectedHydrationRecipe,
+        selected_composition: selectedHydrationState,
+        active_composition: activeHydrationState,
         audition_enabled: hydrationTourEnabled,
-        audition_order: HAIR_HYDRATION_RECIPE_ORDER,
-        effective_population_fraction:
-          fullGroomPresentation.populationFraction * activeHydrationRecipe.populationFraction,
+        audition_order: HAIR_BREADTH_TOUR,
+        active_audition_state: fullGroomPresentation.auditionStateId,
       },
       solver_guide_count: solver.guideCount,
       displayed_guide_count: physicsSkeletonGuides.length,

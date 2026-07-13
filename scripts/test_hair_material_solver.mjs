@@ -31,14 +31,24 @@ import {
   FULL_GROOM_HYDRATION_ID,
   FULL_GROOM_HYDRATION_STEPS,
   hairFiberColorAt,
+  HAIR_BREADTH_TOUR,
+  HAIR_COLOR_PROFILES,
+  HAIR_DETAIL_PROFILES,
   HAIR_FIBER_SHADING_ID,
+  HAIR_GEOMETRY_PROFILES,
+  HAIR_HYDRATION_BREADTH_ID,
+  HAIR_HYDRATION_COMPOSITION_COUNT,
   HAIR_HYDRATION_RECIPES,
   HAIR_HYDRATION_RECIPE_ID,
   HAIR_HYDRATION_RECIPE_ORDER,
   HAIR_PRESENTATION_LOOP_ID,
+  HAIR_OPTICAL_MODELS,
+  hydrationFiberFamilyScale,
   hydrationFiberPopulationScale,
   hydrationRecipeAtStep,
+  hydrationRecipeSelection,
   hydrationRecipeWidthScaleAt,
+  hydrationSelectionAtStep,
   LOCK_AWARE_COVERAGE_ID,
   lockAwareFiberEmergenceScaleAt,
   LOCK_AWARE_RENDER_SUBDIVISIONS,
@@ -55,6 +65,7 @@ import {
   presentationLoopOpacityAtStep,
   reelCameraPoseAtStep,
   REEL_CAMERA_FIELD_ID,
+  resolveHairHydrationState,
   sectionPosePresentationAtStep,
   summarizeGeometryTimings,
   undercoatCoverageAt,
@@ -143,7 +154,7 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
 }
 
 {
-  assert.equal(HAIR_FIBER_SHADING_ID, "tangent_recipe_lobes_root_emergence_v3");
+  assert.equal(HAIR_FIBER_SHADING_ID, "artist_dual_plus_near_field_proxy_lobes_v4");
   assert.equal(HAIR_PRESENTATION_LOOP_ID, "visible_two_wind_orbits_1020_step_v3");
   assert.equal(REEL_CAMERA_FIELD_ID, "fixed_control_two_orbit_1020_step_v3");
   assert.equal(PREVIEW_WIND_PROGRAM_ID, "hydrated_strong_then_moderate_full_orbits_v2");
@@ -164,8 +175,9 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     moderateMagnitude: 0.9,
     legacyScaleMigrated: false,
   });
-  assert.equal(FULL_GROOM_HYDRATION_ID, "staged_material_audition_hydration_v5");
-  assert.equal(HAIR_HYDRATION_RECIPE_ID, "five_recipe_fiber_material_space_v1");
+  assert.equal(FULL_GROOM_HYDRATION_ID, "hierarchy_plus_breadth_lab_hydration_v6");
+  assert.equal(HAIR_HYDRATION_RECIPE_ID, "independent_geometry_optics_color_detail_space_v2");
+  assert.equal(HAIR_HYDRATION_BREADTH_ID, "disney_reference_5x6x6x6_composition_space_v1");
   assert.deepEqual(HAIR_HYDRATION_RECIPE_ORDER, [
     "fine_silk",
     "natural_balanced",
@@ -173,7 +185,13 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     "glossy_cinematic",
     "wet_clumped",
   ]);
-  assert.equal(NATIVE_HYDRATION_PRE_ROLL_SECONDS, 12);
+  assert.equal(NATIVE_HYDRATION_PRE_ROLL_SECONDS, 22.5);
+  assert.equal(HAIR_HYDRATION_COMPOSITION_COUNT, 1080);
+  assert.equal(HAIR_BREADTH_TOUR.length, 12);
+  assert.equal(Object.keys(HAIR_GEOMETRY_PROFILES).length, 5);
+  assert.equal(Object.keys(HAIR_OPTICAL_MODELS).length, 6);
+  assert.equal(Object.keys(HAIR_COLOR_PROFILES).length, 6);
+  assert.equal(Object.keys(HAIR_DETAIL_PROFILES).length, 6);
   assert.ok(
     HAIR_HYDRATION_RECIPES.fine_silk.rootWidthScale <
       HAIR_HYDRATION_RECIPES.coarse_matte.rootWidthScale
@@ -291,40 +309,63 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     widthScale: 0,
     shadingMix: 0,
     undercoatHydration: 0,
-    auditionRecipeId: null,
+    ownerHydration: 0,
+    clumpHydration: 0,
+    microfiberHydration: 0,
+    flyawayHydration: 0,
+    auditionStateId: null,
   });
   assert.equal(fullGroomHydrationAtStep(119).phase, "mechanical_skeleton");
-  assert.equal(fullGroomHydrationAtStep(120).phase, "owner_guides");
-  assert.equal(fullGroomHydrationAtStep(120).hairHydration, 0);
-  assert.ok(fullGroomHydrationAtStep(165).hairHydration > 0.49);
-  assert.equal(fullGroomHydrationAtStep(210).phase, "clump_locks");
-  assert.equal(fullGroomHydrationAtStep(300).phase, "microfiber_fill");
-  assert.equal(fullGroomHydrationAtStep(390).phase, "material_audition");
-  assert.equal(fullGroomHydrationAtStep(390).auditionRecipeId, "fine_silk");
-  assert.equal(fullGroomHydrationAtStep(450).auditionRecipeId, "natural_balanced");
-  assert.equal(fullGroomHydrationAtStep(630).auditionRecipeId, "wet_clumped");
-  assert.equal(fullGroomHydrationAtStep(690).phase, "selected_recipe_settle");
-  assert.equal(fullGroomHydrationAtStep(720).phase, "hydrated");
+  assert.equal(fullGroomHydrationAtStep(120).phase, "groom_volumes");
+  assert.ok(fullGroomHydrationAtStep(165).tubeOpacity > 0.26);
+  assert.equal(fullGroomHydrationAtStep(210).phase, "owner_guides");
+  assert.equal(fullGroomHydrationAtStep(300).phase, "clump_locks");
+  assert.equal(fullGroomHydrationAtStep(390).phase, "microfiber_fill");
+  assert.equal(fullGroomHydrationAtStep(480).phase, "flyaway_frizz_layer");
+  assert.equal(fullGroomHydrationAtStep(570).phase, "material_audition");
+  assert.equal(fullGroomHydrationAtStep(570).auditionStateId, "flat_blueprint");
+  assert.equal(fullGroomHydrationAtStep(630).auditionStateId, "fine_transmission");
+  assert.equal(fullGroomHydrationAtStep(690).auditionStateId, "natural_full");
+  assert.equal(fullGroomHydrationAtStep(1230).auditionStateId, "wet_locks");
+  assert.equal(fullGroomHydrationAtStep(1290).phase, "selected_composition_settle");
+  assert.equal(fullGroomHydrationAtStep(1350).phase, "hydrated");
+  assert.equal(hydrationRecipeAtStep(690, "coarse_matte", true), "natural_balanced");
+  assert.equal(hydrationRecipeAtStep(690, "coarse_matte", false), "coarse_matte");
+  const naturalSelection = hydrationRecipeSelection("natural_balanced");
+  assert.deepEqual(naturalSelection, {
+    geometryId: "balanced_full",
+    opticalId: "artist_dual",
+    colorId: "chestnut",
+    detailId: "natural_variation",
+  });
   assert.equal(
-    hydrationRecipeAtStep(450, "coarse_matte", true),
-    "natural_balanced"
+    resolveHairHydrationState(naturalSelection).id,
+    "balanced_full__artist_dual__chestnut__natural_variation"
   );
-  assert.equal(hydrationRecipeAtStep(450, "coarse_matte", false), "coarse_matte");
+  assert.equal(hydrationSelectionAtStep(570, naturalSelection, true).id, "flat_blueprint");
+  assert.deepEqual(hydrationSelectionAtStep(570, naturalSelection, false), naturalSelection);
   assert.ok(
-    hydrationRecipeWidthScaleAt("fine_silk", 0) >
-      hydrationRecipeWidthScaleAt("fine_silk", 1)
+    hydrationRecipeWidthScaleAt("fine_silk", 0) > hydrationRecipeWidthScaleAt("fine_silk", 1)
   );
   assert.equal(hydrationFiberPopulationScale(0, 21, 0.035), 1);
   assert.equal(hydrationFiberPopulationScale(20, 21, 0.035), 0);
   assert.equal(hydrationFiberPopulationScale(20, 21, 1), 1);
+  const familyPresentation = {
+    ownerHydration: 1,
+    clumpHydration: 0.75,
+    microfiberHydration: 0.5,
+    flyawayHydration: 0.25,
+  };
+  const naturalState = resolveHairHydrationState(naturalSelection);
+  assert.equal(hydrationFiberFamilyScale(0, 21, familyPresentation, naturalState), 1);
+  nearlyEqual(hydrationFiberFamilyScale(3, 21, familyPresentation, naturalState), 0.75);
+  nearlyEqual(hydrationFiberFamilyScale(10, 21, familyPresentation, naturalState), 0.47);
+  nearlyEqual(hydrationFiberFamilyScale(20, 21, familyPresentation, naturalState), 0.13);
   const nativeAtStart = nativeClipPresentationAtTime(0, 12);
   assert.equal(nativeAtStart.phase, "hydration_pre_roll");
   assert.equal(nativeAtStart.sampleTime, 0);
   assert.equal(nativeAtStart.opacity, 0);
-  const nativeStrongStart = nativeClipPresentationAtTime(
-    NATIVE_HYDRATION_PRE_ROLL_SECONDS,
-    12
-  );
+  const nativeStrongStart = nativeClipPresentationAtTime(NATIVE_HYDRATION_PRE_ROLL_SECONDS, 12);
   assert.equal(nativeStrongStart.phase, "wind_clip");
   assert.equal(nativeStrongStart.sampleTime, 0);
   assert.equal(nativeStrongStart.opacity, 1);
@@ -332,13 +373,10 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     nativeClipPresentationAtTime(NATIVE_HYDRATION_PRE_ROLL_SECONDS + 6, 12).sampleTime,
     6
   );
-  const nativeFade = nativeClipPresentationAtTime(
-    NATIVE_HYDRATION_PRE_ROLL_SECONDS + 12.3,
-    12
-  );
+  const nativeFade = nativeClipPresentationAtTime(NATIVE_HYDRATION_PRE_ROLL_SECONDS + 12.3, 12);
   assert.equal(nativeFade.phase, "reset_fade");
   assert.ok(nativeFade.opacity > 0.49 && nativeFade.opacity < 0.51);
-  assert.equal(FULL_GROOM_HYDRATION_STEPS.guideFadeEndStep, 720);
+  assert.equal(FULL_GROOM_HYDRATION_STEPS.guideFadeEndStep, 1350);
 }
 
 {

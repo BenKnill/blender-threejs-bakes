@@ -1,10 +1,11 @@
 export const FATLINE_ROOT_HALF_WIDTH_PX = 0.84;
 export const FATLINE_TIP_HALF_WIDTH_PX = 0.07;
-export const HAIR_FIBER_SHADING_ID = "tangent_recipe_lobes_root_emergence_v3";
+export const HAIR_FIBER_SHADING_ID = "artist_dual_plus_near_field_proxy_lobes_v4";
 export const HAIR_PRESENTATION_LOOP_ID = "visible_two_wind_orbits_1020_step_v3";
 export const REEL_CAMERA_FIELD_ID = "fixed_control_two_orbit_1020_step_v3";
-export const FULL_GROOM_HYDRATION_ID = "staged_material_audition_hydration_v5";
-export const HAIR_HYDRATION_RECIPE_ID = "five_recipe_fiber_material_space_v1";
+export const FULL_GROOM_HYDRATION_ID = "hierarchy_plus_breadth_lab_hydration_v6";
+export const HAIR_HYDRATION_RECIPE_ID = "independent_geometry_optics_color_detail_space_v2";
+export const HAIR_HYDRATION_BREADTH_ID = "disney_reference_5x6x6x6_composition_space_v1";
 export const PHYSICS_SKELETON_STYLE_ID = "uniform_world_space_rods_joints_v2";
 export const LOCK_AWARE_COVERAGE_ID = "live_root_cover_locks_catmull_rom_v3";
 export const LOCK_AWARE_RENDER_SUBDIVISIONS = 2;
@@ -36,6 +37,10 @@ export const HAIR_HYDRATION_RECIPES = Object.freeze({
     rimWeight: 0.2,
     multipleScatteringFill: 0.16,
     undercoatScale: 0.64,
+    geometryId: "fine_layers",
+    opticalId: "backlit_silk",
+    colorId: "honey_blonde",
+    detailId: "groom_clean",
   }),
   natural_balanced: Object.freeze({
     id: "natural_balanced",
@@ -51,6 +56,10 @@ export const HAIR_HYDRATION_RECIPES = Object.freeze({
     rimWeight: 0.16,
     multipleScatteringFill: 0.11,
     undercoatScale: 0.82,
+    geometryId: "balanced_full",
+    opticalId: "artist_dual",
+    colorId: "chestnut",
+    detailId: "natural_variation",
   }),
   coarse_matte: Object.freeze({
     id: "coarse_matte",
@@ -66,6 +75,10 @@ export const HAIR_HYDRATION_RECIPES = Object.freeze({
     rimWeight: 0.12,
     multipleScatteringFill: 0.19,
     undercoatScale: 0.94,
+    geometryId: "coarse_clusters",
+    opticalId: "diffuse_coil",
+    colorId: "deep_ebony",
+    detailId: "soft_wave",
   }),
   glossy_cinematic: Object.freeze({
     id: "glossy_cinematic",
@@ -81,6 +94,10 @@ export const HAIR_HYDRATION_RECIPES = Object.freeze({
     rimWeight: 0.3,
     multipleScatteringFill: 0.09,
     undercoatScale: 0.74,
+    geometryId: "fine_layers",
+    opticalId: "near_field_proxy",
+    colorId: "chestnut",
+    detailId: "natural_variation",
   }),
   wet_clumped: Object.freeze({
     id: "wet_clumped",
@@ -96,17 +113,382 @@ export const HAIR_HYDRATION_RECIPES = Object.freeze({
     rimWeight: 0.18,
     multipleScatteringFill: 0.07,
     undercoatScale: 1.08,
+    geometryId: "wet_locks",
+    opticalId: "near_field_proxy",
+    colorId: "deep_ebony",
+    detailId: "wet_grouped",
   }),
 });
 
 export const HAIR_HYDRATION_RECIPE_ORDER = Object.freeze(Object.keys(HAIR_HYDRATION_RECIPES));
+
+export const HAIR_GEOMETRY_PROFILES = Object.freeze({
+  diagnostic_ribbons: Object.freeze({
+    id: "diagnostic_ribbons",
+    label: "Diagnostic ribbons / sparse",
+    rootWidthScale: 1.34,
+    tipWidthScale: 1.12,
+    ownerDensity: 1,
+    clumpDensity: 0.34,
+    microfiberDensity: 0.1,
+    flyawayDensity: 0,
+    undercoatScale: 0,
+    spreadScale: 0.82,
+  }),
+  fine_layers: Object.freeze({
+    id: "fine_layers",
+    label: "Fine layered fibers",
+    rootWidthScale: 0.54,
+    tipWidthScale: 0.38,
+    ownerDensity: 1,
+    clumpDensity: 0.88,
+    microfiberDensity: 1,
+    flyawayDensity: 0.42,
+    undercoatScale: 0.62,
+    spreadScale: 1.08,
+  }),
+  balanced_full: Object.freeze({
+    id: "balanced_full",
+    label: "Balanced full hierarchy",
+    rootWidthScale: 0.76,
+    tipWidthScale: 0.6,
+    ownerDensity: 1,
+    clumpDensity: 1,
+    microfiberDensity: 0.94,
+    flyawayDensity: 0.52,
+    undercoatScale: 0.82,
+    spreadScale: 1,
+  }),
+  coarse_clusters: Object.freeze({
+    id: "coarse_clusters",
+    label: "Coarse clustered shafts",
+    rootWidthScale: 1.18,
+    tipWidthScale: 0.92,
+    ownerDensity: 1,
+    clumpDensity: 1,
+    microfiberDensity: 0.58,
+    flyawayDensity: 0.24,
+    undercoatScale: 0.9,
+    spreadScale: 0.8,
+  }),
+  wet_locks: Object.freeze({
+    id: "wet_locks",
+    label: "Wet grouped locks",
+    rootWidthScale: 1.54,
+    tipWidthScale: 1.14,
+    ownerDensity: 1,
+    clumpDensity: 0.9,
+    microfiberDensity: 0.24,
+    flyawayDensity: 0.04,
+    undercoatScale: 1.04,
+    spreadScale: 0.42,
+  }),
+});
+
+export const HAIR_OPTICAL_MODELS = Object.freeze({
+  diagnostic_flat: Object.freeze({
+    id: "diagnostic_flat",
+    label: "Flat diagnostic",
+    shadingMix: 0,
+    opacity: 0.9,
+    longitudinalRoughness: 0.45,
+    azimuthalRoughness: 0.5,
+    cuticleTilt: 0,
+    diffuseWeight: 0.9,
+    reflectionWeight: 0,
+    transmissionWeight: 0,
+    internalReflectionWeight: 0,
+    rimWeight: 0,
+    multipleScatteringFill: 0,
+    glintStrength: 0,
+  }),
+  artist_dual: Object.freeze({
+    id: "artist_dual",
+    label: "Artist dual highlight",
+    shadingMix: 1,
+    opacity: 0.78,
+    longitudinalRoughness: 0.31,
+    azimuthalRoughness: 0.38,
+    cuticleTilt: 0.085,
+    diffuseWeight: 0.56,
+    reflectionWeight: 0.24,
+    transmissionWeight: 0.13,
+    internalReflectionWeight: 0.09,
+    rimWeight: 0.16,
+    multipleScatteringFill: 0.11,
+    glintStrength: 0.04,
+  }),
+  near_field_proxy: Object.freeze({
+    id: "near_field_proxy",
+    label: "Near-field R / TT / TRT proxy",
+    shadingMix: 1,
+    opacity: 0.76,
+    longitudinalRoughness: 0.2,
+    azimuthalRoughness: 0.26,
+    cuticleTilt: 0.11,
+    diffuseWeight: 0.34,
+    reflectionWeight: 0.34,
+    transmissionWeight: 0.2,
+    internalReflectionWeight: 0.18,
+    rimWeight: 0.22,
+    multipleScatteringFill: 0.09,
+    glintStrength: 0.12,
+  }),
+  backlit_silk: Object.freeze({
+    id: "backlit_silk",
+    label: "Backlit transmission",
+    shadingMix: 1,
+    opacity: 0.65,
+    longitudinalRoughness: 0.18,
+    azimuthalRoughness: 0.3,
+    cuticleTilt: 0.07,
+    diffuseWeight: 0.36,
+    reflectionWeight: 0.19,
+    transmissionWeight: 0.38,
+    internalReflectionWeight: 0.08,
+    rimWeight: 0.34,
+    multipleScatteringFill: 0.15,
+    glintStrength: 0.08,
+  }),
+  diffuse_coil: Object.freeze({
+    id: "diffuse_coil",
+    label: "Diffuse coil body",
+    shadingMix: 1,
+    opacity: 0.86,
+    longitudinalRoughness: 0.5,
+    azimuthalRoughness: 0.58,
+    cuticleTilt: 0.055,
+    diffuseWeight: 0.74,
+    reflectionWeight: 0.1,
+    transmissionWeight: 0.05,
+    internalReflectionWeight: 0.12,
+    rimWeight: 0.13,
+    multipleScatteringFill: 0.24,
+    glintStrength: 0.02,
+  }),
+  silver_glint: Object.freeze({
+    id: "silver_glint",
+    label: "Silver glint / broad scatter",
+    shadingMix: 1,
+    opacity: 0.74,
+    longitudinalRoughness: 0.26,
+    azimuthalRoughness: 0.44,
+    cuticleTilt: 0.095,
+    diffuseWeight: 0.5,
+    reflectionWeight: 0.4,
+    transmissionWeight: 0.14,
+    internalReflectionWeight: 0.16,
+    rimWeight: 0.3,
+    multipleScatteringFill: 0.23,
+    glintStrength: 0.22,
+  }),
+});
+
+export const HAIR_COLOR_PROFILES = Object.freeze({
+  blueprint: Object.freeze({
+    id: "blueprint",
+    label: "Cyan blueprint",
+    baseColor: 0x32ccef,
+    absorptionTint: Object.freeze([0.38, 0.86, 1]),
+  }),
+  deep_ebony: Object.freeze({
+    id: "deep_ebony",
+    label: "Deep ebony",
+    baseColor: 0x170f18,
+    absorptionTint: Object.freeze([0.34, 0.22, 0.3]),
+  }),
+  chestnut: Object.freeze({
+    id: "chestnut",
+    label: "Chestnut brown",
+    baseColor: 0x3b1715,
+    absorptionTint: Object.freeze([0.78, 0.38, 0.3]),
+  }),
+  copper: Object.freeze({
+    id: "copper",
+    label: "Copper red",
+    baseColor: 0x742817,
+    absorptionTint: Object.freeze([1, 0.44, 0.2]),
+  }),
+  honey_blonde: Object.freeze({
+    id: "honey_blonde",
+    label: "Honey blonde",
+    baseColor: 0x9b6835,
+    absorptionTint: Object.freeze([1, 0.76, 0.4]),
+  }),
+  silver: Object.freeze({
+    id: "silver",
+    label: "Silver / low pigment",
+    baseColor: 0xa9a3a4,
+    absorptionTint: Object.freeze([0.92, 0.96, 1]),
+  }),
+});
+
+export const HAIR_DETAIL_PROFILES = Object.freeze({
+  groom_clean: Object.freeze({
+    id: "groom_clean",
+    label: "Clean groom",
+    curlAmplitude: 0,
+    curlFrequency: 4,
+    frizzAmplitude: 0,
+    flyawayAmplitude: 0,
+  }),
+  natural_variation: Object.freeze({
+    id: "natural_variation",
+    label: "Natural variation",
+    curlAmplitude: 0.008,
+    curlFrequency: 6,
+    frizzAmplitude: 0.006,
+    flyawayAmplitude: 0.02,
+  }),
+  soft_wave: Object.freeze({
+    id: "soft_wave",
+    label: "Soft S-wave",
+    curlAmplitude: 0.032,
+    curlFrequency: 8,
+    frizzAmplitude: 0.007,
+    flyawayAmplitude: 0.025,
+  }),
+  tight_coil: Object.freeze({
+    id: "tight_coil",
+    label: "Tight coil spectrum",
+    curlAmplitude: 0.05,
+    curlFrequency: 18,
+    frizzAmplitude: 0.012,
+    flyawayAmplitude: 0.022,
+  }),
+  flyaway_frizz: Object.freeze({
+    id: "flyaway_frizz",
+    label: "Flyaway + frizz layer",
+    curlAmplitude: 0.014,
+    curlFrequency: 10,
+    frizzAmplitude: 0.025,
+    flyawayAmplitude: 0.075,
+  }),
+  wet_grouped: Object.freeze({
+    id: "wet_grouped",
+    label: "Wet grouped detail",
+    curlAmplitude: 0.004,
+    curlFrequency: 5,
+    frizzAmplitude: 0.001,
+    flyawayAmplitude: 0,
+  }),
+});
+
+export const HAIR_BREADTH_TOUR = Object.freeze([
+  Object.freeze({
+    id: "flat_blueprint",
+    label: "flat blueprint ribbons",
+    geometryId: "diagnostic_ribbons",
+    opticalId: "diagnostic_flat",
+    colorId: "blueprint",
+    detailId: "groom_clean",
+  }),
+  Object.freeze({
+    id: "fine_transmission",
+    label: "fine transmitted layers",
+    geometryId: "fine_layers",
+    opticalId: "backlit_silk",
+    colorId: "honey_blonde",
+    detailId: "groom_clean",
+  }),
+  Object.freeze({
+    id: "natural_full",
+    label: "natural full hierarchy",
+    geometryId: "balanced_full",
+    opticalId: "artist_dual",
+    colorId: "chestnut",
+    detailId: "natural_variation",
+  }),
+  Object.freeze({
+    id: "coarse_matte",
+    label: "coarse matte clusters",
+    geometryId: "coarse_clusters",
+    opticalId: "diffuse_coil",
+    colorId: "deep_ebony",
+    detailId: "groom_clean",
+  }),
+  Object.freeze({
+    id: "ebony_near_field",
+    label: "ebony R / TT / TRT",
+    geometryId: "balanced_full",
+    opticalId: "near_field_proxy",
+    colorId: "deep_ebony",
+    detailId: "natural_variation",
+  }),
+  Object.freeze({
+    id: "copper_artist_dual",
+    label: "copper dual highlight",
+    geometryId: "balanced_full",
+    opticalId: "artist_dual",
+    colorId: "copper",
+    detailId: "natural_variation",
+  }),
+  Object.freeze({
+    id: "blonde_backlight",
+    label: "blonde backlight",
+    geometryId: "fine_layers",
+    opticalId: "backlit_silk",
+    colorId: "honey_blonde",
+    detailId: "natural_variation",
+  }),
+  Object.freeze({
+    id: "silver_glint",
+    label: "silver glint",
+    geometryId: "fine_layers",
+    opticalId: "silver_glint",
+    colorId: "silver",
+    detailId: "groom_clean",
+  }),
+  Object.freeze({
+    id: "soft_wave",
+    label: "soft S-wave detail",
+    geometryId: "balanced_full",
+    opticalId: "artist_dual",
+    colorId: "chestnut",
+    detailId: "soft_wave",
+  }),
+  Object.freeze({
+    id: "tight_coil",
+    label: "tight coil spectrum",
+    geometryId: "coarse_clusters",
+    opticalId: "diffuse_coil",
+    colorId: "deep_ebony",
+    detailId: "tight_coil",
+  }),
+  Object.freeze({
+    id: "flyaway_frizz",
+    label: "flyaway + frizz layer",
+    geometryId: "balanced_full",
+    opticalId: "artist_dual",
+    colorId: "copper",
+    detailId: "flyaway_frizz",
+  }),
+  Object.freeze({
+    id: "wet_locks",
+    label: "wet grouped locks",
+    geometryId: "wet_locks",
+    opticalId: "near_field_proxy",
+    colorId: "deep_ebony",
+    detailId: "wet_grouped",
+  }),
+]);
+
+export const HAIR_BREADTH_TOUR_ORDER = Object.freeze(HAIR_BREADTH_TOUR.map((state) => state.id));
+export const HAIR_HYDRATION_COMPOSITION_COUNT =
+  Object.keys(HAIR_GEOMETRY_PROFILES).length *
+  Object.keys(HAIR_OPTICAL_MODELS).length *
+  Object.keys(HAIR_COLOR_PROFILES).length *
+  Object.keys(HAIR_DETAIL_PROFILES).length;
+
 export const FULL_GROOM_HYDRATION_STEPS = Object.freeze({
   physicsEndStep: 120,
-  ownerGuidesEndStep: 210,
-  clumpLocksEndStep: 300,
-  microfiberFillEndStep: 390,
-  materialAuditionEndStep: 690,
-  guideFadeEndStep: 720,
+  groomVolumesEndStep: 210,
+  ownerGuidesEndStep: 300,
+  clumpLocksEndStep: 390,
+  microfiberFillEndStep: 480,
+  flyawayFillEndStep: 570,
+  materialAuditionEndStep: 1290,
+  guideFadeEndStep: 1350,
   auditionRecipeStepCount: 60,
 });
 export const NATIVE_HYDRATION_PRE_ROLL_SECONDS = FULL_GROOM_HYDRATION_STEPS.guideFadeEndStep / 60;
@@ -400,32 +782,43 @@ function hydrationStage(
   stageProgress,
   hairHydration,
   guideOpacity,
+  tubeOpacity,
   populationFraction,
   widthScale,
   shadingMix,
   undercoatHydration,
-  auditionRecipeId = null
+  ownerHydration,
+  clumpHydration,
+  microfiberHydration,
+  flyawayHydration,
+  auditionStateId = null
 ) {
   return {
     phase,
     stageProgress,
     hairHydration,
     guideOpacity,
-    tubeOpacity: 0,
+    tubeOpacity,
     populationFraction,
     widthScale,
     shadingMix,
     undercoatHydration,
-    auditionRecipeId,
+    ownerHydration,
+    clumpHydration,
+    microfiberHydration,
+    flyawayHydration,
+    auditionStateId,
   };
 }
 
 export function fullGroomHydrationAtStep(step, stages = FULL_GROOM_HYDRATION_STEPS) {
   const {
     physicsEndStep,
+    groomVolumesEndStep,
     ownerGuidesEndStep,
     clumpLocksEndStep,
     microfiberFillEndStep,
+    flyawayFillEndStep,
     materialAuditionEndStep,
     guideFadeEndStep,
     auditionRecipeStepCount,
@@ -434,10 +827,12 @@ export function fullGroomHydrationAtStep(step, stages = FULL_GROOM_HYDRATION_STE
     !Number.isFinite(step) ||
     !(
       0 < physicsEndStep &&
-      physicsEndStep < ownerGuidesEndStep &&
+      physicsEndStep < groomVolumesEndStep &&
+      groomVolumesEndStep < ownerGuidesEndStep &&
       ownerGuidesEndStep < clumpLocksEndStep &&
       clumpLocksEndStep < microfiberFillEndStep &&
-      microfiberFillEndStep < materialAuditionEndStep &&
+      microfiberFillEndStep < flyawayFillEndStep &&
+      flyawayFillEndStep < materialAuditionEndStep &&
       materialAuditionEndStep < guideFadeEndStep &&
       auditionRecipeStepCount > 0
     )
@@ -445,17 +840,56 @@ export function fullGroomHydrationAtStep(step, stages = FULL_GROOM_HYDRATION_STE
     throw new Error("full groom hydration steps are invalid");
   }
   if (step < physicsEndStep) {
-    return hydrationStage("mechanical_skeleton", step / physicsEndStep, 0, 0.92, 0, 0, 0, 0);
+    return hydrationStage(
+      "mechanical_skeleton",
+      step / physicsEndStep,
+      0,
+      0.92,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    );
+  }
+  if (step < groomVolumesEndStep) {
+    const progress = smoothStep01((step - physicsEndStep) / (groomVolumesEndStep - physicsEndStep));
+    return hydrationStage(
+      "groom_volumes",
+      progress,
+      0,
+      0.92 - 0.6 * progress,
+      0.08 + 0.38 * progress,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    );
   }
   if (step < ownerGuidesEndStep) {
-    const progress = smoothStep01((step - physicsEndStep) / (ownerGuidesEndStep - physicsEndStep));
+    const progress = smoothStep01(
+      (step - groomVolumesEndStep) / (ownerGuidesEndStep - groomVolumesEndStep)
+    );
     return hydrationStage(
       "owner_guides",
       progress,
       progress,
-      0.92 - 0.42 * progress,
+      0.32 * (1 - progress),
+      0.46 * (1 - progress),
       0.035,
       0.34 + 0.3 * progress,
+      0,
+      0,
+      progress,
+      0,
       0,
       0
     );
@@ -469,10 +903,15 @@ export function fullGroomHydrationAtStep(step, stages = FULL_GROOM_HYDRATION_STE
       progress,
       1,
       0.5 * (1 - progress),
+      0,
       0.035 + 0.265 * progress,
       0.64 + 0.16 * progress,
       0.12 * progress,
-      0.08 * progress
+      0.08 * progress,
+      1,
+      progress,
+      0,
+      0
     );
   }
   if (step < microfiberFillEndStep) {
@@ -484,38 +923,67 @@ export function fullGroomHydrationAtStep(step, stages = FULL_GROOM_HYDRATION_STE
       progress,
       1,
       0,
+      0,
       0.3 + 0.7 * progress,
       0.8 + 0.2 * progress,
       0.12 + 0.43 * progress,
-      0.08 + 0.52 * progress
+      0.08 + 0.52 * progress,
+      1,
+      1,
+      progress,
+      0
+    );
+  }
+  if (step < flyawayFillEndStep) {
+    const progress = smoothStep01(
+      (step - microfiberFillEndStep) / (flyawayFillEndStep - microfiberFillEndStep)
+    );
+    return hydrationStage(
+      "flyaway_frizz_layer",
+      progress,
+      1,
+      0,
+      0,
+      1,
+      1,
+      0.55 + 0.2 * progress,
+      0.6 + 0.4 * progress,
+      1,
+      1,
+      1,
+      progress
     );
   }
   if (step < materialAuditionEndStep) {
-    const progress =
-      (step - microfiberFillEndStep) / (materialAuditionEndStep - microfiberFillEndStep);
-    const recipeIndex = Math.min(
-      HAIR_HYDRATION_RECIPE_ORDER.length - 1,
-      Math.floor((step - microfiberFillEndStep) / auditionRecipeStepCount)
+    const progress = (step - flyawayFillEndStep) / (materialAuditionEndStep - flyawayFillEndStep);
+    const stateIndex = Math.min(
+      HAIR_BREADTH_TOUR.length - 1,
+      Math.floor((step - flyawayFillEndStep) / auditionRecipeStepCount)
     );
     return hydrationStage(
       "material_audition",
       progress,
       1,
       0,
+      0,
       1,
       1,
       0.55 + 0.45 * smoothStep01(progress),
       0.6 + 0.4 * smoothStep01(progress),
-      HAIR_HYDRATION_RECIPE_ORDER[recipeIndex]
+      1,
+      1,
+      1,
+      1,
+      HAIR_BREADTH_TOUR[stateIndex].id
     );
   }
   if (step < guideFadeEndStep) {
     const progress = smoothStep01(
       (step - materialAuditionEndStep) / (guideFadeEndStep - materialAuditionEndStep)
     );
-    return hydrationStage("selected_recipe_settle", progress, 1, 0, 1, 1, 1, 1);
+    return hydrationStage("selected_composition_settle", progress, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1);
   }
-  return hydrationStage("hydrated", 1, 1, 0, 1, 1, 1, 1);
+  return hydrationStage("hydrated", 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1);
 }
 
 export function hydrationRecipe(recipeId) {
@@ -524,15 +992,91 @@ export function hydrationRecipe(recipeId) {
 
 export function hydrationRecipeAtStep(step, selectedRecipeId, auditionEnabled = true) {
   const presentation = fullGroomHydrationAtStep(step);
-  return auditionEnabled && presentation.auditionRecipeId
-    ? presentation.auditionRecipeId
-    : hydrationRecipe(selectedRecipeId).id;
+  const auditionState = HAIR_BREADTH_TOUR.find(
+    (candidate) => candidate.id === presentation.auditionStateId
+  );
+  if (!auditionEnabled || !auditionState) return hydrationRecipe(selectedRecipeId).id;
+  return (
+    HAIR_HYDRATION_RECIPE_ORDER.find((recipeId) => {
+      const recipe = hydrationRecipe(recipeId);
+      return (
+        recipe.geometryId === auditionState.geometryId &&
+        recipe.opticalId === auditionState.opticalId &&
+        recipe.colorId === auditionState.colorId &&
+        recipe.detailId === auditionState.detailId
+      );
+    }) ?? hydrationRecipe(selectedRecipeId).id
+  );
+}
+
+export function hydrationRecipeSelection(recipeOrId) {
+  const recipe = typeof recipeOrId === "string" ? hydrationRecipe(recipeOrId) : recipeOrId;
+  return {
+    geometryId: recipe.geometryId,
+    opticalId: recipe.opticalId,
+    colorId: recipe.colorId,
+    detailId: recipe.detailId,
+  };
+}
+
+export function resolveHairHydrationState(selection = {}) {
+  const geometry =
+    HAIR_GEOMETRY_PROFILES[selection.geometryId] ?? HAIR_GEOMETRY_PROFILES.balanced_full;
+  const optical = HAIR_OPTICAL_MODELS[selection.opticalId] ?? HAIR_OPTICAL_MODELS.artist_dual;
+  const color = HAIR_COLOR_PROFILES[selection.colorId] ?? HAIR_COLOR_PROFILES.chestnut;
+  const detail = HAIR_DETAIL_PROFILES[selection.detailId] ?? HAIR_DETAIL_PROFILES.natural_variation;
+  return {
+    geometry,
+    optical,
+    color,
+    detail,
+    ...geometry,
+    ...optical,
+    baseColor: color.baseColor,
+    absorptionTint: color.absorptionTint,
+    id: `${geometry.id}__${optical.id}__${color.id}__${detail.id}`,
+    label: `${geometry.label} · ${optical.label} · ${color.label} · ${detail.label}`,
+  };
+}
+
+export function hydrationSelectionAtStep(step, selectedSelection, auditionEnabled = true) {
+  const presentation = fullGroomHydrationAtStep(step);
+  if (!auditionEnabled || !presentation.auditionStateId) return { ...selectedSelection };
+  const audition = HAIR_BREADTH_TOUR.find(
+    (candidate) => candidate.id === presentation.auditionStateId
+  );
+  return audition ? { ...audition } : { ...selectedSelection };
 }
 
 export function hydrationRecipeWidthScaleAt(recipeOrId, rootFraction) {
   const recipe = typeof recipeOrId === "string" ? hydrationRecipe(recipeOrId) : recipeOrId;
   const fraction = smoothStep01(Math.max(0, Math.min(1, rootFraction)));
   return recipe.rootWidthScale + (recipe.tipWidthScale - recipe.rootWidthScale) * fraction;
+}
+
+export function hydrationFiberFamilyScale(copy, copies, presentation, hydrationState) {
+  if (
+    !Number.isInteger(copy) ||
+    !Number.isInteger(copies) ||
+    copy < 0 ||
+    copy >= copies ||
+    copies < 1
+  ) {
+    throw new Error("hydration fiber family indices are invalid");
+  }
+  const clumpEnd = Math.max(2, Math.floor(copies * 0.29));
+  const flyawayStart = Math.max(clumpEnd + 1, Math.floor(copies * 0.86));
+  const family =
+    copy === 0
+      ? "owner"
+      : copy < clumpEnd
+        ? "clump"
+        : copy < flyawayStart
+          ? "microfiber"
+          : "flyaway";
+  const hydration = presentation?.[`${family}Hydration`] ?? 1;
+  const densityKey = family === "microfiber" ? "microfiberDensity" : `${family}Density`;
+  return Math.max(0, Math.min(1, hydration * (hydrationState?.[densityKey] ?? 1)));
 }
 
 export function hydrationFiberPopulationScale(copy, copies, visibleFraction) {

@@ -146,6 +146,16 @@ proof boundaries must remain explicit.
       receives the full strong and moderate native wind orbits. A nine-frame
       Chrome Canary pass has no JavaScript exceptions and measures dense geometry
       at 8.71 ms mean / 9.50 ms p99 / 14.10 ms maximum over 600 frames.
+- [x] Widen hydration from five bundled guesses into a Disney-reference hierarchy
+      and independent parameter lab. The presentation now separates rods, groom
+      volume, owners, clump children, microfibers, and flyaways before touring 12
+      curated states from a 1,080-composition geometry × optics × pigment × detail
+      space. The optical lane includes artist-dual and R/TT/TRT-inspired real-time
+      proxies; curl/frizz/flyaway detail is rest-baked and display-only. An exact-
+      time 20-frame Canary pass observes every state plus both native wind orbits
+      with no JavaScript exceptions or console errors. Cached detail geometry
+      measures 8.04 ms mean / 14.50 ms p99 / 20.40 ms maximum over 144 updates
+      while the native trajectory digest remains `5aaf6c2db5806b28`.
 - [x] Build a small explicit-guide rod/reference fixture before raising guide
       count or enabling spatial friction in the browser by default. The
       settled axial/transverse lanes reproduce exactly, remain under 1.9%

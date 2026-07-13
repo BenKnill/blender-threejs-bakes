@@ -415,28 +415,58 @@ are visible next boundaries rather than accepted realism claims. See
 `docs/receipts/hair_box3d_scalp_scale_v1.json` and
 `docs/HAIR_BOX3D_SWATCH.md`.
 
-## Multi-recipe display hydration
+## Disney-reference hydration breadth lab
 
-`groomHydration=1` is no longer a single opacity guess. The canonical playback
-holds one native guide pose still for a twelve-second display audition:
-mechanical rods, owner guides, clump locks, microfiber fill, five one-second
-material recipes, and a selected-recipe settle. Only then does recorded motion
-begin, preserving the full six-second strong orbit and full six-second moderate
-orbit in the completed groom.
+The earlier five-recipe audition was still five bundled points on one ribbon
+renderer. The current `groomHydration=1` presentation separates the hierarchy
+instead: uniform mechanical rods, one translucent groom volume, owner guides,
+clump children, microfiber fill, and a flyaway/frizz layer. It then auditions
+twelve deliberately different compositions before returning to the selected
+final material for the full six-second strong and six-second moderate native
+Box3D wind orbits.
+
+The architecture is informed by Disney's published Frozen pipeline: roughly 50
+groom volumes, 100 simulation curves, 1,000 guide curves, and 400,000 render
+curves, with scalp clump regions and procedural curl/noise/clumping. Tonic also
+describes hierarchical volumes that are procedurally populated with individual
+strands. Those ratios are references, not parity claims: this browser study
+plays 256 native Box3D guides into 5,376 display fibers.
+
+The final display composition is independently selectable:
+
+- `hydrationGeometry=diagnostic-ribbons|fine-layers|balanced-full|coarse-clusters|wet-locks`
+- `hydrationOptical=diagnostic-flat|artist-dual|near-field-proxy|backlit-silk|diffuse-coil|silver-glint`
+- `hydrationColor=blueprint|deep-ebony|chestnut|copper|honey-blonde|silver`
+- `hydrationDetail=groom-clean|natural-variation|soft-wave|tight-coil|flyaway-frizz|wet-grouped`
+
+That is a 5 × 6 × 6 × 6, or 1,080-composition display space. The optical models
+include artist-directed dual highlights and an R/TT/TRT-inspired near-field
+proxy. They are compact real-time approximations, not Disney's energy-conserving
+production BFSDF or a path-traced multiple-scattering solution. Rest-baked curl,
+frizz, and flyaway offsets read the same guide motion and never write physics.
 
 `hydrationRecipe=fine-silk|natural-balanced|coarse-matte|glossy-cinematic|wet-clumped`
-selects the final recipe. `hydrationTour=0` skips automatic recipe substitution
-during the five-second audition while retaining the structural stages. Recipes
-vary root/tip screen-space gauge, visible population, opacity, longitudinal
-roughness, diffuse/primary/transmission/rim weights, multiple scattering fill,
-and undercoat scale. Every choice is recorded in the render receipt under
-`full_groom_hydration.material_recipe_space`.
+remains as a shortcut that sets all four axes. `hydrationTour=0` skips the
+twelve-state substitution while retaining the structural hierarchy. Receipts
+store both the selected and active compositions under
+`full_groom_hydration.breadth_lab`.
 
-A nine-frame Chrome Canary pass observed the complete stage sequence with no
-JavaScript exceptions. The dense geometry update measured 8.71 ms mean / 9.50
-ms p99 / 14.10 ms maximum over 600 frames at 960x900. These are browser display
-measurements, not new Box3D performance or realism claims. See
-`docs/receipts/hair_hydration_audition_v1.json`.
+An exact-time 20-frame Chrome Canary pass observed every named state plus both
+wind phases with no JavaScript exceptions or console errors. The cached rest-detail
+field measured 8.04 ms mean / 14.50 ms p99 / 20.40 ms maximum over 144 browser
+geometry updates at 960x900. The native clip remained trajectory digest
+`5aaf6c2db5806b28`; these
+are browser display measurements, not new Box3D performance or realism claims.
+See `docs/receipts/hair_disney_breadth_lab_v1.json`.
+
+Primary production references:
+
+- <https://disneyanimation.com/publications/disneys-hair-pipeline-crafting-hair-styles-from-design-to-motion/>
+- <https://www.disneyanimation.com/technology/tonic/>
+- <https://disneyanimation.com/publications/the-art-and-technology-of-simulating-hair-in-disneys-moana/>
+- <https://www.disneyanimation.com/publications/hierarchical-workflow-for-art-directed-hair-animation/>
+- <https://disneyanimation.com/publications/a-practical-and-controllable-hair-and-fur-model-for-production-path-tracing/>
+- <https://la.disneyresearch.com/publication/an-artist-friendly-hair-shading-system/>
 
 ## Hero mannequin and reel cameras
 

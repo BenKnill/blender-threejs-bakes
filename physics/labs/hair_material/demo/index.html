@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hair Material Bench</title>
+    <link rel="icon" href="data:," />
     <link rel="stylesheet" href="./styles.css?v=102" />
     <script type="importmap">
       {
@@ -69,7 +70,7 @@
       </label>
 
       <label>
-        Hydration recipe
+        Final recipe shortcut
         <select id="hydration-recipe">
           <option value="fine_silk">Fine silk / transmitted</option>
           <option value="natural_balanced" selected>Natural balanced / full</option>
@@ -79,9 +80,56 @@
         </select>
       </label>
 
+      <label>
+        Fiber geometry
+        <select id="hydration-geometry">
+          <option value="diagnostic_ribbons">Diagnostic ribbons / sparse</option>
+          <option value="fine_layers">Fine layered fibers</option>
+          <option value="balanced_full" selected>Balanced full hierarchy</option>
+          <option value="coarse_clusters">Coarse clustered shafts</option>
+          <option value="wet_locks">Wet grouped locks</option>
+        </select>
+      </label>
+
+      <label>
+        Optical model
+        <select id="hydration-optical">
+          <option value="diagnostic_flat">Flat diagnostic</option>
+          <option value="artist_dual" selected>Artist dual highlight</option>
+          <option value="near_field_proxy">Near-field R / TT / TRT proxy</option>
+          <option value="backlit_silk">Backlit transmission</option>
+          <option value="diffuse_coil">Diffuse coil body</option>
+          <option value="silver_glint">Silver glint / broad scatter</option>
+        </select>
+      </label>
+
+      <label>
+        Pigment / absorption
+        <select id="hydration-color">
+          <option value="blueprint">Cyan blueprint</option>
+          <option value="deep_ebony">Deep ebony</option>
+          <option value="chestnut" selected>Chestnut brown</option>
+          <option value="copper">Copper red</option>
+          <option value="honey_blonde">Honey blonde</option>
+          <option value="silver">Silver / low pigment</option>
+        </select>
+      </label>
+
+      <label>
+        Procedural detail
+        <select id="hydration-detail">
+          <option value="groom_clean">Clean groom</option>
+          <option value="natural_variation" selected>Natural variation</option>
+          <option value="soft_wave">Soft S-wave</option>
+          <option value="tight_coil">Tight coil spectrum</option>
+          <option value="flyaway_frizz">Flyaway + frizz layer</option>
+          <option value="wet_grouped">Wet grouped detail</option>
+        </select>
+      </label>
+
       <label class="check-control">
         <input id="hydration-tour" type="checkbox" checked />
-        Audition all five recipes before wind
+        Tour hierarchy + 12 compositions before wind
       </label>
 
       <label>
@@ -374,6 +422,6 @@
       <div id="status" role="status">Running deterministic wavy preset.</div>
     </aside>
     <div id="cut-cursor" aria-hidden="true"></div>
-    <script type="module" src="./main.js?v=155"></script>
+    <script type="module" src="./main.js?v=156"></script>
   </body>
 </html>

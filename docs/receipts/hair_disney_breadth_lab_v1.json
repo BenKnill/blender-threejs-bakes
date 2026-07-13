@@ -1,0 +1,88 @@
+{
+  "schema": "hair-display-breadth-lab-receipt/1",
+  "issue": 179,
+  "field_identity": "disney_reference_5x6x6x6_composition_space_v1",
+  "hydration_identity": "hierarchy_plus_breadth_lab_hydration_v6",
+  "shader_identity": "artist_dual_plus_near_field_proxy_lobes_v4",
+  "reference_boundary": {
+    "production_architecture": "Disney Frozen and Tonic hierarchy used as a design reference only",
+    "browser_claim": "256 native Box3D guides hydrate into 5376 screen-space display fibers",
+    "optics_claim": "real-time artist-dual and R_TT_TRT-inspired proxies, not a production BFSDF or path tracer",
+    "detail_claim": "rest-baked renderer offsets read guide motion and never write physics"
+  },
+  "parameter_space": {
+    "geometry_profiles": 5,
+    "optical_models": 6,
+    "color_absorption_profiles": 6,
+    "procedural_detail_profiles": 6,
+    "selectable_compositions": 1080,
+    "hands_off_tour_states": 12
+  },
+  "hands_off_hierarchy": [
+    "mechanical_skeleton",
+    "groom_volumes",
+    "owner_guides",
+    "clump_locks",
+    "microfiber_fill",
+    "flyaway_frizz_layer",
+    "material_audition",
+    "selected_composition_settle",
+    "strong_native_wind_orbit",
+    "moderate_native_wind_orbit"
+  ],
+  "tour_compositions": [
+    "diagnostic_ribbons__diagnostic_flat__blueprint__groom_clean",
+    "fine_layers__backlit_silk__honey_blonde__groom_clean",
+    "balanced_full__artist_dual__chestnut__natural_variation",
+    "coarse_clusters__diffuse_coil__deep_ebony__groom_clean",
+    "balanced_full__near_field_proxy__deep_ebony__natural_variation",
+    "balanced_full__artist_dual__copper__natural_variation",
+    "fine_layers__backlit_silk__honey_blonde__natural_variation",
+    "fine_layers__silver_glint__silver__groom_clean",
+    "balanced_full__artist_dual__chestnut__soft_wave",
+    "coarse_clusters__diffuse_coil__deep_ebony__tight_coil",
+    "balanced_full__artist_dual__copper__flyaway_frizz",
+    "wet_locks__near_field_proxy__deep_ebony__wet_grouped"
+  ],
+  "native_box3d_clip": {
+    "fixture": "hair_box3d_scalp_groom_256",
+    "trajectory_digest": "5aaf6c2db5806b28",
+    "guide_count": 256,
+    "segments": 8,
+    "sample_hz": 15,
+    "duration_seconds": 12,
+    "physics_authority": "native_box3d_precomputed_capsule_transforms"
+  },
+  "exact_time_canary": {
+    "browser": "Google Chrome Canary",
+    "viewport": "960x900",
+    "capture_count": 20,
+    "calm_capture_count": 18,
+    "calm_physics_digests": [
+      "d1dd623e0aff3b65"
+    ],
+    "strong_wind_physics_digest": "527b84a595220c1d",
+    "moderate_wind_physics_digest": "fa11b33849011648",
+    "javascript_exceptions": 0,
+    "console_errors": 0,
+    "geometry_update": {
+      "measured_frames": 144,
+      "mean_ms": 8.04305555505885,
+      "p99_ms": 14.5,
+      "max_ms": 20.400000005960464
+    }
+  },
+  "validation": [
+    "just lint",
+    "just test",
+    "node scripts/qa_hair_canary.mjs exact native presentation URL"
+  ],
+  "sources": [
+    "https://disneyanimation.com/publications/disneys-hair-pipeline-crafting-hair-styles-from-design-to-motion/",
+    "https://www.disneyanimation.com/technology/tonic/",
+    "https://disneyanimation.com/publications/the-art-and-technology-of-simulating-hair-in-disneys-moana/",
+    "https://www.disneyanimation.com/publications/hierarchical-workflow-for-art-directed-hair-animation/",
+    "https://disneyanimation.com/publications/a-practical-and-controllable-hair-and-fur-model-for-production-path-tracing/",
+    "https://la.disneyresearch.com/publication/an-artist-friendly-hair-shading-system/"
+  ]
+}
