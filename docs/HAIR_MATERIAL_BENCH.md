@@ -277,6 +277,35 @@ fixture fades in, hydrates, simulates wind and the cut, fades out after step
 420, then resets at step 450. One live browser observation crossed the boundary
 and reported restart count 1. Fixed-step screenshots remain receipts only.
 
+## Hero mannequin and reel cameras
+
+The demo can now put that loop on a CC0 Blender Studio realistic head with
+`mannequin=realistic`. The tracked GLB contains the head, sclerae, and irises;
+the browser applies deliberately simple warm salon materials. It is a visual
+plate only. The unchanged analytic ellipsoid still owns every scalp collision,
+so switching `mannequin=primitive|realistic` cannot add mesh collision detail or
+change the mechanics claim.
+
+`reel=beauty|control|cut` selects a deterministic 450-step camera field. The
+beauty shot makes a restrained orbit, the control shot holds a higher view of
+the transient authoring tube, and the cut shot eases closer and lower during
+the cut-and-relaxation interval. `reel=free` preserves manual orbit controls.
+The render receipt records the mannequin asset identity, CC0 license, collision
+authority, named shot, and `three_shot_orbit_450_step_v1` camera identity.
+
+The three moving front doors are:
+
+```sh
+just hair-reel-beauty
+just hair-reel-control
+just hair-reel-cut
+```
+
+They intentionally print looping browser URLs rather than frame directories.
+The existing deterministic-frame packaging scripts remain available for final
+encoding, but named moving shots are now the source-of-truth compositions for
+the upcoming reels.
+
 ## Claim boundary
 
 This is a material-aware graphics solver, not continuum hair mechanics or a

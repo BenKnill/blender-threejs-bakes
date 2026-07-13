@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 import { HairSolver } from "./solver.js?v=114";
 import {
@@ -16,9 +17,11 @@ import {
   HAIR_FIBER_SHADING_ID,
   HAIR_PRESENTATION_LOOP_ID,
   presentationLoopOpacityAtStep,
+  reelCameraPoseAtStep,
+  REEL_CAMERA_FIELD_ID,
   sectionPosePresentationAtStep,
   summarizeGeometryTimings,
-} from "./rendering.js?v=109";
+} from "./rendering.js?v=110";
 import {
   buildGroomInterpolationBindings,
   groomBindingActiveSegments,
@@ -39,6 +42,10 @@ let sectionControlTubeEnabled = false;
 let hairShadingMode = "fiber_lobes";
 let presentationLoopEnabled = false;
 let presentationLoopRestarts = 0;
+let mannequinMode = "primitive";
+let mannequinStatus = "primitive_ready";
+let heroMannequin;
+let reelShot = "free";
 const PRESENTATION_LOOP_END_STEP = 450;
 const FATLINE_DYNAMIC_ATTRIBUTES = Object.freeze([
   "instanceStart",
@@ -80,13 +87,15 @@ const porcelain = new THREE.MeshStandardMaterial({
   roughness: 0.42,
   metalness: 0.03,
 });
+const primitiveHeadGroup = new THREE.Group();
+scene.add(primitiveHeadGroup);
 const head = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 32), porcelain);
 head.scale.set(0.9, 1.12, 0.82);
 head.position.set(0, 1.35, 0);
-scene.add(head);
+primitiveHeadGroup.add(head);
 const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.56, 1.3, 32), porcelain);
 neck.position.set(0, -0.03, 0);
-scene.add(neck);
+primitiveHeadGroup.add(neck);
 const bust = new THREE.Mesh(
   new THREE.SphereGeometry(1, 40, 20),
   new THREE.MeshStandardMaterial({ color: 0x172452, roughness: 0.68 })
@@ -100,7 +109,91 @@ for (const x of [-0.31, 0.31]) {
     new THREE.MeshStandardMaterial({ color: 0x12090d, roughness: 0.2 })
   );
   eye.position.set(x, 1.56, 0.77);
-  scene.add(eye);
+  primitiveHeadGroup.add(eye);
+}
+
+const mannequinLoader = new GLTFLoader();
+const heroSkinMaterial = new THREE.MeshStandardMaterial({
+  color: 0xb96f5f,
+  roughness: 0.58,
+  metalness: 0,
+});
+const heroScleraMaterial = new THREE.MeshStandardMaterial({
+  color: 0xe9d8cf,
+  roughness: 0.42,
+  metalness: 0,
+});
+const heroIrisMaterial = new THREE.MeshStandardMaterial({
+  color: 0x263d48,
+  roughness: 0.28,
+  metalness: 0,
+});
+
+function showLoadedMannequin() {
+  primitiveHeadGroup.visible = mannequinMode !== "realistic" || !heroMannequin;
+  if (heroMannequin) heroMannequin.visible = mannequinMode === "realistic";
+}
+
+function loadRealisticMannequin() {
+  if (heroMannequin) {
+    mannequinStatus = "realistic_ready";
+    showLoadedMannequin();
+    return;
+  }
+  if (mannequinStatus === "realistic_loading") {
+    showLoadedMannequin();
+    return;
+  }
+  mannequinStatus = "realistic_loading";
+  mannequinLoader.load(
+    "./assets/realistic-head-animation.glb",
+    (gltf) => {
+      heroMannequin = gltf.scene;
+      heroMannequin.traverse((object) => {
+        if (!object.isMesh) return;
+        object.frustumCulled = false;
+        const name = object.name.toLowerCase();
+        object.material = name.includes("iris")
+          ? heroIrisMaterial
+          : name.includes("sclera")
+            ? heroScleraMaterial
+            : heroSkinMaterial;
+      });
+      const sourceBox = new THREE.Box3().setFromObject(heroMannequin);
+      const sourceSize = sourceBox.getSize(new THREE.Vector3());
+      const scale = 2.55 / Math.max(0.001, sourceSize.y);
+      heroMannequin.scale.setScalar(scale);
+      heroMannequin.updateMatrixWorld(true);
+      const fittedBox = new THREE.Box3().setFromObject(heroMannequin);
+      const fittedCenter = fittedBox.getCenter(new THREE.Vector3());
+      heroMannequin.position.set(-fittedCenter.x, 1.18 - fittedCenter.y, -fittedCenter.z);
+      scene.add(heroMannequin);
+      mannequinStatus = mannequinMode === "realistic" ? "realistic_ready" : "primitive_ready";
+      showLoadedMannequin();
+    },
+    undefined,
+    () => {
+      if (mannequinMode !== "realistic") {
+        mannequinStatus = "primitive_ready";
+        showLoadedMannequin();
+        return;
+      }
+      mannequinStatus = "realistic_failed_primitive_fallback";
+      mannequinMode = "primitive";
+      document.querySelector("#mannequin").value = "primitive";
+      showLoadedMannequin();
+      status.textContent = "CC0 hero head failed to load; restored the primitive mannequin.";
+    }
+  );
+}
+
+function setMannequinMode(mode) {
+  mannequinMode = mode === "realistic" ? "realistic" : "primitive";
+  if (mannequinMode === "realistic") loadRealisticMannequin();
+  else {
+    mannequinStatus = "primitive_ready";
+    showLoadedMannequin();
+  }
 }
 
 const guideLine = new THREE.Line(
@@ -1006,6 +1099,8 @@ function updateTelemetry(now) {
   document.querySelector("#metric-groom-mode").textContent = groomMode;
   document.querySelector("#metric-hair-surface").textContent =
     `${hairShadingMode.replaceAll("_", " ")} · ${presentationLoopEnabled ? `loop ${presentationLoopRestarts + 1}` : "continuous"}`;
+  document.querySelector("#metric-reel-presentation").textContent =
+    `${mannequinStatus.replaceAll("_", " ")} · ${reelShot.replaceAll("_", " ")}`;
   document.querySelector("#metric-root-director").textContent = receipt.root_director.enabled
     ? `${receipt.root_director.mode.replaceAll("_", " ")} · ${receipt.root_director.strength.toFixed(2)}`
     : "off";
@@ -1066,8 +1161,13 @@ function updateTelemetry(now) {
           : receipt.assumption_receipt.measurement_window.replaceAll("_", " ");
   document.querySelector("#showcase-wind").textContent =
     `wind ${windDegrees.toFixed(0)}° · ${receipt.wind.magnitude.toFixed(2)}`;
+  const stretchWindow = receipt.assumption_receipt.measurement_window;
+  const stretchQualifier =
+    stretchWindow === "full_simulation"
+      ? "live"
+      : `gate ${receipt.assumption_receipt.stretch.satisfied ? "pass" : "fail"}`;
   document.querySelector("#showcase-stretch").textContent =
-    `stretch ${(receipt.max_relative_stretch_error * 100).toFixed(2)}% · ${receipt.assumption_receipt.status}`;
+    `stretch ${(receipt.max_relative_stretch_error * 100).toFixed(2)}% · ${stretchQualifier}`;
   if (performance.memory) {
     document.querySelector("#metric-memory").textContent = `${(
       performance.memory.usedJSHeapSize /
@@ -1172,6 +1272,11 @@ function animate(now) {
   updateWindVisual();
   comb.visible = Boolean(deterministicReplay.config.comb && solver.comb.enabled);
   comb.position.x = solver.comb.currentX;
+  if (reelShot !== "free") {
+    const pose = reelCameraPoseAtStep(deterministicReplay.state.step, reelShot);
+    camera.position.fromArray(pose.position);
+    controls.target.fromArray(pose.target);
+  }
   controls.update();
   renderer.render(scene, camera);
   updateTelemetry(now);
@@ -1247,6 +1352,13 @@ function applyQueryConfiguration() {
   document.querySelector("#groom-display").value = hairRenderMode === "lines" ? "lines" : groomMode;
   hairShadingMode = params.get("hairShade") === "flat" ? "flat" : "fiber_lobes";
   document.querySelector("#hair-surface").value = hairShadingMode;
+  setMannequinMode(params.get("mannequin") === "realistic" ? "realistic" : "primitive");
+  document.querySelector("#mannequin").value = mannequinMode;
+  reelShot = ["beauty", "control", "cut"].includes(params.get("reel"))
+    ? params.get("reel")
+    : "free";
+  document.querySelector("#reel-shot").value = reelShot;
+  if (reelShot !== "free") controls.autoRotate = false;
   sectionControlTubeEnabled = params.get("controlTube") === "1";
   document.querySelector("#pose-visual").value = sectionControlTubeEnabled
     ? "control_tube"
@@ -1263,7 +1375,7 @@ function applyQueryConfiguration() {
     filmDirection.cutAt = Math.max(0, Number(params.get("cutAt") ?? 2.5));
     filmDirection.cutDuration = Math.max(0.2, Number(params.get("cutDuration") ?? 1.4));
     filmDirection.windRotationRate = Number(params.get("windRotation") ?? 0);
-    controls.autoRotate = true;
+    controls.autoRotate = reelShot === "free";
     controls.autoRotateSpeed = Number(params.get("orbit") ?? 0.8);
   }
   if (params.get("replay") === "1") {
@@ -1320,7 +1432,7 @@ function applyQueryConfiguration() {
           : undefined,
     };
     if (showcase) {
-      controls.autoRotate = true;
+      controls.autoRotate = reelShot === "free";
       controls.autoRotateSpeed = Number(params.get("orbit") ?? 0.35);
     }
   }
@@ -1372,6 +1484,15 @@ document.querySelector("#hair-surface").addEventListener("change", (event) => {
   if (hairRenderMode === "fatline") {
     hair.material.uniforms.shadingEnabled.value = hairShadingMode === "fiber_lobes" ? 1 : 0;
   }
+});
+document.querySelector("#mannequin").addEventListener("change", (event) => {
+  setMannequinMode(event.currentTarget.value);
+});
+document.querySelector("#reel-shot").addEventListener("change", (event) => {
+  reelShot = ["beauty", "control", "cut"].includes(event.currentTarget.value)
+    ? event.currentTarget.value
+    : "free";
+  controls.autoRotate = false;
 });
 document.querySelector("#reset").addEventListener("click", rebuildSolver);
 document.querySelector("#pause").addEventListener("click", (event) => {
@@ -1484,6 +1605,26 @@ function createRenderReceipt() {
         : 1,
       restarts: presentationLoopRestarts,
       physics_authority: "restarts_same_deterministic_fixture_only",
+    },
+    mannequin: {
+      requested_mode: mannequinMode,
+      status: mannequinStatus,
+      asset: mannequinMode === "realistic" ? "assets/realistic-head-animation.glb" : null,
+      asset_sha256:
+        mannequinMode === "realistic"
+          ? "d1ef943ef0b0081ed5b9d655f6b6bce419190ab754ad7aa0659bfa58e3566b78"
+          : null,
+      license: mannequinMode === "realistic" ? "CC0-1.0" : "in_repo_primitive",
+      collision_proxy: "analytic_ellipsoid_unchanged",
+      physics_authority: "none_visual_plate_only",
+    },
+    reel_camera: {
+      shot: reelShot,
+      field_identity: REEL_CAMERA_FIELD_ID,
+      cycle_steps: PRESENTATION_LOOP_END_STEP,
+      pose:
+        reelShot === "free" ? null : reelCameraPoseAtStep(deterministicReplay.state.step, reelShot),
+      physics_authority: "none_camera_only",
     },
     root_director: solver.receipt().root_director,
     section_lift: solver.receipt().section_lift,

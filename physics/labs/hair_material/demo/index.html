@@ -68,6 +68,24 @@
       </label>
 
       <label>
+        Mannequin
+        <select id="mannequin">
+          <option value="primitive" selected>Primitive collision proxy</option>
+          <option value="realistic">CC0 realistic hero head</option>
+        </select>
+      </label>
+
+      <label>
+        Reel camera
+        <select id="reel-shot">
+          <option value="free" selected>Free orbit</option>
+          <option value="beauty">Beauty orbit</option>
+          <option value="control">Control-volume close-up</option>
+          <option value="cut">Cut and relaxation</option>
+        </select>
+      </label>
+
+      <label>
         Simulated guides <output id="guide-output">512</output>
         <input id="guides" type="range" min="128" max="768" step="64" value="512" />
       </label>
@@ -184,6 +202,10 @@
           <div>
             <dt>Hair surface / presentation</dt>
             <dd id="metric-hair-surface">flat · continuous</dd>
+          </div>
+          <div>
+            <dt>Mannequin / reel camera</dt>
+            <dd id="metric-reel-presentation">primitive · free</dd>
           </div>
           <div>
             <dt>Root director</dt>
@@ -330,6 +352,6 @@
       <div id="status" role="status">Running deterministic wavy preset.</div>
     </aside>
     <div id="cut-cursor" aria-hidden="true"></div>
-    <script type="module" src="./main.js?v=125"></script>
+    <script type="module" src="./main.js?v=128"></script>
   </body>
 </html>
