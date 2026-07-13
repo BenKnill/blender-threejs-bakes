@@ -89,9 +89,13 @@ assert.ok(visitedModules.has(path.join(output, "vendor/utils/BufferGeometryUtils
 const index = await readFile(path.join(output, "index.html"), "utf8");
 assert.ok(index.includes('"three": "./vendor/three.module.js"'));
 assert.ok(index.includes('"three/addons/": "./vendor/"'));
-assert.ok(index.includes("native-box3d-scalp-groom-two-orbit-playback"));
+assert.ok(index.includes("disney-breadth-lab"));
 assert.ok(index.includes("physicsClip=box3d-scalp-256"));
 assert.ok(index.includes("hydrationRecipe=natural-balanced"));
+assert.ok(index.includes("hydrationGeometry=balanced-full"));
+assert.ok(index.includes("hydrationOptical=artist-dual"));
+assert.ok(index.includes("hydrationColor=chestnut"));
+assert.ok(index.includes("hydrationDetail=natural-variation"));
 assert.ok(index.includes("hydrationTour=1"));
 assert.ok(index.includes("guides=256"));
 assert.ok(index.includes("fibers=21"));

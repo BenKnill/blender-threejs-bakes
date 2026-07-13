@@ -103,7 +103,11 @@ async function evaluate(expression) {
     awaitPromise: true,
     returnByValue: true,
   });
-  if (result.exceptionDetails) throw new Error(result.exceptionDetails.text);
+  if (result.exceptionDetails) {
+    throw new Error(
+      result.exceptionDetails.exception?.description ?? JSON.stringify(result.exceptionDetails)
+    );
+  }
   return result.result.value;
 }
 
@@ -114,24 +118,42 @@ async function capture(name) {
     captureBeyondViewport: false,
   });
   await writeFile(path.join(outputDirectory, `${name}.png`), Buffer.from(result.data, "base64"));
-  return evaluate(`({
-    phase: document.querySelector("#showcase-phase")?.textContent,
-    material: document.querySelector("#showcase-material")?.textContent,
-    wind: document.querySelector("#showcase-wind")?.textContent,
-    receipt: document.documentElement.dataset.hairRenderReceipt ?? null
-  })`);
+  return evaluate(`(() => {
+    const receipt = document.documentElement.dataset.hairRenderReceipt ?? null;
+    const parsed = receipt ? JSON.parse(receipt) : null;
+    return {
+      phase: document.querySelector("#showcase-phase")?.textContent,
+      material: document.querySelector("#showcase-material")?.textContent,
+      wind: document.querySelector("#showcase-wind")?.textContent,
+      physics_digest: parsed?.physics_state_digest ?? null,
+      active_composition:
+        parsed?.full_groom_hydration?.breadth_lab?.active_composition?.id ?? null,
+      receipt
+    };
+  })()`);
 }
 
 const captureSchedule = [
   [1.2, "01-mechanical-rods"],
-  [2.8, "02-owner-guides"],
-  [4.2, "03-clump-locks"],
-  [5.8, "04-microfiber-fill"],
-  [7.0, "05-fine-silk"],
-  [9.0, "06-coarse-matte"],
-  [11.0, "07-wet-clumped"],
-  [12.8, "08-strong-wind"],
-  [18.8, "09-moderate-wind"],
+  [2.8, "02-groom-volume"],
+  [4.2, "03-owner-guides"],
+  [5.8, "04-clump-children"],
+  [7.3, "05-microfiber-fill"],
+  [8.8, "06-flyaway-frizz"],
+  [10, "07-flat-blueprint"],
+  [11.1, "08-fine-transmission"],
+  [12.1, "09-natural-full"],
+  [13.1, "10-coarse-matte"],
+  [14.1, "11-ebony-near-field"],
+  [15.1, "12-copper-artist-dual"],
+  [16.1, "13-blonde-backlight"],
+  [17.1, "14-silver-glint"],
+  [18.1, "15-soft-wave"],
+  [19.1, "16-tight-coil"],
+  [20.1, "17-flyaway-layer"],
+  [21.1, "18-wet-locks"],
+  [23.3, "19-strong-wind"],
+  [29.3, "20-moderate-wind"],
 ];
 
 try {
@@ -139,11 +161,18 @@ try {
   const loaded = nextEvent("Page.loadEventFired");
   await send("Page.navigate", { url: targetUrl });
   await loaded;
-  const started = Date.now();
+  const readyDeadline = Date.now() + 30_000;
+  while (
+    !(await evaluate(
+      "Boolean(window.hairMaterialReplay?.renderReceipt().native_box3d_clip.metadata)"
+    ))
+  ) {
+    if (Date.now() >= readyDeadline) throw new Error("native Box3D clip readiness timeout");
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
   const captures = [];
   for (const [seconds, name] of captureSchedule) {
-    const remaining = seconds * 1000 - (Date.now() - started);
-    if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining));
+    await evaluate(`window.hairMaterialReplay.seekPresentation(${JSON.stringify(seconds)})`);
     captures.push({ seconds, name, ...(await capture(name)) });
   }
   const receipt = captures.findLast((captureItem) => captureItem.receipt)?.receipt ?? null;

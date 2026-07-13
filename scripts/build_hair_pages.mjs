@@ -14,6 +14,10 @@ const canonicalParameters = new URLSearchParams([
   ["showcase", "1"],
   ["groomHydration", "1"],
   ["hydrationRecipe", "natural-balanced"],
+  ["hydrationGeometry", "balanced-full"],
+  ["hydrationOptical", "artist-dual"],
+  ["hydrationColor", "chestnut"],
+  ["hydrationDetail", "natural-variation"],
   ["hydrationTour", "1"],
   ["guides", "256"],
   ["iterations", "6"],
@@ -30,7 +34,7 @@ const canonicalParameters = new URLSearchParams([
   ["mannequin", "realistic"],
   ["reel", "control"],
   ["renderReceipt", "1"],
-  ["scenario", "native-box3d-scalp-groom-two-orbit-playback"],
+  ["scenario", "disney-breadth-lab"],
 ]).toString();
 
 await rm(output, { recursive: true, force: true });
