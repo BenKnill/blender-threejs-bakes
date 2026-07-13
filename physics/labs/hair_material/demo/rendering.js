@@ -3,11 +3,25 @@ export const FATLINE_TIP_HALF_WIDTH_PX = 0.07;
 export const HAIR_FIBER_SHADING_ID = "tangent_dual_lobe_root_emergence_v2";
 export const HAIR_PRESENTATION_LOOP_ID = "fade_reset_450_step_v1";
 export const REEL_CAMERA_FIELD_ID = "three_shot_orbit_450_step_v1";
-export const FULL_GROOM_HYDRATION_ID = "lit_rod_joint_hydration_450_v2";
+export const FULL_GROOM_HYDRATION_ID = "uniform_rod_joint_hydration_450_v3";
+export const PHYSICS_SKELETON_STYLE_ID = "uniform_world_space_rods_joints_v1";
+export const PHYSICS_SKELETON_STYLE = Object.freeze({
+  guideLimit: 20,
+  rodRadiusMeters: 0.011,
+  jointRadiusMeters: 0.02,
+  rootJointScale: 1,
+  depthWriteMinimumOpacity: 0.5,
+});
 
 function smoothStep01(value) {
   const t = Math.max(0, Math.min(1, value));
   return t * t * (3 - 2 * t);
+}
+
+export function physicsSkeletonDepthWriteAt(phase, opacity) {
+  return (
+    phase === "mechanical_skeleton" || opacity >= PHYSICS_SKELETON_STYLE.depthWriteMinimumOpacity
+  );
 }
 
 export function presentationLoopOpacityAtStep(

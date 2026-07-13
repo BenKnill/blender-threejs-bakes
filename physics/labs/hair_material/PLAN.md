@@ -124,12 +124,15 @@ proof boundaries must remain explicit.
       hydrated screenshots now read as three distinct representations.
 - [x] Correct the diagnostic phase after screenshot review showed the 256-line
       cage plus volume tube still read as a bundle/hair hybrid. The current
-      `lit_rod_joint_hydration_450_v2` display deterministically samples 32
-      solver guides and draws 384 lit cylinder links plus 416 sphere joints.
-      Dense hair, undercoat, and the volume tube remain absent for a full 120
-      steps while the mannequin is ghosted; hydration begins only afterward.
-      At fixed step 60, enabled and hair-only modes share physics digest
-      `4b5e2bcab247f0bd`; one narrow sample measures the skeleton at 0.20 ms p99.
+      `uniform_rod_joint_hydration_450_v3` display deterministically samples 20
+      solver guides and draws 240 cylinder links plus 260 sphere joints. All
+      active rods share one 0.011 m radius and all active joints, including
+      roots, share one 0.020 m radius; section identity remains color-only.
+      Depth-resolved overlap removes transparent root blobs. Dense hair,
+      undercoat, and the volume tube remain absent for a full 120 steps while
+      the mannequin is ghosted; hydration begins only afterward. At fixed step
+      60, enabled and hair-only modes share physics digest `b7a5a62747c250db`;
+      one narrow sample measures 0.038 ms mean / 0.20 ms p99 skeleton update.
 - [x] Build a small explicit-guide rod/reference fixture before raising guide
       count or enabling spatial friction in the browser by default. The
       settled axial/transverse lanes reproduce exactly, remain under 1.9%

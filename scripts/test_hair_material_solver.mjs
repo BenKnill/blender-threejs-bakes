@@ -27,6 +27,9 @@ import {
   hairFiberColorAt,
   HAIR_FIBER_SHADING_ID,
   HAIR_PRESENTATION_LOOP_ID,
+  physicsSkeletonDepthWriteAt,
+  PHYSICS_SKELETON_STYLE,
+  PHYSICS_SKELETON_STYLE_ID,
   presentationLoopOpacityAtStep,
   reelCameraPoseAtStep,
   REEL_CAMERA_FIELD_ID,
@@ -93,7 +96,15 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.equal(HAIR_FIBER_SHADING_ID, "tangent_dual_lobe_root_emergence_v2");
   assert.equal(HAIR_PRESENTATION_LOOP_ID, "fade_reset_450_step_v1");
   assert.equal(REEL_CAMERA_FIELD_ID, "three_shot_orbit_450_step_v1");
-  assert.equal(FULL_GROOM_HYDRATION_ID, "lit_rod_joint_hydration_450_v2");
+  assert.equal(FULL_GROOM_HYDRATION_ID, "uniform_rod_joint_hydration_450_v3");
+  assert.equal(PHYSICS_SKELETON_STYLE_ID, "uniform_world_space_rods_joints_v1");
+  assert.equal(PHYSICS_SKELETON_STYLE.guideLimit, 20);
+  assert.equal(PHYSICS_SKELETON_STYLE.rootJointScale, 1);
+  assert.ok(PHYSICS_SKELETON_STYLE.rodRadiusMeters > 0);
+  assert.ok(PHYSICS_SKELETON_STYLE.jointRadiusMeters > PHYSICS_SKELETON_STYLE.rodRadiusMeters);
+  assert.equal(physicsSkeletonDepthWriteAt("mechanical_skeleton", 0.1), true);
+  assert.equal(physicsSkeletonDepthWriteAt("hydrating", 0.8), true);
+  assert.equal(physicsSkeletonDepthWriteAt("hydrating", 0.2), false);
   nearlyEqual(presentationLoopOpacityAtStep(0), 0);
   nearlyEqual(presentationLoopOpacityAtStep(15), 0.5);
   nearlyEqual(presentationLoopOpacityAtStep(30), 1);
