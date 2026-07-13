@@ -60,6 +60,14 @@
       </label>
 
       <label>
+        Hair surface
+        <select id="hair-surface">
+          <option value="fiber_lobes" selected>Directional fiber lobes</option>
+          <option value="flat">Flat diagnostic color</option>
+        </select>
+      </label>
+
+      <label>
         Simulated guides <output id="guide-output">512</output>
         <input id="guides" type="range" min="128" max="768" step="64" value="512" />
       </label>
@@ -172,6 +180,10 @@
           <div>
             <dt>Groom mode</dt>
             <dd id="metric-groom-mode">radial_xz</dd>
+          </div>
+          <div>
+            <dt>Hair surface / presentation</dt>
+            <dd id="metric-hair-surface">flat · continuous</dd>
           </div>
           <div>
             <dt>Root director</dt>
@@ -318,6 +330,6 @@
       <div id="status" role="status">Running deterministic wavy preset.</div>
     </aside>
     <div id="cut-cursor" aria-hidden="true"></div>
-    <script type="module" src="./main.js?v=124"></script>
+    <script type="module" src="./main.js?v=125"></script>
   </body>
 </html>

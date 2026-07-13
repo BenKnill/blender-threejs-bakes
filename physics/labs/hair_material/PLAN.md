@@ -76,6 +76,17 @@ proof boundaries must remain explicit.
       observes 0.10 ms tube-geometry p99. The render receipt marks the tube as
       `none_renderer_only`, so it is an artist-facing explanation rather than
       a mechanics claim.
+- [x] Replace the dense renderer's flat color with an artist-facing directional
+      fiber material and restore a genuinely looping preview. The compact
+      strand shader separates a neutral root-shifted reflection lobe, a
+      hair-tinted tip-shifted transmission lobe, tangent diffuse, and a bounded
+      multiple-scattering fill; deterministic root-to-tip color variation keeps
+      it out of the uniform ribbon look. Flat and fiber modes share fixed-step
+      physics digest `1b50f30cdfdff721`, position-buffer digest `8019ba02`,
+      and the 120 fps browser ceiling in the isolated 560×720 gate. The
+      showcase now fades, resets the same deterministic fixture at step 450,
+      and repeats; fixed frames remain validation receipts rather than the
+      product experience.
 - [x] Build a small explicit-guide rod/reference fixture before raising guide
       count or enabling spatial friction in the browser by default. The
       settled axial/transverse lanes reproduce exactly, remain under 1.9%

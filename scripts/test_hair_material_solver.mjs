@@ -21,6 +21,10 @@ import {
   fatlineColorScale,
   fatlineHalfWidthAt,
   float32BufferDigest,
+  hairFiberColorAt,
+  HAIR_FIBER_SHADING_ID,
+  HAIR_PRESENTATION_LOOP_ID,
+  presentationLoopOpacityAtStep,
   sectionPosePresentationAtStep,
   summarizeGeometryTimings,
 } from "../physics/labs/hair_material/demo/rendering.js";
@@ -72,6 +76,23 @@ import {
 
 function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} != ${expected}`);
+}
+
+{
+  assert.equal(HAIR_FIBER_SHADING_ID, "tangent_dual_lobe_ms_fill_v1");
+  assert.equal(HAIR_PRESENTATION_LOOP_ID, "fade_reset_450_step_v1");
+  nearlyEqual(presentationLoopOpacityAtStep(0), 0);
+  nearlyEqual(presentationLoopOpacityAtStep(15), 0.5);
+  nearlyEqual(presentationLoopOpacityAtStep(30), 1);
+  nearlyEqual(presentationLoopOpacityAtStep(420), 1);
+  nearlyEqual(presentationLoopOpacityAtStep(435), 0.5);
+  nearlyEqual(presentationLoopOpacityAtStep(450), 0);
+  const root = hairFiberColorAt({ r: 0.4, g: 0.2, b: 0.1 }, 8, 3, 0);
+  const tip = hairFiberColorAt({ r: 0.4, g: 0.2, b: 0.1 }, 8, 3, 1);
+  assert.ok(root.r < tip.r);
+  assert.ok(root.g < tip.g);
+  assert.ok(root.b < tip.b);
+  assert.deepEqual(tip, hairFiberColorAt({ r: 0.4, g: 0.2, b: 0.1 }, 8, 3, 1));
 }
 
 {
