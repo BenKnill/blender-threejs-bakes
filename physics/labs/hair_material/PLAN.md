@@ -139,6 +139,13 @@ proof boundaries must remain explicit.
       into 5,376 section-interpolated fibers. The browser only interpolates the
       recorded 15 Hz node samples and renders them; native Box3D remains the
       physics authority.
+- [x] Replace the one-dimensional browser hydration guess with a staged material
+      audition. The native guide pose now holds still through rods, owner guides,
+      clump locks, microfiber fill, five receipt-distinct thickness/population/
+      shader recipes, and a selected-recipe settle. The completed groom then
+      receives the full strong and moderate native wind orbits. A nine-frame
+      Chrome Canary pass has no JavaScript exceptions and measures dense geometry
+      at 8.71 ms mean / 9.50 ms p99 / 14.10 ms maximum over 600 frames.
 - [x] Build a small explicit-guide rod/reference fixture before raising guide
       count or enabling spatial friction in the browser by default. The
       settled axial/transverse lanes reproduce exactly, remain under 1.9%

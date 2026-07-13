@@ -29,9 +29,16 @@ import {
   float32BufferDigest,
   fullGroomHydrationAtStep,
   FULL_GROOM_HYDRATION_ID,
+  FULL_GROOM_HYDRATION_STEPS,
   hairFiberColorAt,
   HAIR_FIBER_SHADING_ID,
+  HAIR_HYDRATION_RECIPES,
+  HAIR_HYDRATION_RECIPE_ID,
+  HAIR_HYDRATION_RECIPE_ORDER,
   HAIR_PRESENTATION_LOOP_ID,
+  hydrationFiberPopulationScale,
+  hydrationRecipeAtStep,
+  hydrationRecipeWidthScaleAt,
   LOCK_AWARE_COVERAGE_ID,
   lockAwareFiberEmergenceScaleAt,
   LOCK_AWARE_RENDER_SUBDIVISIONS,
@@ -40,6 +47,8 @@ import {
   LOCK_AWARE_ROOT_COVER_MIN_AUTHORED_DOT,
   LOCK_AWARE_ROOT_COVER_PROBE_PARTICLE,
   LOCK_AWARE_ROOT_COVER_SEGMENTS,
+  nativeClipPresentationAtTime,
+  NATIVE_HYDRATION_PRE_ROLL_SECONDS,
   physicsSkeletonDepthWriteAt,
   PHYSICS_SKELETON_STYLE,
   PHYSICS_SKELETON_STYLE_ID,
@@ -134,7 +143,7 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
 }
 
 {
-  assert.equal(HAIR_FIBER_SHADING_ID, "tangent_dual_lobe_root_emergence_v2");
+  assert.equal(HAIR_FIBER_SHADING_ID, "tangent_recipe_lobes_root_emergence_v3");
   assert.equal(HAIR_PRESENTATION_LOOP_ID, "visible_two_wind_orbits_1020_step_v3");
   assert.equal(REEL_CAMERA_FIELD_ID, "fixed_control_two_orbit_1020_step_v3");
   assert.equal(PREVIEW_WIND_PROGRAM_ID, "hydrated_strong_then_moderate_full_orbits_v2");
@@ -155,7 +164,24 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     moderateMagnitude: 0.9,
     legacyScaleMigrated: false,
   });
-  assert.equal(FULL_GROOM_HYDRATION_ID, "uniform_64guide_rod_joint_hydration_v4");
+  assert.equal(FULL_GROOM_HYDRATION_ID, "staged_material_audition_hydration_v5");
+  assert.equal(HAIR_HYDRATION_RECIPE_ID, "five_recipe_fiber_material_space_v1");
+  assert.deepEqual(HAIR_HYDRATION_RECIPE_ORDER, [
+    "fine_silk",
+    "natural_balanced",
+    "coarse_matte",
+    "glossy_cinematic",
+    "wet_clumped",
+  ]);
+  assert.equal(NATIVE_HYDRATION_PRE_ROLL_SECONDS, 12);
+  assert.ok(
+    HAIR_HYDRATION_RECIPES.fine_silk.rootWidthScale <
+      HAIR_HYDRATION_RECIPES.coarse_matte.rootWidthScale
+  );
+  assert.ok(
+    HAIR_HYDRATION_RECIPES.wet_clumped.populationFraction <
+      HAIR_HYDRATION_RECIPES.natural_balanced.populationFraction
+  );
   assert.equal(PHYSICS_SKELETON_STYLE_ID, "uniform_world_space_rods_joints_v2");
   assert.equal(LOCK_AWARE_COVERAGE_ID, "live_root_cover_locks_catmull_rom_v3");
   assert.equal(LOCK_AWARE_RENDER_SUBDIVISIONS, 2);
@@ -257,27 +283,62 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.equal(reelCameraPoseAtStep(0, "free"), null);
   assert.deepEqual(fullGroomHydrationAtStep(0), {
     phase: "mechanical_skeleton",
+    stageProgress: 0,
     hairHydration: 0,
     guideOpacity: 0.92,
     tubeOpacity: 0,
+    populationFraction: 0,
+    widthScale: 0,
+    shadingMix: 0,
+    undercoatHydration: 0,
+    auditionRecipeId: null,
   });
   assert.equal(fullGroomHydrationAtStep(119).phase, "mechanical_skeleton");
-  assert.equal(fullGroomHydrationAtStep(120).phase, "hydrating");
+  assert.equal(fullGroomHydrationAtStep(120).phase, "owner_guides");
   assert.equal(fullGroomHydrationAtStep(120).hairHydration, 0);
   assert.ok(fullGroomHydrationAtStep(165).hairHydration > 0.49);
-  assert.ok(fullGroomHydrationAtStep(165).guideOpacity > 0.18);
-  assert.deepEqual(fullGroomHydrationAtStep(210), {
-    phase: "guide_release",
-    hairHydration: 1,
-    guideOpacity: 0.18,
-    tubeOpacity: 0,
-  });
-  assert.deepEqual(fullGroomHydrationAtStep(240), {
-    phase: "hydrated",
-    hairHydration: 1,
-    guideOpacity: 0,
-    tubeOpacity: 0,
-  });
+  assert.equal(fullGroomHydrationAtStep(210).phase, "clump_locks");
+  assert.equal(fullGroomHydrationAtStep(300).phase, "microfiber_fill");
+  assert.equal(fullGroomHydrationAtStep(390).phase, "material_audition");
+  assert.equal(fullGroomHydrationAtStep(390).auditionRecipeId, "fine_silk");
+  assert.equal(fullGroomHydrationAtStep(450).auditionRecipeId, "natural_balanced");
+  assert.equal(fullGroomHydrationAtStep(630).auditionRecipeId, "wet_clumped");
+  assert.equal(fullGroomHydrationAtStep(690).phase, "selected_recipe_settle");
+  assert.equal(fullGroomHydrationAtStep(720).phase, "hydrated");
+  assert.equal(
+    hydrationRecipeAtStep(450, "coarse_matte", true),
+    "natural_balanced"
+  );
+  assert.equal(hydrationRecipeAtStep(450, "coarse_matte", false), "coarse_matte");
+  assert.ok(
+    hydrationRecipeWidthScaleAt("fine_silk", 0) >
+      hydrationRecipeWidthScaleAt("fine_silk", 1)
+  );
+  assert.equal(hydrationFiberPopulationScale(0, 21, 0.035), 1);
+  assert.equal(hydrationFiberPopulationScale(20, 21, 0.035), 0);
+  assert.equal(hydrationFiberPopulationScale(20, 21, 1), 1);
+  const nativeAtStart = nativeClipPresentationAtTime(0, 12);
+  assert.equal(nativeAtStart.phase, "hydration_pre_roll");
+  assert.equal(nativeAtStart.sampleTime, 0);
+  assert.equal(nativeAtStart.opacity, 0);
+  const nativeStrongStart = nativeClipPresentationAtTime(
+    NATIVE_HYDRATION_PRE_ROLL_SECONDS,
+    12
+  );
+  assert.equal(nativeStrongStart.phase, "wind_clip");
+  assert.equal(nativeStrongStart.sampleTime, 0);
+  assert.equal(nativeStrongStart.opacity, 1);
+  assert.equal(
+    nativeClipPresentationAtTime(NATIVE_HYDRATION_PRE_ROLL_SECONDS + 6, 12).sampleTime,
+    6
+  );
+  const nativeFade = nativeClipPresentationAtTime(
+    NATIVE_HYDRATION_PRE_ROLL_SECONDS + 12.3,
+    12
+  );
+  assert.equal(nativeFade.phase, "reset_fade");
+  assert.ok(nativeFade.opacity > 0.49 && nativeFade.opacity < 0.51);
+  assert.equal(FULL_GROOM_HYDRATION_STEPS.guideFadeEndStep, 720);
 }
 
 {

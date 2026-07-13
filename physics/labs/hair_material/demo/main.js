@@ -26,6 +26,9 @@ import {
   float32BufferDigest,
   fullGroomHydrationAtStep,
   FULL_GROOM_HYDRATION_ID,
+  HAIR_HYDRATION_RECIPES,
+  HAIR_HYDRATION_RECIPE_ID,
+  HAIR_HYDRATION_RECIPE_ORDER,
   hairFiberColorAt,
   HAIR_FIBER_SHADING_ID,
   HAIR_PRESENTATION_LOOP_ID,
@@ -37,6 +40,12 @@ import {
   LOCK_AWARE_ROOT_COVER_MIN_AUTHORED_DOT,
   LOCK_AWARE_ROOT_COVER_PROBE_PARTICLE,
   LOCK_AWARE_ROOT_COVER_SEGMENTS,
+  hydrationFiberPopulationScale,
+  hydrationRecipe,
+  hydrationRecipeAtStep,
+  hydrationRecipeWidthScaleAt,
+  nativeClipPresentationAtTime,
+  NATIVE_HYDRATION_PRE_ROLL_SECONDS,
   physicsSkeletonDepthWriteAt,
   PHYSICS_SKELETON_STYLE,
   PHYSICS_SKELETON_STYLE_ID,
@@ -45,7 +54,7 @@ import {
   REEL_CAMERA_FIELD_ID,
   sectionPosePresentationAtStep,
   summarizeGeometryTimings,
-} from "./rendering.js?v=121";
+} from "./rendering.js?v=127";
 import {
   buildGroomInterpolationBindings,
   groomBindingActiveSegments,
@@ -75,6 +84,9 @@ let renderReceiptEnabled = false;
 let sectionControlTubeEnabled = false;
 let fullGroomHydrationEnabled = false;
 let hairShadingMode = "fiber_lobes";
+let hydrationRecipeId = "natural_balanced";
+let activeHydrationRecipeId = hydrationRecipeId;
+let hydrationTourEnabled = true;
 let presentationLoopEnabled = false;
 let presentationLoopRestarts = 0;
 let mannequinMode = "primitive";
@@ -87,6 +99,7 @@ const nativeClipPlayback = {
   clip: null,
   elapsed: 0,
   sampleTime: 0,
+  presentationPhase: "loading",
   opacity: 1,
   restarts: 0,
   error: null,
@@ -328,9 +341,15 @@ let sectionControlTubeTimings = [];
 let sectionPresentation = { phase: "off", hydration: 1, tubeOpacity: 0 };
 let fullGroomPresentation = {
   phase: "hair_only",
+  stageProgress: 1,
   hairHydration: 1,
   guideOpacity: 0,
   tubeOpacity: 0,
+  populationFraction: 1,
+  widthScale: 1,
+  shadingMix: 1,
+  undercoatHydration: 1,
+  auditionRecipeId: null,
 };
 let physicsGuideCage;
 let physicsJointMesh;
@@ -507,14 +526,43 @@ function rebuildPhysicsGuideCage() {
 }
 
 function updateFullGroomPresentation() {
-  const step = deterministicReplay.enabled
-    ? deterministicReplay.state.step
-    : Math.floor(solver.time * 60);
+  const step = nativeClipPlayback.enabled
+    ? Math.floor(nativeClipPlayback.elapsed * 60)
+    : deterministicReplay.enabled
+      ? deterministicReplay.state.step
+      : Math.floor(solver.time * 60);
   fullGroomPresentation = fullGroomHydrationEnabled
     ? fullGroomHydrationAtStep(step)
-    : { phase: "hair_only", hairHydration: 1, guideOpacity: 0, tubeOpacity: 0 };
+    : {
+        phase: "hair_only",
+        stageProgress: 1,
+        hairHydration: 1,
+        guideOpacity: 0,
+        tubeOpacity: 0,
+        populationFraction: 1,
+        widthScale: 1,
+        shadingMix: 1,
+        undercoatHydration: 1,
+        auditionRecipeId: null,
+      };
+  activeHydrationRecipeId = hydrationRecipeAtStep(
+    step,
+    hydrationRecipeId,
+    fullGroomHydrationEnabled && hydrationTourEnabled
+  );
+  const activeRecipe = hydrationRecipe(activeHydrationRecipeId);
   if (hairRenderMode === "fatline" && hair?.material.uniforms?.presentationHydration) {
-    hair.material.uniforms.presentationHydration.value = fullGroomPresentation.hairHydration;
+    const uniforms = hair.material.uniforms;
+    uniforms.presentationHydration.value =
+      fullGroomPresentation.hairHydration * activeRecipe.opacity;
+    uniforms.shadingEnabled.value =
+      hairShadingMode === "fiber_lobes" ? fullGroomPresentation.shadingMix : 0;
+    uniforms.longitudinalRoughness.value = activeRecipe.longitudinalRoughness;
+    uniforms.diffuseWeight.value = activeRecipe.diffuseWeight;
+    uniforms.primaryWeight.value = activeRecipe.primaryWeight;
+    uniforms.transmissionWeight.value = activeRecipe.transmissionWeight;
+    uniforms.rimWeight.value = activeRecipe.rimWeight;
+    uniforms.multipleScatteringFill.value = activeRecipe.multipleScatteringFill;
   } else if (hair?.material) {
     const baseOpacity = hair.material.userData.baseOpacity ?? 1;
     hair.material.opacity = baseOpacity * fullGroomPresentation.hairHydration;
@@ -522,9 +570,11 @@ function updateFullGroomPresentation() {
   if (hairUndercoat) {
     for (const layer of hairUndercoat.children) {
       layer.material.opacity =
-        layer.material.userData.baseOpacity * fullGroomPresentation.hairHydration;
+        layer.material.userData.baseOpacity *
+        fullGroomPresentation.undercoatHydration *
+        activeRecipe.undercoatScale;
     }
-    hairUndercoat.visible = fullGroomPresentation.hairHydration > 0.002;
+    hairUndercoat.visible = fullGroomPresentation.undercoatHydration > 0.002;
   }
   const mechanicalWeight = fullGroomHydrationEnabled
     ? Math.max(0, Math.min(1, fullGroomPresentation.guideOpacity / 0.92))
@@ -643,6 +693,15 @@ function writeHydratedFiberStyle(
   activeSegments
 ) {
   const hydration = sectionHydrationForGuide(guide);
+  const activeRecipe = hydrationRecipe(activeHydrationRecipeId);
+  const visiblePopulation = fullGroomHydrationEnabled
+    ? fullGroomPresentation.populationFraction * activeRecipe.populationFraction
+    : 1;
+  const populationScale = hydrationFiberPopulationScale(
+    copy,
+    renderFibersPerGuide,
+    visiblePopulation
+  );
   const middleParticle = (startParticle + endParticle) * 0.5;
   const hairColorAtSegment = hairFiberColorAt(
     fatlineBaseColor,
@@ -665,15 +724,21 @@ function writeHydratedFiberStyle(
     1,
     hairColorAtSegment.b * hairContribution + SECTION_CONTROL_TUBE_COLOR.b * proxy * 0.72
   );
-  const widthScale = 0.12 + 0.88 * hydration;
+  const presentationWidthScale = fullGroomHydrationEnabled
+    ? fullGroomPresentation.widthScale
+    : 0.12 + 0.88 * hydration;
   const emergenceScaleAt = groomBindings ? lockAwareFiberEmergenceScaleAt : fiberEmergenceScaleAt;
   widthsStart[instance] =
     fatlineHalfWidthAt(startParticle, activeSegments) *
-    widthScale *
+    presentationWidthScale *
+    populationScale *
+    hydrationRecipeWidthScaleAt(activeRecipe, startParticle / Math.max(1, activeSegments)) *
     emergenceScaleAt(guide, copy, startParticle, activeSegments, solver.rootNormals[guide * 3 + 1]);
   widthsEnd[instance] =
     fatlineHalfWidthAt(endParticle, activeSegments) *
-    widthScale *
+    presentationWidthScale *
+    populationScale *
+    hydrationRecipeWidthScaleAt(activeRecipe, endParticle / Math.max(1, activeSegments)) *
     emergenceScaleAt(guide, copy, endParticle, activeSegments, solver.rootNormals[guide * 3 + 1]);
 }
 
@@ -773,6 +838,10 @@ function createFatlineMaterial() {
       keyColor: { value: new THREE.Color(0xffddcf) },
       rimColor: { value: new THREE.Color(0x667dd8) },
       longitudinalRoughness: { value: 0.34 },
+      diffuseWeight: { value: 0.62 },
+      primaryWeight: { value: 0.23 },
+      transmissionWeight: { value: 0.1 },
+      rimWeight: { value: 0.16 },
       multipleScatteringFill: { value: 0.11 },
     },
     vertexShader: `
@@ -822,6 +891,10 @@ function createFatlineMaterial() {
       uniform vec3 keyColor;
       uniform vec3 rimColor;
       uniform float longitudinalRoughness;
+      uniform float diffuseWeight;
+      uniform float primaryWeight;
+      uniform float transmissionWeight;
+      uniform float rimWeight;
       uniform float multipleScatteringFill;
       varying vec3 vColor;
       varying vec3 vTangentView;
@@ -845,11 +918,6 @@ function createFatlineMaterial() {
         float jointCoverage = 0.5 + 0.5 * sin(3.14159265 * clamp(vAlong, 0.0, 1.0));
         float fiberAlpha =
           fiberCoverage * jointCoverage * (0.72 + 0.22 * crossSection) * presentationHydration;
-        if (shadingEnabled < 0.5) {
-          gl_FragColor = vec4(vColor, fiberAlpha);
-          return;
-        }
-
         vec3 tangent = normalize(vTangentView);
         vec3 viewDirection = normalize(-vPositionView);
         vec3 keyDirection = normalize((viewMatrix * vec4(keyDirectionWorld, 0.0)).xyz);
@@ -874,14 +942,14 @@ function createFatlineMaterial() {
         float cylinderEdge = 0.68 + 0.32 * abs(vAcross);
         vec3 scatteringTint = pow(max(vColor, vec3(0.0)), vec3(0.46));
 
-        vec3 color = vColor * (0.34 + 0.62 * diffuse);
-        color += keyColor * primary * cylinderEdge * 0.23;
-        color += scatteringTint * keyColor * transmission * 0.1;
-        color += rimColor * rimPrimary * cylinderEdge * 0.16;
+        vec3 color = vColor * (0.34 + diffuseWeight * diffuse);
+        color += keyColor * primary * cylinderEdge * primaryWeight;
+        color += scatteringTint * keyColor * transmission * transmissionWeight;
+        color += rimColor * rimPrimary * cylinderEdge * rimWeight;
         color += scatteringTint * multipleScatteringFill * (0.72 + 0.28 * diffuse);
         color *= 0.9 + 0.1 * crossSection;
         color = color / (vec3(0.94) + color);
-        gl_FragColor = vec4(color, fiberAlpha);
+        gl_FragColor = vec4(mix(vColor, color, clamp(shadingEnabled, 0.0, 1.0)), fiberAlpha);
       }
     `,
     depthTest: true,
@@ -1462,11 +1530,31 @@ function updateSectionInterpolatedFatlineGeometry() {
         0.83 + coverSegment * 0.38,
         activeSegments
       );
-      const hydration = 0.12 + 0.88 * sectionHydrationForGuide(owner);
+      const activeRecipe = hydrationRecipe(activeHydrationRecipeId);
+      const visiblePopulation = fullGroomHydrationEnabled
+        ? fullGroomPresentation.populationFraction * activeRecipe.populationFraction
+        : 1;
+      const populationScale = hydrationFiberPopulationScale(
+        copy,
+        renderFibersPerGuide,
+        visiblePopulation
+      );
+      const hydration = fullGroomHydrationEnabled
+        ? fullGroomPresentation.widthScale
+        : 0.12 + 0.88 * sectionHydrationForGuide(owner);
+      const rootRecipeScale = hydrationRecipeWidthScaleAt(activeRecipe, 0);
       widthsStart[instance] =
-        FATLINE_ROOT_HALF_WIDTH_PX * LOCK_ROOT_COVER_WIDTH_PROFILE[coverSegment] * hydration;
+        FATLINE_ROOT_HALF_WIDTH_PX *
+        LOCK_ROOT_COVER_WIDTH_PROFILE[coverSegment] *
+        hydration *
+        populationScale *
+        rootRecipeScale;
       widthsEnd[instance] =
-        FATLINE_ROOT_HALF_WIDTH_PX * LOCK_ROOT_COVER_WIDTH_PROFILE[coverSegment + 1] * hydration;
+        FATLINE_ROOT_HALF_WIDTH_PX *
+        LOCK_ROOT_COVER_WIDTH_PROFILE[coverSegment + 1] *
+        hydration *
+        populationScale *
+        rootRecipeScale;
       instance += 1;
     }
     for (let segment = 0; segment < activeSegments; segment += 1) {
@@ -1647,6 +1735,9 @@ function updateTelemetry(now) {
   document.querySelector("#metric-groom-mode").textContent = groomMode;
   document.querySelector("#metric-hair-surface").textContent =
     `${hairShadingMode.replaceAll("_", " ")} · ${presentationLoopEnabled ? `loop ${presentationLoopRestarts + 1}` : "continuous"}`;
+  const activeHydrationRecipe = hydrationRecipe(activeHydrationRecipeId);
+  document.querySelector("#metric-hydration-recipe").textContent =
+    `${activeHydrationRecipe.label} · ${activeHydrationRecipe.rootWidthScale.toFixed(2)}→${activeHydrationRecipe.tipWidthScale.toFixed(2)}× · ${Math.round(activeHydrationRecipe.populationFraction * 100)}% fibers`;
   document.querySelector("#metric-reel-presentation").textContent =
     `${mannequinStatus.replaceAll("_", " ")} · ${reelShot.replaceAll("_", " ")}`;
   document.querySelector("#metric-root-director").textContent = rootDirectorReceipt.enabled
@@ -1665,7 +1756,7 @@ function updateTelemetry(now) {
       ? "off"
       : `${receipt.section_pose.phase} · s${receipt.section_pose.selected_section} · ${receipt.section_pose.affected_guides} guides · ${receipt.section_pose.lift_meters.toFixed(2)} / ${receipt.section_pose.tangential_sweep_meters.toFixed(2)} m`;
   document.querySelector("#metric-control-tube").textContent = fullGroomHydrationEnabled
-    ? `${fullGroomPresentation.phase.replaceAll("_", " ")} · ${(fullGroomPresentation.hairHydration * 100).toFixed(0)}% hair · ${(fullGroomPresentation.guideOpacity * 100).toFixed(0)}% guides`
+    ? `${fullGroomPresentation.phase.replaceAll("_", " ")} · ${Math.round(fullGroomPresentation.populationFraction * activeHydrationRecipe.populationFraction * 100)}% population · ${(fullGroomPresentation.guideOpacity * 100).toFixed(0)}% guides`
     : sectionControlTubeEnabled
       ? `${sectionPresentation.phase} · ${(sectionPresentation.hydration * 100).toFixed(0)}% hair · ${(sectionPresentation.tubeOpacity * 100).toFixed(0)}% tube`
       : "off";
@@ -1710,17 +1801,23 @@ function updateTelemetry(now) {
       )
     : null;
   const nativeWind =
-    nativeClipPlayback.enabled && nativeClipPlayback.clip
+    nativeClipPlayback.enabled &&
+    nativeClipPlayback.clip &&
+    nativeClipPlayback.presentationPhase === "wind_clip"
       ? nativeClipWindAtTime(nativeClipPlayback.sampleTime)
       : null;
+  document.querySelector("#showcase-material").textContent =
+    `${activeHydrationRecipe.label} · ${activeHydrationRecipe.rootWidthScale.toFixed(2)}→${activeHydrationRecipe.tipWidthScale.toFixed(2)}× shafts · ${Math.round(activeHydrationRecipe.populationFraction * 100)}% population`;
   document.querySelector("#showcase-phase").textContent =
     fullGroomHydrationEnabled && fullGroomPresentation.phase !== "hydrated"
       ? fullGroomPresentation.phase === "mechanical_skeleton"
         ? `mechanical rods · ${physicsSkeletonGuides.length} guides / ${physicsSkeletonGuides.length * solver.segments} links`
-        : `groom hydration · ${fullGroomPresentation.phase.replaceAll("_", " ")}`
+        : fullGroomPresentation.phase === "material_audition"
+          ? `material audition · ${HAIR_HYDRATION_RECIPE_ORDER.indexOf(activeHydrationRecipeId) + 1}/${HAIR_HYDRATION_RECIPE_ORDER.length}`
+          : `groom hydration · ${fullGroomPresentation.phase.replaceAll("_", " ")}`
       : previewWind?.phase === "strong_orbit"
         ? `STRONG breeze · orbit ${Math.round(previewWind.orbitProgress * 100)}%`
-        : nativeClipPlayback.enabled && nativeClipPlayback.elapsed > 12
+        : nativeClipPlayback.enabled && nativeClipPlayback.presentationPhase === "reset_fade"
           ? "two complete Box3D wind orbits · resetting"
           : nativeWind?.phase === "strong_orbit"
             ? `STRONG native breeze · orbit ${Math.round(nativeWind.orbitProgress * 100)}%`
@@ -1749,7 +1846,9 @@ function updateTelemetry(now) {
     ? `${windStrength} · ${windDegrees.toFixed(0)}° · force ${receipt.wind.magnitude.toFixed(2)}`
     : nativeWind
       ? `${nativeWind.speed.toFixed(2)} m/s · ${windDegrees.toFixed(0)}° · native clip`
-      : `wind ${windDegrees.toFixed(0)}° · ${receipt.wind.magnitude.toFixed(2)}`;
+      : nativeClipPlayback.enabled
+        ? "calm material setup · Box3D clip held at t=0"
+        : `wind ${windDegrees.toFixed(0)}° · ${receipt.wind.magnitude.toFixed(2)}`;
   const stretchWindow = receipt.assumption_receipt.measurement_window;
   const stretchQualifier =
     stretchWindow === "full_simulation"
@@ -1826,33 +1925,29 @@ function nativeClipWindAtTime(timeSeconds) {
 function advanceNativeClip(frameDt) {
   if (!nativeClipPlayback.enabled || !nativeClipPlayback.clip) return false;
   const { metadata, quantized } = nativeClipPlayback.clip;
-  const cycleDuration = metadata.duration_s + 2 * NATIVE_CLIP_RESET_FADE_SECONDS;
   nativeClipPlayback.elapsed += frameDt;
-  if (nativeClipPlayback.elapsed >= cycleDuration) {
-    nativeClipPlayback.elapsed %= cycleDuration;
+  const presentation = nativeClipPresentationAtTime(
+    nativeClipPlayback.elapsed,
+    metadata.duration_s,
+    NATIVE_HYDRATION_PRE_ROLL_SECONDS,
+    NATIVE_CLIP_RESET_FADE_SECONDS
+  );
+  if (nativeClipPlayback.elapsed >= presentation.cycleDuration) {
+    nativeClipPlayback.elapsed %= presentation.cycleDuration;
     nativeClipPlayback.restarts += 1;
   }
-  if (nativeClipPlayback.elapsed <= metadata.duration_s) {
-    nativeClipPlayback.sampleTime = nativeClipPlayback.elapsed;
-    nativeClipPlayback.opacity = 1;
-  } else if (nativeClipPlayback.elapsed <= metadata.duration_s + NATIVE_CLIP_RESET_FADE_SECONDS) {
-    nativeClipPlayback.sampleTime = metadata.duration_s;
-    nativeClipPlayback.opacity =
-      1 - (nativeClipPlayback.elapsed - metadata.duration_s) / NATIVE_CLIP_RESET_FADE_SECONDS;
-  } else {
-    nativeClipPlayback.sampleTime = 0;
-    nativeClipPlayback.opacity =
-      (nativeClipPlayback.elapsed - metadata.duration_s - NATIVE_CLIP_RESET_FADE_SECONDS) /
-      NATIVE_CLIP_RESET_FADE_SECONDS;
-  }
+  nativeClipPlayback.sampleTime = presentation.sampleTime;
+  nativeClipPlayback.opacity = presentation.opacity;
+  nativeClipPlayback.presentationPhase = presentation.phase;
   solver.previous.set(solver.positions);
   sampleQuantizedGuideClip(metadata, quantized, nativeClipPlayback.sampleTime, solver.positions);
   solver.time = nativeClipPlayback.sampleTime;
   deterministicReplay.state.step = Math.round(nativeClipPlayback.sampleTime * 60);
   const wind = nativeClipWindAtTime(nativeClipPlayback.sampleTime);
-  solver.wind = wind.speed;
-  solver.windAngle = wind.angle;
-  solver.windDirection = [Math.cos(wind.angle), 0, Math.sin(wind.angle)];
+  const windIsPlaying = presentation.phase === "wind_clip";
+  solver.wind = windIsPlaying ? wind.speed : 0;
+  solver.windAngle = windIsPlaying ? wind.angle : 0;
+  solver.windDirection = [Math.cos(solver.windAngle), 0, Math.sin(solver.windAngle)];
   solver.directionalWind = true;
   return true;
 }
@@ -2051,6 +2146,14 @@ function applyQueryConfiguration() {
   document.querySelector("#groom-display").value = hairRenderMode === "lines" ? "lines" : groomMode;
   hairShadingMode = params.get("hairShade") === "flat" ? "flat" : "fiber_lobes";
   document.querySelector("#hair-surface").value = hairShadingMode;
+  const requestedHydrationRecipe = params.get("hydrationRecipe")?.replaceAll("-", "_");
+  hydrationRecipeId = HAIR_HYDRATION_RECIPE_ORDER.includes(requestedHydrationRecipe)
+    ? requestedHydrationRecipe
+    : "natural_balanced";
+  activeHydrationRecipeId = hydrationRecipeId;
+  hydrationTourEnabled = params.get("hydrationTour") !== "0";
+  document.querySelector("#hydration-recipe").value = hydrationRecipeId;
+  document.querySelector("#hydration-tour").checked = hydrationTourEnabled;
   setMannequinMode(params.get("mannequin") === "realistic" ? "realistic" : "primitive");
   document.querySelector("#mannequin").value = mannequinMode;
   reelShot = ["beauty", "control", "cut"].includes(params.get("reel"))
@@ -2210,6 +2313,13 @@ document.querySelector("#hair-surface").addEventListener("change", (event) => {
     hair.material.uniforms.shadingEnabled.value = hairShadingMode === "fiber_lobes" ? 1 : 0;
   }
 });
+document.querySelector("#hydration-recipe").addEventListener("change", (event) => {
+  hydrationRecipeId = hydrationRecipe(event.currentTarget.value).id;
+  activeHydrationRecipeId = hydrationRecipeId;
+});
+document.querySelector("#hydration-tour").addEventListener("change", (event) => {
+  hydrationTourEnabled = event.currentTarget.checked;
+});
 document.querySelector("#mannequin").addEventListener("change", (event) => {
   setMannequinMode(event.currentTarget.value);
 });
@@ -2304,6 +2414,8 @@ window.hairMaterialReplay = {
 
 function createRenderReceipt() {
   const lockCoverageEnabled = hairRenderMode === "fatline" && Boolean(groomBindings);
+  const selectedHydrationRecipe = hydrationRecipe(hydrationRecipeId);
+  const activeHydrationRecipe = hydrationRecipe(activeHydrationRecipeId);
   const tubePositions =
     sectionControlTube?.geometry.attributes.position.array ?? new Float32Array();
   const hairAttributes = hair?.geometry.attributes;
@@ -2319,6 +2431,8 @@ function createRenderReceipt() {
       metadata: nativeClipPlayback.clip?.metadata ?? null,
       sample_time_s: nativeClipPlayback.sampleTime,
       loop_elapsed_s: nativeClipPlayback.elapsed,
+      presentation_phase: nativeClipPlayback.presentationPhase,
+      hydration_pre_roll_s: NATIVE_HYDRATION_PRE_ROLL_SECONDS,
       loop_opacity: nativeClipPlayback.opacity,
       restarts: nativeClipPlayback.restarts,
       browser_role: "linear_interpolation_plus_display_hydration_only",
@@ -2333,8 +2447,12 @@ function createRenderReceipt() {
       geometry: groomBindings ? "screen_aligned_lock_curve_spans" : "screen_aligned_strand_ribbons",
       primary_lobe: "white_shifted_root_reflection",
       secondary_lobe: "hair_tinted_tip_transmission",
-      longitudinal_roughness: 0.34,
-      multiple_scattering_fill: 0.11,
+      longitudinal_roughness: activeHydrationRecipe.longitudinalRoughness,
+      diffuse_weight: activeHydrationRecipe.diffuseWeight,
+      primary_weight: activeHydrationRecipe.primaryWeight,
+      transmission_weight: activeHydrationRecipe.transmissionWeight,
+      rim_weight: activeHydrationRecipe.rimWeight,
+      multiple_scattering_fill: activeHydrationRecipe.multipleScatteringFill,
       color_variation: "deterministic_fiber_plus_root_tip_v1",
       root_emergence: groomBindings
         ? "distributed_parent_roots_plus_short_styled_coverage_locks"
@@ -2445,9 +2563,23 @@ function createRenderReceipt() {
       enabled: fullGroomHydrationEnabled,
       field_identity: FULL_GROOM_HYDRATION_ID,
       phase: fullGroomPresentation.phase,
+      stage_progress: fullGroomPresentation.stageProgress,
       hair_hydration: fullGroomPresentation.hairHydration,
       guide_opacity: fullGroomPresentation.guideOpacity,
       tube_opacity: fullGroomPresentation.tubeOpacity,
+      population_fraction: fullGroomPresentation.populationFraction,
+      width_scale: fullGroomPresentation.widthScale,
+      shading_mix: fullGroomPresentation.shadingMix,
+      undercoat_hydration: fullGroomPresentation.undercoatHydration,
+      material_recipe_space: {
+        field_identity: HAIR_HYDRATION_RECIPE_ID,
+        selected_recipe: selectedHydrationRecipe,
+        active_recipe: activeHydrationRecipe,
+        audition_enabled: hydrationTourEnabled,
+        audition_order: HAIR_HYDRATION_RECIPE_ORDER,
+        effective_population_fraction:
+          fullGroomPresentation.populationFraction * activeHydrationRecipe.populationFraction,
+      },
       solver_guide_count: solver.guideCount,
       displayed_guide_count: physicsSkeletonGuides.length,
       rod_count: physicsSkeletonGuides.length * solver.segments,

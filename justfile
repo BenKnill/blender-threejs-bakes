@@ -10,7 +10,7 @@ default:
 
 # Lint everything (no changes) — JS + Python
 lint:
-    npx eslint editor physics/labs/contact_shell/demo/main.js physics/labs/hair_material/demo/*.js scripts/build_hair_pages.mjs scripts/export_hair_box3d_clip.mjs scripts/test_hair_pages_build.mjs scripts/test_hair_material_solver.mjs scripts/run_hair_operator_ab.mjs scripts/run_hair_comb_benchmark.mjs scripts/run_hair_comb_cycle.mjs scripts/run_hair_contact_discovery_ab.mjs scripts/run_hair_contact_churn.mjs scripts/run_hair_face_clear_ab.mjs scripts/run_hair_spatial_friction_ab.mjs scripts/run_hair_rod_reference.mjs scripts/run_hair_spatial_step_benchmark.mjs scripts/run_hair_root_field_ab.mjs scripts/run_hair_section_lift_ab.mjs scripts/run_hair_section_pose_ab.mjs
+    npx eslint editor physics/labs/contact_shell/demo/main.js physics/labs/hair_material/demo/*.js scripts/build_hair_pages.mjs scripts/export_hair_box3d_clip.mjs scripts/qa_hair_canary.mjs scripts/test_hair_pages_build.mjs scripts/test_hair_material_solver.mjs scripts/run_hair_operator_ab.mjs scripts/run_hair_comb_benchmark.mjs scripts/run_hair_comb_cycle.mjs scripts/run_hair_contact_discovery_ab.mjs scripts/run_hair_contact_churn.mjs scripts/run_hair_face_clear_ab.mjs scripts/run_hair_spatial_friction_ab.mjs scripts/run_hair_rod_reference.mjs scripts/run_hair_spatial_step_benchmark.mjs scripts/run_hair_root_field_ab.mjs scripts/run_hair_section_lift_ab.mjs scripts/run_hair_section_pose_ab.mjs
     npx prettier --check 'editor/**/*.{js,css,html}' 'physics/labs/contact_shell/demo/**/*.{js,css,html,json}' 'physics/labs/hair_material/demo/**/*.{js,css,html}'
     {{ruff}} check scripts
 

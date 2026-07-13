@@ -120,6 +120,20 @@ label output {
   font-variant-numeric: tabular-nums;
 }
 
+.check-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid rgb(255 255 255 / 9%);
+  border-radius: 9px;
+  background: rgb(255 255 255 / 3%);
+}
+
+.check-control input {
+  accent-color: #e85b83;
+}
+
 select,
 input[type="range"] {
   width: 100%;
