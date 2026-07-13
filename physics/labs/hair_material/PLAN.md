@@ -67,6 +67,15 @@ proof boundaries must remain explicit.
       peaks at 3.4982% stretch; the disabled baseline stays
       `6a0294d4bf085310`. This is a Tonic-like control primitive, not production
       groom or Disney parity.
+- [x] Present the section pose as an explicitly non-physical authoring volume
+      that hydrates into rendered hair. A deterministic five-phase envelope
+      starts with thin cyan proxy fibers and a translucent 10-sided mean-guide
+      tube, restores full fiber color/width, then dissolves the tube before
+      ordinary simulation. At fixed step 90, enabled and hair-only modes share
+      physics digest `1b50f30cdfdff721`; the 256-guide × 15-fiber narrow gate
+      observes 0.10 ms tube-geometry p99. The render receipt marks the tube as
+      `none_renderer_only`, so it is an artist-facing explanation rather than
+      a mechanics claim.
 - [x] Build a small explicit-guide rod/reference fixture before raising guide
       count or enabling spatial friction in the browser by default. The
       settled axial/transverse lanes reproduce exactly, remain under 1.9%

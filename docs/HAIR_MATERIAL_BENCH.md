@@ -252,6 +252,15 @@ same recipe's scalp-normal observation formed a smooth cap over the face; the
 styled field retained a visible part and lateral sweep. These are visual and
 single-run performance observations, not a pixel-identical or portable A/B.
 
+The opt-in `controlTube=1` presentation makes the artist control separate from
+the final material. It renders the selected section's mean guide as a
+semi-transparent cyan tube, begins with thin cyan proxy fibers, hydrates those
+fibers to their full groom color and width, and then dissolves the tube. At
+fixed step 90, tube-on and hair-only modes share physics digest
+`1b50f30cdfdff721`. One 560×720 browser sample observed 0.10 ms tube-geometry
+p99 and 1.20 ms total hair-geometry p99 at 256 guides × 15 fibers. These are
+single-browser render costs; the tube has no solver authority.
+
 ## Claim boundary
 
 This is a material-aware graphics solver, not continuum hair mechanics or a
