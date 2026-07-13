@@ -1,0 +1,77 @@
+{
+  "schema": "hair-box3d-swatch-receipt/1",
+  "configuration": {
+    "guides": 16,
+    "links_per_guide": 8,
+    "dynamic_capsules": 128,
+    "spherical_joints": 128,
+    "simulation_hz": 60,
+    "substeps_per_step": 4,
+    "duration_s": 12,
+    "phase_duration_s": 6
+  },
+  "conditions": {
+    "calm_control": {
+      "trajectory_digest": "036bba371099fc91",
+      "simulation_cpu_ms": 221.057,
+      "realtime_factor": 54.284642,
+      "finite": true,
+      "max_speed_m_s": 0.0448077321,
+      "max_angular_speed_rad_s": 0,
+      "max_joint_gap_m": 0.00132465363,
+      "max_horizontal_tip_displacement_m": 0,
+      "max_active_contacts": 528,
+      "contact_begins": 528,
+      "contact_ends": 0,
+      "strong_orbit": {
+        "wind_speed_m_s": 6,
+        "mean_horizontal_tip_displacement_m": 0,
+        "max_horizontal_tip_displacement_m": 0,
+        "mean_wind_alignment": 0,
+        "azimuth_bins_visited": 0
+      },
+      "moderate_orbit": {
+        "wind_speed_m_s": 3.25,
+        "mean_horizontal_tip_displacement_m": 0,
+        "max_horizontal_tip_displacement_m": 0,
+        "mean_wind_alignment": 0,
+        "azimuth_bins_visited": 0
+      }
+    },
+    "rotating_wind": {
+      "trajectory_digest": "eb3ebea59ffbb5af",
+      "simulation_cpu_ms": 281.263,
+      "realtime_factor": 42.664695,
+      "finite": true,
+      "max_speed_m_s": 4.77802038,
+      "max_angular_speed_rad_s": 15.9806242,
+      "max_joint_gap_m": 0.00239716563,
+      "max_horizontal_tip_displacement_m": 2.04672766,
+      "max_active_contacts": 553,
+      "contact_begins": 3154,
+      "contact_ends": 2729,
+      "strong_orbit": {
+        "wind_speed_m_s": 6,
+        "mean_horizontal_tip_displacement_m": 1.66190552,
+        "max_horizontal_tip_displacement_m": 2.00465512,
+        "mean_wind_alignment": 0.967547245,
+        "azimuth_bins_visited": 23
+      },
+      "moderate_orbit": {
+        "wind_speed_m_s": 3.25,
+        "mean_horizontal_tip_displacement_m": 1.15635083,
+        "max_horizontal_tip_displacement_m": 1.77052653,
+        "mean_wind_alignment": 0.967919143,
+        "azimuth_bins_visited": 24
+      }
+    }
+  },
+  "gates": {
+    "finite_and_bounded": true,
+    "wind_displacement_exceeds_calm": true,
+    "contact_manifolds_observed": true,
+    "strong_orbit_visits_at_least_18_of_24_bins": true,
+    "moderate_orbit_visits_at_least_14_of_24_bins": true
+  },
+  "claim_boundary": "Native reduced-guide experiment; no browser/WASM integration, dense hydration, or custom stiction yet."
+}

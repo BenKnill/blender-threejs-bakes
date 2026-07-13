@@ -46,6 +46,10 @@ chain-lab:
 soft-ribbon:
     bash scripts/build_soft_ribbon.sh
 
+# Reduced hair-guide swatch with capsule links, spherical springs, and rotating drag.
+hair-box3d-swatch:
+    bash scripts/build_hair_box3d_swatch.sh
+
 # Render the soft-ribbon motion as a neon Eevee animation.
 soft-ribbon-video: soft-ribbon
     bash scripts/render_soft_ribbon_animation.sh
