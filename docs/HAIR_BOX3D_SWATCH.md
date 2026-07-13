@@ -1,7 +1,8 @@
 # Box3D spherical-chain hair swatch
 
 Issues: [#171](https://github.com/BenKnill/blender-threejs-bakes/issues/171),
-[#173](https://github.com/BenKnill/blender-threejs-bakes/issues/173)
+[#173](https://github.com/BenKnill/blender-threejs-bakes/issues/173),
+[#175](https://github.com/BenKnill/blender-threejs-bakes/issues/175)
 
 ## Question
 
@@ -13,6 +14,13 @@ This is a bounded mechanics experiment, not a replacement hair solver. It uses
 16 guides with eight dynamic capsule links each. Every link is attached through
 a three-dimensional spherical joint with a target-rotation spring, cone limit,
 and twist limit. A static root body anchors each chain.
+
+The follow-up scalp fixture raises that same operator to accepted 64- and
+256-guide targets. It bakes the browser groom's golden-angle scalp placement,
+face-clear side part, and crown sweep into native rest frames. The spherical
+joint cone is aligned with each capsule's long axis; an earlier perpendicular
+frame let roots fold across the scalp even though their initial pose was
+correct.
 
 ## Wind operator
 
@@ -44,6 +52,8 @@ first accepted run is preserved at
 `docs/receipts/hair_box3d_swatch_v1.json`.
 The contact-memory A/B is preserved at
 `docs/receipts/hair_box3d_stiction_ab_v1.json`.
+The scalable scalp result is preserved at
+`docs/receipts/hair_box3d_scalp_scale_v1.json`.
 
 The same recipe regenerates the tracked aligned two-row diagnostic plate at
 `docs/images/hair_box3d_swatch_preview.svg`. It is a projection of the recorded
@@ -115,13 +125,34 @@ ordering, and non-positive scaled cancellation work. A warm OrbStack replay is
 development evidence only, not a cold final proof receipt or a refinement proof
 for the C implementation.
 
+## Scalp-scale result and browser playback
+
+The accepted 256-guide target contains 2,048 dynamic capsules and 2,048
+spherical joints. Its fixed replay repeats at digest `5aaf6c2db5806b28`.
+The strong and moderate phases visit 22/24 and 24/24 azimuth bins. Persistent
+stiction records 39,314 captures and 31,658 releases while reducing mean
+predicted contact-plane relative speed from 0.07835 m/s to 0.02661 m/s.
+
+Root direction is now a gate rather than an initial-condition claim. Across
+the settled two-orbit window, minimum first-link target alignment is 0.929 and
+minimum outward alignment is 0.231. Maximum settled joint separation is
+11.31 mm. The smaller accepted 64-guide target remains available for faster
+diagnostics and repeats at digest `5baa317af18e23f6`.
+
+The demo assets store 15 Hz quantized guide nodes: 0.60 MiB for 64 guides and
+2.39 MiB for 256. The canonical page plays the 256-guide clip, exposes 64 of
+those guides as 512 uniform rods and 576 uniform joints, then hydrates the
+recorded motion into 5,376 render fibers. Browser code only interpolates and
+renders the recorded nodes; it does not run Box3D or alter the native motion.
+
 ## Claim boundary
 
-This result establishes a fast, deterministic native reduced-guide fixture with
-real capsule inertia, spherical joints, contact, direction-aware drag, and a
-bounded post-step hair-specific stick/slip operator. It does not establish
-browser/WASM cost, thousands-of-body performance, realistic fiber calibration,
-dense render quality, or a refinement connection between the native code and
-HOL Light statements. The nearly unchanged overall tip path is useful but also
-means the current plate is a mechanics diagnostic, not yet a visually dramatic
-collective-hair result.
+This result establishes deterministic 64- and 256-guide native scalp fixtures
+with real capsule inertia, spherical joints, contact, direction-aware drag,
+directed roots, and a bounded post-step hair-specific stick/slip operator. The
+256-guide target measures thousands of bodies, but not live browser/WASM cost:
+the public demo is recorded playback. It does not establish realistic fiber
+calibration or a refinement connection between the native code and HOL Light
+statements. The mannequin is deliberately excluded from native collision, so
+head/face contact and the remaining ribbon-like hydrated surface are the next
+visible mechanics/rendering boundaries.

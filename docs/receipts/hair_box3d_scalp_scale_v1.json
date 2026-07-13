@@ -1,0 +1,66 @@
+{
+  "schema": "hair-box3d-scalp-scale/1",
+  "issue": 175,
+  "fixture": "styled_scalp_groom",
+  "wind_program": {
+    "strong": { "speed_m_s": 6.0, "duration_s": 6, "orbits": 1 },
+    "moderate": { "speed_m_s": 3.25, "duration_s": 6, "orbits": 1 }
+  },
+  "root_mechanics": {
+    "field_identity": "face_clear_side_part_crown_v2",
+    "spring_hertz": 6.0,
+    "cone_angle_degrees": 12.0,
+    "cone_axis": "capsule_long_axis",
+    "head_collision": false
+  },
+  "accepted_targets": {
+    "64_guides": {
+      "dynamic_capsules": 512,
+      "spherical_joints": 512,
+      "substeps_per_step": 12,
+      "baseline_digest": "f39da2ed951744cd",
+      "stiction_digest": "5baa317af18e23f6",
+      "deterministic_replay": true,
+      "maximum_settled_joint_gap_m": 0.00859552622,
+      "minimum_settled_root_target_dot": 0.940808713,
+      "minimum_settled_root_outward_dot": 0.255032241,
+      "strong_azimuth_bins_visited": 23,
+      "moderate_azimuth_bins_visited": 24,
+      "mean_relative_speed_before_m_s": 0.1467489,
+      "mean_predicted_speed_after_m_s": 0.0536395057,
+      "captures": 4987,
+      "releases": 4236,
+      "stiction_cpu_overhead_ratio_observed": 1.01657522
+    },
+    "256_guides": {
+      "dynamic_capsules": 2048,
+      "spherical_joints": 2048,
+      "substeps_per_step": 18,
+      "baseline_digest": "714d6369e014bb36",
+      "stiction_digest": "5aaf6c2db5806b28",
+      "deterministic_replay": true,
+      "maximum_settled_joint_gap_m": 0.0113093229,
+      "minimum_settled_root_target_dot": 0.929245055,
+      "minimum_settled_root_outward_dot": 0.231088907,
+      "strong_azimuth_bins_visited": 22,
+      "moderate_azimuth_bins_visited": 24,
+      "mean_relative_speed_before_m_s": 0.0783468238,
+      "mean_predicted_speed_after_m_s": 0.0266063262,
+      "captures": 39314,
+      "releases": 31658,
+      "stiction_cpu_overhead_ratio_observed_with_csv_capture": 1.20088394
+    }
+  },
+  "canonical_playback": {
+    "native_guides": 256,
+    "recorded_sample_hz": 15,
+    "binary_bytes": 2502144,
+    "binary_sha256": "bee02827d8533090f123b3a9fca681aaa5c5ab84c5db12e65e7d4fa9cc0aa68d",
+    "hydrated_fibers": 5376,
+    "diagnostic_guides_displayed": 64,
+    "diagnostic_rods": 512,
+    "diagnostic_joints": 576,
+    "browser_role": "linear_interpolation_and_display_hydration_only"
+  },
+  "claim_boundary": "The accepted clips use native Box3D capsule chains and the persistent anisotropic stiction operator. Browser playback does not rerun Box3D. The mannequin is a visual plate, not a collision proxy, so head and face crossings remain possible."
+}

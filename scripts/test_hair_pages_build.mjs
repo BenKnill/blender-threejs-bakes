@@ -20,6 +20,10 @@ for (const relativePath of [
   "solver.js",
   "styles.css",
   "assets/realistic-head-animation.glb",
+  "assets/box3d_scalp_groom_64.meta.json",
+  "assets/box3d_scalp_groom_64.positions.i16",
+  "assets/box3d_scalp_groom_256.meta.json",
+  "assets/box3d_scalp_groom_256.positions.i16",
   "vendor/three.module.js",
   "vendor/controls/OrbitControls.js",
   "vendor/loaders/GLTFLoader.js",
@@ -28,6 +32,18 @@ for (const relativePath of [
 ]) {
   await access(path.join(output, relativePath));
 }
+
+const nativeClipMetadata = JSON.parse(
+  await readFile(path.join(output, "assets/box3d_scalp_groom_256.meta.json"), "utf8")
+);
+const nativeClipBinary = await stat(
+  path.join(output, "assets/box3d_scalp_groom_256.positions.i16")
+);
+assert.equal(nativeClipMetadata.guide_count, 256);
+assert.equal(nativeClipMetadata.segments, 8);
+assert.equal(nativeClipMetadata.trajectory_digest, "5aaf6c2db5806b28");
+assert.equal(nativeClipMetadata.head_collision, false);
+assert.equal(nativeClipMetadata.binary_bytes, nativeClipBinary.size);
 
 const moduleSpecifiers = (source) => {
   const specifiers = [];
@@ -47,7 +63,9 @@ const resolveModule = (importer, specifier) => {
   if (cleanSpecifier.startsWith(".")) {
     return path.resolve(path.dirname(importer), cleanSpecifier);
   }
-  throw new Error(`unsupported bare module import ${specifier} in ${path.relative(output, importer)}`);
+  throw new Error(
+    `unsupported bare module import ${specifier} in ${path.relative(output, importer)}`
+  );
 };
 
 const pendingModules = [path.join(output, "main.js")];
@@ -71,8 +89,11 @@ assert.ok(visitedModules.has(path.join(output, "vendor/utils/BufferGeometryUtils
 const index = await readFile(path.join(output, "index.html"), "utf8");
 assert.ok(index.includes('"three": "./vendor/three.module.js"'));
 assert.ok(index.includes('"three/addons/": "./vendor/"'));
-assert.ok(index.includes("canonical-visible-two-orbit-wind-demo"));
-assert.ok(index.includes("windProgram=strong-then-moderate-orbits"));
+assert.ok(index.includes("native-box3d-scalp-groom-two-orbit-playback"));
+assert.ok(index.includes("physicsClip=box3d-scalp-256"));
+assert.ok(index.includes("guides=256"));
+assert.ok(index.includes("fibers=21"));
+assert.ok(!index.includes("windProgram=strong-then-moderate-orbits"));
 assert.ok(!index.includes("strongWind="));
 assert.ok(!index.includes("moderateWind="));
 assert.ok(!index.includes("../../../../editor/vendor"));
@@ -87,5 +108,16 @@ assert.equal(receipt.commit, commit);
 assert.equal(receipt.canonical_url, "https://hair-material-bench.pages.dev/");
 assert.equal(receipt.source_path, "physics/labs/hair_material/demo");
 assert.ok((await stat(path.join(output, "assets/realistic-head-animation.glb"))).size > 100_000);
+const clipMetadata = JSON.parse(
+  await readFile(path.join(output, "assets/box3d_scalp_groom_64.meta.json"), "utf8")
+);
+assert.equal(clipMetadata.schema, "hair-box3d-guide-clip/1");
+assert.equal(clipMetadata.guide_count, 64);
+assert.equal(clipMetadata.segments, 8);
+assert.equal(clipMetadata.visible_fiber_target, 5376);
+assert.equal(
+  (await stat(path.join(output, "assets/box3d_scalp_groom_64.positions.i16"))).size,
+  clipMetadata.binary_bytes
+);
 
 console.log("hair Pages bundle: ok");

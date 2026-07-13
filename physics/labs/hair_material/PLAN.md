@@ -133,6 +133,12 @@ proof boundaries must remain explicit.
       the mannequin is ghosted; hydration begins only afterward. At fixed step
       60, enabled and hair-only modes share physics digest `b7a5a62747c250db`;
       one narrow sample measures 0.038 ms mean / 0.20 ms p99 skeleton update.
+- [x] Scale the diagnostic hierarchy with the native Box3D scalp fixture. The
+      `uniform_64guide_rod_joint_hydration_v4` playback exposes all 64 simulated
+      guides as 512 uniform rods and 576 uniform joints before hydrating them
+      into 5,376 section-interpolated fibers. The browser only interpolates the
+      recorded 15 Hz node samples and renders them; native Box3D remains the
+      physics authority.
 - [x] Build a small explicit-guide rod/reference fixture before raising guide
       count or enabling spatial friction in the browser by default. The
       settled axial/transverse lanes reproduce exactly, remain under 1.9%
@@ -256,6 +262,14 @@ strand rendering; do not add another many-hair operator first.
       narrow HOL Light contracts replay warm, explicitly as development rather
       than cold final evidence. Browser integration and a stronger visible
       collective-motion calibration remain open.
+- [x] Scale the native operator from the 16-guide swatch to accepted styled
+      scalp fixtures at 64 and 256 guides. The 256-guide target contains 2,048
+      dynamic capsules and 2,048 spherical joints; it repeats at digest
+      `5aaf6c2db5806b28`, retains minimum settled root target/outward alignment
+      of 0.929/0.231, stays under 11.31 mm settled joint separation, and visits
+      22/24 then 24/24 wind azimuth bins. The canonical browser recipe plays
+      its quantized 15 Hz nodes, exposes a uniform 64-guide rod subset, and
+      hydrates to 5,376 fibers without claiming live Box3D/WASM execution.
 - [ ] Better scalp/strand contact and a clearer calibration path.
 - [x] Define three receipt-distinct reel shots before packaging video variants.
 - [ ] Package short 16:9 and vertical reels from those named moving shots.

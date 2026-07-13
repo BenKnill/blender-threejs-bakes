@@ -14,10 +14,38 @@
 #include <sys/stat.h>
 #include <time.h>
 
+#ifndef HAIR_GUIDE_SIDE
+#define HAIR_GUIDE_SIDE 4
+#endif
+
+#ifndef HAIR_SCALP_GROOM
+#define HAIR_SCALP_GROOM 0
+#endif
+
+#ifndef HAIR_HEAD_PROXY
+#define HAIR_HEAD_PROXY HAIR_SCALP_GROOM
+#endif
+
+#ifndef HAIR_OUTPUT_BASENAME
+#define HAIR_OUTPUT_BASENAME "hair_box3d_swatch"
+#endif
+
+#ifndef HAIR_MOTION_PATH
+#define HAIR_MOTION_PATH "outputs/hair_box3d_swatch_motion.csv"
+#endif
+
+#ifndef HAIR_RECEIPT_PATH
+#define HAIR_RECEIPT_PATH "outputs/receipt.json"
+#endif
+
+#ifndef HAIR_EXPECTED_BASELINE_DIGEST
+#define HAIR_EXPECTED_BASELINE_DIGEST UINT64_C(0xeb3ebea59ffbb5af)
+#endif
+
 enum
 {
-    guide_columns = 4,
-    guide_rows = 4,
+    guide_columns = HAIR_GUIDE_SIDE,
+    guide_rows = HAIR_GUIDE_SIDE,
     guide_count = guide_columns * guide_rows,
     links_per_guide = 8,
     body_count = guide_count * links_per_guide,
@@ -27,17 +55,31 @@ enum
     phase_seconds = 6,
     duration_seconds = phase_seconds * 2,
     step_count = simulation_hz * duration_seconds,
-    substeps_per_step = 4,
+    substeps_per_step = HAIR_SCALP_GROOM
+                            ? (HAIR_GUIDE_SIDE >= 16 ? 18 : 12)
+                            : 4,
     azimuth_bins = 24,
-    max_contact_candidates = 2048,
-    stiction_memory_capacity = 1024,
+    max_contact_candidates = guide_count * 128,
+    stiction_memory_capacity = guide_count * 64,
     stiction_memory_ttl_steps = 3
 };
 
+_Static_assert((stiction_memory_capacity & (stiction_memory_capacity - 1)) == 0,
+               "stiction memory capacity must be a power of two");
+
 static const float pi_f = 3.14159265358979323846f;
 static const float link_half_length = 0.14f;
-static const float link_radius = 0.028f;
+static const float link_radius = HAIR_SCALP_GROOM ? 0.018f : 0.028f;
 static const float guide_spacing = 0.068f;
+
+typedef struct ScalpFrame
+{
+    b3Pos root;
+    b3Vec3 normal;
+    b3Vec3 tangent;
+    b3Vec3 bitangent;
+    float phi;
+} ScalpFrame;
 
 typedef struct JointEndpoints
 {
@@ -121,6 +163,12 @@ typedef struct Result
     float max_speed;
     float max_angular_speed;
     float max_joint_gap;
+    float max_settled_joint_gap;
+    float min_settled_root_target_dot;
+    float min_settled_root_outward_dot;
+    double settled_root_target_dot_sum;
+    double settled_root_outward_dot_sum;
+    int settled_root_alignment_count;
     float max_tip_displacement;
     int max_active_contacts;
     int contact_begins;
@@ -176,6 +224,168 @@ static b3Vec3 normalize_vec(b3Vec3 value)
 static b3Vec3 subtract_pos(b3Pos a, b3Pos b)
 {
     return (b3Vec3){a.x - b.x, a.y - b.y, a.z - b.z};
+}
+
+static float clamp_float(float value, float lower, float upper)
+{
+    return fmaxf(lower, fminf(upper, value));
+}
+
+static float smooth_step_range(float lower, float upper, float value)
+{
+    float t = clamp_float((value - lower) / fmaxf(1.0e-8f, upper - lower),
+                          0.0f, 1.0f);
+    return t * t * (3.0f - 2.0f * t);
+}
+
+static ScalpFrame scalp_root_frame(int guide)
+{
+    const float golden_angle = pi_f * (3.0f - 2.2360679774997896964f);
+    float fraction = ((float)guide + 0.5f) / (float)guide_count;
+    float phi = guide * golden_angle;
+    float front = fmaxf(0.0f, sinf(phi));
+    float temple = fabsf(cosf(phi));
+    float central_forehead = front * (1.0f - 0.58f * temple);
+    float theta_limit = 1.24f - 0.22f * central_forehead;
+    float theta = 0.08f + (theta_limit - 0.08f) * sqrtf(fraction);
+    float sin_theta = sinf(theta);
+    b3Vec3 normal = {sin_theta * cosf(phi), cosf(theta),
+                     sin_theta * sinf(phi)};
+    b3Pos root = {(0.9f + 0.045f) * normal.x,
+                  1.35f + (1.12f + 0.045f) * normal.y,
+                  (0.82f + 0.045f) * normal.z};
+    float tangent_length = hypotf(normal.z, normal.x);
+    b3Vec3 tangent = tangent_length > 1.0e-8f
+                         ? (b3Vec3){normal.z / tangent_length, 0.0f,
+                                    -normal.x / tangent_length}
+                         : (b3Vec3){1.0f, 0.0f, 0.0f};
+    b3Vec3 bitangent = {normal.y * tangent.z,
+                        normal.z * tangent.x - normal.x * tangent.z,
+                        -normal.y * tangent.x};
+    return (ScalpFrame){.root = root,
+                        .normal = normal,
+                        .tangent = tangent,
+                        .bitangent = bitangent,
+                        .phi = phi};
+}
+
+static b3Vec3 styled_root_direction(const ScalpFrame* frame)
+{
+    static const b3Vec3 section_sweep[8] = {
+        {0.18f, -0.16f, -0.30f}, {0.22f, -0.08f, -0.28f},
+        {0.20f, 0.08f, -0.24f},  {0.14f, 0.16f, -0.32f},
+        {-0.08f, 0.08f, -0.58f}, {-0.16f, -0.08f, -0.72f},
+        {-0.08f, -0.18f, -0.62f}, {0.10f, -0.20f, -0.42f},
+    };
+    float turn = (atan2f(frame->root.z, frame->root.x) + pi_f) /
+                 (2.0f * pi_f);
+    int section = (int)floorf(turn * 8.0f);
+    section = section < 0 ? 0 : (section > 7 ? 7 : section);
+    b3Vec3 sweep = section_sweep[section];
+    float crown = smooth_step_range(0.48f, 0.94f, frame->normal.y);
+    float front = smooth_step_range(0.02f, 0.72f, frame->normal.z);
+    float center_front =
+        front * (1.0f - smooth_step_range(0.18f, 0.82f,
+                                         fabsf(frame->normal.x)));
+    float part_separation =
+        1.0f - smooth_step_range(0.025f, 0.24f,
+                                 fabsf(frame->root.x + 0.2f));
+    float part_side = frame->root.x < -0.2f ? -1.0f : 1.0f;
+    float crown_side_reduction = 1.0f - crown * (1.0f - front) * 0.82f;
+    b3Vec3 authored = {
+        sweep.x * crown_side_reduction +
+            part_side * (part_separation * 0.18f + center_front * 0.62f +
+                         (1.0f - crown) * 0.14f),
+        sweep.y + crown * 0.50f + center_front * 0.14f,
+        sweep.z - center_front * 0.82f - front * 0.22f - crown * 0.52f,
+    };
+    float authored_normal_dot = dot_vec(authored, frame->normal);
+    b3Vec3 tangent = subtract_vec(
+        authored, scale_vec(frame->normal, authored_normal_dot));
+    if (length_vec(tangent) < 1.0e-8f)
+    {
+        tangent = (b3Vec3){frame->normal.z, 0.0f, -frame->normal.x};
+    }
+    tangent = normalize_vec(tangent);
+    float outward = 0.52f + crown * 0.14f + front * 0.06f;
+    float tangential = sqrtf(fmaxf(0.0f, 1.0f - outward * outward));
+    return normalize_vec(add_vec(scale_vec(frame->normal, outward),
+                                 scale_vec(tangent, tangential)));
+}
+
+static b3Pos styled_rest_target(const ScalpFrame* frame, float fraction)
+{
+    const float curl_radius = 0.13f;
+    const float curl_turns = 1.35f;
+    const float material_length = 2.55f;
+    float angle = fraction * curl_turns * 2.0f * pi_f + frame->phi;
+    float curl_u = curl_radius * (cosf(angle) - cosf(frame->phi));
+    float curl_v = curl_radius * (sinf(angle) - sinf(frame->phi));
+    float lift =
+        0.16f * sinf(fminf(1.0f, fraction * 3.0f) * pi_f * 0.5f);
+    float front = fmaxf(0.0f, frame->normal.z);
+    float center = 1.0f - fminf(1.0f, fabsf(frame->normal.x) / 0.82f);
+    float face_clear = front * center;
+    float part_side = frame->root.x < -0.2f ? -1.0f : 1.0f;
+    float face_envelope = smooth_step_range(0.055f, 0.435f, fraction);
+    float return_envelope =
+        1.0f - 0.34f * smooth_step_range(0.62f, 1.0f, fraction);
+    float lateral_clear =
+        part_side * face_clear * 0.44f * face_envelope * return_envelope;
+    float rear_clear =
+        -face_clear * 0.28f * face_envelope * return_envelope;
+    float crown = smooth_step_range(0.68f, 0.96f, frame->normal.y);
+    float crown_flow = -crown * 0.24f * face_envelope * return_envelope;
+    float crown_lift =
+        crown * 0.11f * sinf(fminf(1.0f, fraction * 1.8f) * pi_f);
+    return (b3Pos){
+        frame->root.x + frame->normal.x * lift + frame->tangent.x * curl_u +
+            frame->bitangent.x * curl_v + lateral_clear,
+        frame->root.y + frame->normal.y * lift - material_length * fraction +
+            frame->tangent.y * curl_u + frame->bitangent.y * curl_v +
+            crown_lift,
+        frame->root.z + frame->normal.z * lift + frame->tangent.z * curl_u +
+            frame->bitangent.z * curl_v + rear_clear + crown_flow,
+    };
+}
+
+static void build_guide_points(int guide, b3Pos points[links_per_guide + 1])
+{
+    if (!HAIR_SCALP_GROOM)
+    {
+        int row = guide / guide_columns;
+        int column = guide % guide_columns;
+        float root_x =
+            guide_spacing * ((float)column - 0.5f * (guide_columns - 1));
+        float root_z = guide_spacing * ((float)row - 0.5f * (guide_rows - 1));
+        float root_y = 2.55f + 0.008f * (float)((guide * 5) % 3);
+        points[0] = (b3Pos){root_x, root_y, root_z};
+        for (int link = 0; link < links_per_guide; ++link)
+        {
+            points[link + 1] =
+                (b3Pos){root_x, root_y - 2.0f * link_half_length * (link + 1),
+                        root_z};
+        }
+        return;
+    }
+
+    ScalpFrame frame = scalp_root_frame(guide);
+    b3Vec3 authored = styled_root_direction(&frame);
+    points[0] = frame.root;
+    for (int link = 0; link < links_per_guide; ++link)
+    {
+        float fraction = (float)(link + 1) / links_per_guide;
+        b3Pos target = styled_rest_target(&frame, fraction);
+        b3Vec3 direction = normalize_vec(subtract_pos(target, points[link]));
+        if (link < 2)
+        {
+            float bias = link == 0 ? 0.92f : 0.66f;
+            direction = normalize_vec(add_vec(scale_vec(authored, bias),
+                                              scale_vec(direction, 1.0f - bias)));
+        }
+        points[link + 1] =
+            b3OffsetPos(points[link], scale_vec(direction, 2.0f * link_half_length));
+    }
 }
 
 static b3Vec3 point_velocity_response(b3BodyId body_a, b3BodyId body_b,
@@ -744,80 +954,132 @@ static Result run_simulation(const char* id, bool wind_enabled,
 
     b3Capsule capsule = {{0.0f, -link_half_length, 0.0f},
                          {0.0f, link_half_length, 0.0f}, link_radius};
+    b3Quat hair_axis_frame = b3ComputeQuatBetweenUnitVectors(
+        (b3Vec3){0.0f, 0.0f, 1.0f}, (b3Vec3){0.0f, 1.0f, 0.0f});
+
+    if (HAIR_HEAD_PROXY)
+    {
+        b3BodyDef head_body_def = b3DefaultBodyDef();
+        head_body_def.position = (b3Pos){0.0f, 1.35f, 0.0f};
+        b3BodyId head_body = b3CreateBody(world, &head_body_def);
+        b3ShapeDef head_shape_def = b3DefaultShapeDef();
+        head_shape_def.baseMaterial.friction = 0.42f;
+        head_shape_def.filter.categoryBits = UINT64_C(0x4);
+        head_shape_def.filter.maskBits = UINT64_C(0x2);
+        b3Capsule head_capsule = {{0.0f, -0.40f, 0.0f},
+                                  {0.0f, 0.40f, 0.0f}, 0.58f};
+        b3CreateCapsuleShape(head_body, &head_shape_def, &head_capsule);
+    }
 
     int endpoint_count = 0;
-    for (int row = 0; row < guide_rows; ++row)
+    for (int guide = 0; guide < guide_count; ++guide)
     {
-        for (int column = 0; column < guide_columns; ++column)
+        b3Pos points[links_per_guide + 1];
+        build_guide_points(guide, points);
+        b3Quat first_rotation = b3Quat_identity;
+        if (HAIR_SCALP_GROOM)
         {
-            int guide = row * guide_columns + column;
-            float root_x = guide_spacing * ((float)column - 0.5f * (guide_columns - 1));
-            float root_z = guide_spacing * ((float)row - 0.5f * (guide_rows - 1));
-            float root_y = 2.55f + 0.008f * (float)((guide * 5) % 3);
+            b3Vec3 first_upstream =
+                normalize_vec(subtract_pos(points[0], points[1]));
+            first_rotation = b3ComputeQuatBetweenUnitVectors(
+                (b3Vec3){0.0f, 1.0f, 0.0f}, first_upstream);
+        }
 
-            b3BodyDef root_def = b3DefaultBodyDef();
-            root_def.position = (b3Pos){root_x, root_y, root_z};
-            roots[guide] = b3CreateBody(world, &root_def);
-            rest_tips[guide] =
-                (b3Pos){root_x, root_y - 2.0f * link_half_length * links_per_guide, root_z};
+        b3BodyDef root_def = b3DefaultBodyDef();
+        root_def.position = points[0];
+        root_def.rotation = first_rotation;
+        roots[guide] = b3CreateBody(world, &root_def);
+        rest_tips[guide] = points[links_per_guide];
 
-            b3BodyId parent = roots[guide];
-            for (int link = 0; link < links_per_guide; ++link)
+        b3BodyId parent = roots[guide];
+        b3Quat parent_rotation = first_rotation;
+        for (int link = 0; link < links_per_guide; ++link)
+        {
+            int index = body_index(guide, link);
+            tags[index] = (BodyTag){.guide = guide, .link = link};
+            b3Quat body_rotation = b3Quat_identity;
+            if (HAIR_SCALP_GROOM)
             {
-                int index = body_index(guide, link);
-                tags[index] = (BodyTag){.guide = guide, .link = link};
-                b3BodyDef body_def = b3DefaultBodyDef();
-                body_def.type = b3_dynamicBody;
-                body_def.position = (b3Pos){root_x,
-                                            root_y - link_half_length -
-                                                2.0f * link_half_length * link,
-                                            root_z};
-                body_def.linearDamping = 0.035f;
-                body_def.angularDamping = 0.08f;
-                body_def.enableSleep = false;
-                bodies[index] = b3CreateBody(world, &body_def);
-
-                b3ShapeDef shape_def = b3DefaultShapeDef();
-                shape_def.userData = tags + index;
-                shape_def.density = 25.0f;
-                shape_def.baseMaterial.friction = 0.3f;
-                shape_def.baseMaterial.restitution = 0.0f;
-                shape_def.enableContactEvents = true;
-                shape_def.enableHitEvents = true;
-                shape_def.filter.categoryBits = UINT64_C(0x2);
-                shape_def.filter.maskBits = UINT64_C(0x2);
-                shape_def.filter.groupIndex = -(guide + 1);
-                shapes[index] =
-                    b3CreateCapsuleShape(bodies[index], &shape_def, &capsule);
-
-                b3SphericalJointDef joint_def = b3DefaultSphericalJointDef();
-                joint_def.base.bodyIdA = parent;
-                joint_def.base.bodyIdB = bodies[index];
-                joint_def.base.collideConnected = false;
-                joint_def.base.localFrameA =
-                    link == 0
-                        ? (b3Transform){b3Vec3_zero, b3Quat_identity}
-                        : (b3Transform){{0.0f, -link_half_length, 0.0f}, b3Quat_identity};
-                joint_def.base.localFrameB =
-                    (b3Transform){{0.0f, link_half_length, 0.0f}, b3Quat_identity};
-                joint_def.enableSpring = true;
-                joint_def.hertz = link == 0 ? 2.4f : 1.35f;
-                joint_def.dampingRatio = link == 0 ? 0.48f : 0.32f;
-                joint_def.targetRotation = b3Quat_identity;
-                joint_def.enableConeLimit = true;
-                joint_def.coneAngle = 75.0f * pi_f / 180.0f;
-                joint_def.enableTwistLimit = true;
-                joint_def.lowerTwistAngle = -35.0f * pi_f / 180.0f;
-                joint_def.upperTwistAngle = 35.0f * pi_f / 180.0f;
-                b3CreateSphericalJoint(world, &joint_def);
-
-                endpoints[endpoint_count++] =
-                    (JointEndpoints){.parent = parent,
-                                     .child = bodies[index],
-                                     .local_a = joint_def.base.localFrameA.p,
-                                     .local_b = joint_def.base.localFrameB.p};
-                parent = bodies[index];
+                b3Vec3 upstream = normalize_vec(
+                    subtract_pos(points[link], points[link + 1]));
+                body_rotation = b3ComputeQuatBetweenUnitVectors(
+                    (b3Vec3){0.0f, 1.0f, 0.0f}, upstream);
             }
+            b3BodyDef body_def = b3DefaultBodyDef();
+            body_def.type = b3_dynamicBody;
+            body_def.position =
+                HAIR_SCALP_GROOM
+                    ? (b3Pos){0.5f * (points[link].x + points[link + 1].x),
+                              0.5f * (points[link].y + points[link + 1].y),
+                              0.5f * (points[link].z + points[link + 1].z)}
+                    : (b3Pos){points[0].x,
+                              points[0].y - link_half_length -
+                                  2.0f * link_half_length * link,
+                              points[0].z};
+            body_def.rotation = body_rotation;
+            body_def.linearDamping = 0.035f;
+            body_def.angularDamping = 0.08f;
+            body_def.enableSleep = false;
+            bodies[index] = b3CreateBody(world, &body_def);
+
+            b3ShapeDef shape_def = b3DefaultShapeDef();
+            shape_def.userData = tags + index;
+            shape_def.density = HAIR_SCALP_GROOM ? 60.0f : 25.0f;
+            shape_def.baseMaterial.friction = 0.3f;
+            shape_def.baseMaterial.restitution = 0.0f;
+            shape_def.enableContactEvents = true;
+            shape_def.enableHitEvents = true;
+            shape_def.filter.categoryBits = UINT64_C(0x2);
+            shape_def.filter.maskBits =
+                HAIR_SCALP_GROOM ? UINT64_C(0x6) : UINT64_C(0x2);
+            shape_def.filter.groupIndex = -(guide + 1);
+            shapes[index] =
+                b3CreateCapsuleShape(bodies[index], &shape_def, &capsule);
+
+            b3SphericalJointDef joint_def = b3DefaultSphericalJointDef();
+            joint_def.base.bodyIdA = parent;
+            joint_def.base.bodyIdB = bodies[index];
+            joint_def.base.collideConnected = false;
+            b3Quat relative_rest_rotation =
+                link == 0 ? b3Quat_identity
+                          : b3InvMulQuat(parent_rotation, body_rotation);
+            joint_def.base.localFrameA = (b3Transform){
+                link == 0 ? b3Vec3_zero
+                          : (b3Vec3){0.0f, -link_half_length, 0.0f},
+                HAIR_SCALP_GROOM
+                    ? b3MulQuat(relative_rest_rotation, hair_axis_frame)
+                    : b3Quat_identity};
+            joint_def.base.localFrameB = (b3Transform){
+                {0.0f, link_half_length, 0.0f},
+                HAIR_SCALP_GROOM ? hair_axis_frame : b3Quat_identity};
+            joint_def.enableSpring = true;
+            joint_def.hertz =
+                HAIR_SCALP_GROOM
+                    ? (link == 0 ? 6.0f : (link == 1 ? 2.4f : 1.35f))
+                    : (link == 0 ? 2.4f : 1.35f);
+            joint_def.dampingRatio =
+                HAIR_SCALP_GROOM
+                    ? (link == 0 ? 0.80f : (link == 1 ? 0.50f : 0.32f))
+                    : (link == 0 ? 0.48f : 0.32f);
+            joint_def.targetRotation = b3Quat_identity;
+            joint_def.enableConeLimit = true;
+            joint_def.coneAngle =
+                (HAIR_SCALP_GROOM
+                     ? (link == 0 ? 12.0f : (link == 1 ? 32.0f : 75.0f))
+                     : 75.0f) *
+                pi_f / 180.0f;
+            joint_def.enableTwistLimit = true;
+            joint_def.lowerTwistAngle = -35.0f * pi_f / 180.0f;
+            joint_def.upperTwistAngle = 35.0f * pi_f / 180.0f;
+            b3CreateSphericalJoint(world, &joint_def);
+
+            endpoints[endpoint_count++] =
+                (JointEndpoints){.parent = parent,
+                                 .child = bodies[index],
+                                 .local_a = joint_def.base.localFrameA.p,
+                                 .local_b = joint_def.base.localFrameB.p};
+            parent = bodies[index];
+            parent_rotation = body_rotation;
         }
     }
 
@@ -834,6 +1096,12 @@ static Result run_simulation(const char* id, bool wind_enabled,
                      .max_speed = 0.0f,
                      .max_angular_speed = 0.0f,
                      .max_joint_gap = 0.0f,
+                     .max_settled_joint_gap = 0.0f,
+                     .min_settled_root_target_dot = 1.0f,
+                     .min_settled_root_outward_dot = 1.0f,
+                     .settled_root_target_dot_sum = 0.0,
+                     .settled_root_outward_dot_sum = 0.0,
+                     .settled_root_alignment_count = 0,
                      .max_tip_displacement = 0.0f,
                      .max_active_contacts = 0,
                      .contact_begins = 0,
@@ -845,6 +1113,16 @@ static Result run_simulation(const char* id, bool wind_enabled,
 
     int sample_stride = simulation_hz / sample_hz;
     int frame = 0;
+    ContactCandidate* candidates =
+        stiction_enabled
+            ? malloc((size_t)max_contact_candidates * sizeof(ContactCandidate))
+            : NULL;
+    if (stiction_enabled && candidates == NULL)
+    {
+        result.finite = false;
+        b3DestroyWorld(world);
+        return result;
+    }
     clock_t started = clock();
     for (int step = 0; step <= step_count; ++step)
     {
@@ -878,6 +1156,29 @@ static Result run_simulation(const char* id, bool wind_enabled,
                 sqrtf(spread_squared_sum / (float)guide_count);
             record_phase_sample(time_s < phase_seconds ? &result.strong : &result.moderate,
                                 mean_tip_offset, horizontal_spread, wind);
+
+            if (HAIR_SCALP_GROOM && step >= 2 * simulation_hz)
+            {
+                for (int guide = 0; guide < guide_count; ++guide)
+                {
+                    b3Quat rotation =
+                        b3Body_GetRotation(bodies[body_index(guide, 0)]);
+                    b3Vec3 downstream = scale_vec(
+                        b3RotateVector(rotation, (b3Vec3){0.0f, 1.0f, 0.0f}),
+                        -1.0f);
+                    ScalpFrame frame = scalp_root_frame(guide);
+                    float target_dot =
+                        dot_vec(downstream, styled_root_direction(&frame));
+                    float outward_dot = dot_vec(downstream, frame.normal);
+                    result.min_settled_root_target_dot =
+                        fminf(result.min_settled_root_target_dot, target_dot);
+                    result.min_settled_root_outward_dot =
+                        fminf(result.min_settled_root_outward_dot, outward_dot);
+                    result.settled_root_target_dot_sum += target_dot;
+                    result.settled_root_outward_dot_sum += outward_dot;
+                    result.settled_root_alignment_count += 1;
+                }
+            }
 
             for (int guide = 0; guide < guide_count; ++guide)
             {
@@ -917,7 +1218,13 @@ static Result run_simulation(const char* id, bool wind_enabled,
         {
             b3Pos a = b3Body_GetWorldPoint(endpoints[joint].parent, endpoints[joint].local_a);
             b3Pos b = b3Body_GetWorldPoint(endpoints[joint].child, endpoints[joint].local_b);
-            result.max_joint_gap = fmaxf(result.max_joint_gap, length_vec(subtract_pos(a, b)));
+            float joint_gap = length_vec(subtract_pos(a, b));
+            result.max_joint_gap = fmaxf(result.max_joint_gap, joint_gap);
+            if (step >= 2 * simulation_hz)
+            {
+                result.max_settled_joint_gap =
+                    fmaxf(result.max_settled_joint_gap, joint_gap);
+            }
         }
 
         int contact_count_sum = 0;
@@ -958,7 +1265,6 @@ static Result run_simulation(const char* id, bool wind_enabled,
         result.contact_ends += events.endCount;
         if (stiction_enabled)
         {
-            ContactCandidate candidates[max_contact_candidates];
             int candidate_count = collect_contact_candidates(
                 shapes, candidates, &result.stiction, &result.finite);
             apply_stiction_candidates(candidates, candidate_count,
@@ -967,6 +1273,7 @@ static Result run_simulation(const char* id, bool wind_enabled,
     }
     result.cpu_ms = 1000.0 * (double)(clock() - started) / CLOCKS_PER_SEC;
 
+    free(candidates);
     b3DestroyWorld(world);
     return result;
 }
@@ -999,6 +1306,10 @@ static void write_result_json(FILE* output, const Result* result, bool trailing_
             "      \"max_speed_m_s\": %.9g,\n"
             "      \"max_angular_speed_rad_s\": %.9g,\n"
             "      \"max_joint_gap_m\": %.9g,\n"
+            "      \"max_settled_joint_gap_m\": %.9g,\n"
+            "      \"settled_root_alignment\": {\"minimum_target_dot\": %.9g, "
+            "\"mean_target_dot\": %.9g, \"minimum_outward_dot\": %.9g, "
+            "\"mean_outward_dot\": %.9g, \"sample_count\": %d},\n"
             "      \"max_horizontal_tip_displacement_m\": %.9g,\n"
             "      \"max_active_contacts\": %d,\n"
             "      \"contact_begins\": %d,\n"
@@ -1024,6 +1335,18 @@ static void write_result_json(FILE* output, const Result* result, bool trailing_
             result->cpu_ms > 0.0 ? 1000.0 * duration_seconds / result->cpu_ms : 0.0,
             result->finite ? "true" : "false", (double)result->max_speed,
             (double)result->max_angular_speed, (double)result->max_joint_gap,
+            (double)result->max_settled_joint_gap,
+            (double)result->min_settled_root_target_dot,
+            result->settled_root_alignment_count > 0
+                ? result->settled_root_target_dot_sum /
+                      result->settled_root_alignment_count
+                : 1.0,
+            (double)result->min_settled_root_outward_dot,
+            result->settled_root_alignment_count > 0
+                ? result->settled_root_outward_dot_sum /
+                      result->settled_root_alignment_count
+                : 1.0,
+            result->settled_root_alignment_count,
             (double)result->max_tip_displacement, result->max_active_contacts,
             result->contact_begins, result->contact_ends,
             phase_mean_displacement(&result->strong), (double)result->strong.max_displacement,
@@ -1058,16 +1381,34 @@ static void write_result_json(FILE* output, const Result* result, bool trailing_
 
 static bool result_is_healthy(const Result* result)
 {
+    bool joint_gap_bounded =
+        HAIR_SCALP_GROOM
+            ? result->max_joint_gap < 0.04f &&
+                  result->max_settled_joint_gap < 0.015f
+            : result->max_joint_gap < 0.012f;
+    bool roots_directed =
+        !HAIR_SCALP_GROOM ||
+        (result->min_settled_root_target_dot > 0.50f &&
+         result->min_settled_root_outward_dot > 0.05f);
     return result->finite && result->max_speed < 100.0f &&
-           result->max_angular_speed < 500.0f && result->max_joint_gap < 0.012f;
+           result->max_angular_speed < 500.0f && joint_gap_bounded &&
+           roots_directed;
+}
+
+static bool result_roots_are_directed(const Result* result)
+{
+    return !HAIR_SCALP_GROOM ||
+           (result->min_settled_root_target_dot > 0.50f &&
+            result->min_settled_root_outward_dot > 0.05f);
 }
 
 int main(int argc, char** argv)
 {
     bool self_test = argc == 2 && strcmp(argv[1], "--self-test") == 0;
-    if (argc > 2 || (argc == 2 && !self_test))
+    bool receipt_only = argc == 2 && strcmp(argv[1], "--receipt-only") == 0;
+    if (argc > 2 || (argc == 2 && !self_test && !receipt_only))
     {
-        fprintf(stderr, "usage: %s [--self-test]\n", argv[0]);
+        fprintf(stderr, "usage: %s [--self-test|--receipt-only]\n", argv[0]);
         return EXIT_FAILURE;
     }
 
@@ -1079,11 +1420,14 @@ int main(int argc, char** argv)
             perror("outputs");
             return EXIT_FAILURE;
         }
-        motion = fopen("outputs/hair_box3d_swatch_motion.csv", "w");
-        if (motion == NULL)
+        if (!receipt_only)
         {
-            perror("outputs/hair_box3d_swatch_motion.csv");
-            return EXIT_FAILURE;
+            motion = fopen(HAIR_MOTION_PATH, "w");
+            if (motion == NULL)
+            {
+                perror(HAIR_MOTION_PATH);
+                return EXIT_FAILURE;
+            }
         }
     }
 
@@ -1117,8 +1461,10 @@ int main(int argc, char** argv)
                           bit_count(wind.moderate.azimuth_mask) >= 14;
     bool contacts_observed = wind.max_active_contacts > 0 && wind.contact_begins > 0 &&
                              wind.contact_ends > 0;
+    bool baseline_regression_enabled = HAIR_EXPECTED_BASELINE_DIGEST != UINT64_C(0);
     bool baseline_preserved =
-        wind.trajectory_digest == UINT64_C(0xeb3ebea59ffbb5af);
+        !baseline_regression_enabled ||
+        wind.trajectory_digest == HAIR_EXPECTED_BASELINE_DIGEST;
     bool stiction_persistent = stiction.stiction.captures > 0 &&
                                stiction.stiction.releases > 0 &&
                                stiction.stiction.stick_services > 0 &&
@@ -1137,6 +1483,9 @@ int main(int argc, char** argv)
                           bit_count(stiction.strong.azimuth_mask) >= 18 &&
                           bit_count(stiction.moderate.azimuth_mask) >= 14;
     bool stiction_cost_bounded = stiction.cpu_ms < 4.0 * wind.cpu_ms;
+    bool roots_directed = result_roots_are_directed(&calm) &&
+                          result_roots_are_directed(&wind) &&
+                          result_roots_are_directed(&stiction);
     bool operator_contracts = stiction_operator_self_test();
     bool healthy = result_is_healthy(&calm) && result_is_healthy(&wind) &&
                    result_is_healthy(&stiction) && visibly_driven && orbit_coverage &&
@@ -1146,17 +1495,20 @@ int main(int argc, char** argv)
 
     if (!self_test)
     {
-        FILE* receipt = fopen("outputs/receipt.json", "w");
+        FILE* receipt = fopen(HAIR_RECEIPT_PATH, "w");
         if (receipt == NULL)
         {
-            perror("outputs/receipt.json");
+            perror(HAIR_RECEIPT_PATH);
             return EXIT_FAILURE;
         }
         fprintf(receipt,
                 "{\n"
-                "  \"schema\": \"hair-box3d-swatch-receipt/2\",\n"
-                "  \"configuration\": {\"guides\": %d, \"links_per_guide\": %d, "
+                "  \"schema\": \"hair-box3d-swatch-receipt/4\",\n"
+                "  \"configuration\": {\"fixture\": \"%s\", \"layout\": \"%s\", "
+                "\"guides\": %d, \"guide_side\": %d, \"links_per_guide\": %d, "
                 "\"dynamic_capsules\": %d, \"spherical_joints\": %d, "
+                "\"head_proxy_enabled\": %s, \"root_field_identity\": \"%s\", "
+                "\"root_spring_hertz\": %.9g, \"root_cone_angle_degrees\": %.9g, "
                 "\"simulation_hz\": %d, \"substeps_per_step\": %d, "
                 "\"duration_s\": %d, \"phase_duration_s\": %d, "
                 "\"stiction_memory_capacity\": %d, \"stiction_memory_ttl_steps\": %d, "
@@ -1164,7 +1516,14 @@ int main(int argc, char** argv)
                 "\"kinetic_axial\": %.9g, \"kinetic_transverse\": %.9g, "
                 "\"capture_speed_m_s\": %.9g, \"release_speed_m_s\": %.9g},\n"
                 "  \"conditions\": {\n",
-                guide_count, links_per_guide, body_count, joint_count, simulation_hz,
+                HAIR_OUTPUT_BASENAME,
+                HAIR_SCALP_GROOM ? "styled_scalp_groom" : "planar_swatch",
+                guide_count, guide_columns, links_per_guide, body_count, joint_count,
+                HAIR_HEAD_PROXY ? "true" : "false",
+                HAIR_SCALP_GROOM ? "face_clear_side_part_crown_v2" : "none",
+                HAIR_SCALP_GROOM ? 6.0 : 2.4,
+                HAIR_SCALP_GROOM ? 12.0 : 75.0,
+                simulation_hz,
                 substeps_per_step, duration_seconds, phase_seconds,
                 stiction_memory_capacity, stiction_memory_ttl_steps,
                 (double)stiction_coefficients.static_axial,
@@ -1187,6 +1546,7 @@ int main(int argc, char** argv)
                 "    \"finite_and_bounded\": %s,\n"
                 "    \"wind_displacement_exceeds_calm\": %s,\n"
                 "    \"contact_manifolds_observed\": %s,\n"
+                "    \"baseline_digest_regression_enabled\": %s,\n"
                 "    \"baseline_digest_preserved\": %s,\n"
                 "    \"persistent_stick_and_slip_observed\": %s,\n"
                 "    \"memory_and_energy_bounds_hold\": %s,\n"
@@ -1194,10 +1554,11 @@ int main(int argc, char** argv)
                 "    \"stiction_groom_remains_visibly_driven\": %s,\n"
                 "    \"stiction_cpu_overhead_below_4x\": %s,\n"
                 "    \"executable_operator_contracts\": %s,\n"
+                "    \"styled_roots_retain_positive_outward_alignment\": %s,\n"
                 "    \"strong_orbit_visits_at_least_18_of_24_bins\": %s,\n"
                 "    \"moderate_orbit_visits_at_least_14_of_24_bins\": %s\n"
                 "  },\n"
-                "  \"claim_boundary\": \"Native reduced-guide A/B with a bounded post-step contact impulse operator; no browser/WASM integration, dense hydration, calibrated fiber fit, or proof that C refines HOL Light.\"\n"
+                "  \"claim_boundary\": \"Native Box3D scalp-rooted guide A/B with directed first-link pivots and a bounded post-step contact impulse operator. Browser hydration is recorded playback, the mannequin is not a collision proxy, and this is not proof that C refines HOL Light.\"\n"
                 "}\n",
                 wind.cpu_ms > 0.0 ? stiction.cpu_ms / wind.cpu_ms : 0.0,
                 wind_strong_mean > 0.0 ? stiction_strong_mean / wind_strong_mean : 0.0,
@@ -1215,6 +1576,7 @@ int main(int argc, char** argv)
                 result_is_healthy(&calm) && result_is_healthy(&wind) ? "true" : "false",
                 visibly_driven ? "true" : "false",
                 contacts_observed ? "true" : "false",
+                baseline_regression_enabled ? "true" : "false",
                 baseline_preserved ? "true" : "false",
                 stiction_persistent ? "true" : "false",
                 stiction_bounded ? "true" : "false",
@@ -1222,15 +1584,17 @@ int main(int argc, char** argv)
                 stiction_moves ? "true" : "false",
                 stiction_cost_bounded ? "true" : "false",
                 operator_contracts ? "true" : "false",
+                roots_directed ? "true" : "false",
                 bit_count(wind.strong.azimuth_mask) >= 18 ? "true" : "false",
                 bit_count(wind.moderate.azimuth_mask) >= 14 ? "true" : "false");
         fclose(receipt);
     }
 
-    printf("hair Box3D swatch: bodies=%d joints=%d calm_mean=%.4g "
+    printf("hair Box3D %s: guides=%d bodies=%d joints=%d calm_mean=%.4g "
            "baseline=%.4g/%.4g stiction=%.4g/%.4g bins=%d/%d "
            "memory=%d captures=%d releases=%d stick/slip=%d/%d overhead=%.3gx "
            "joint_gap=%.4g digest=%016" PRIx64 " deterministic=%s gate=%s\n",
+           HAIR_SCALP_GROOM ? "scalp groom" : "swatch", guide_count,
            body_count, joint_count, calm_mean, wind_strong_mean, wind_moderate_mean,
            stiction_strong_mean, stiction_moderate_mean,
            bit_count(wind.strong.azimuth_mask), bit_count(wind.moderate.azimuth_mask),
