@@ -13,8 +13,9 @@ import {
   fatlineColorScale,
   fatlineHalfWidthAt,
   float32BufferDigest,
+  sectionPosePresentationAtStep,
   summarizeGeometryTimings,
-} from "./rendering.js?v=107";
+} from "./rendering.js?v=108";
 import {
   buildGroomInterpolationBindings,
   groomBindingActiveSegments,
@@ -31,6 +32,7 @@ let groomBindingBuildCount = 0;
 let rootDirectorMode = "free";
 let rootDirectorStrength = 0.22;
 let renderReceiptEnabled = false;
+let sectionControlTubeEnabled = false;
 const FATLINE_DYNAMIC_ATTRIBUTES = Object.freeze([
   "instanceStart",
   "instanceEnd",
@@ -160,6 +162,11 @@ let hairUndercoat;
 let hairPositions;
 let hairDrawCount = 0;
 let hairGeometryTimings = [];
+let sectionControlTube;
+let sectionControlTubeTimings = [];
+let sectionPresentation = { phase: "off", hydration: 1, tubeOpacity: 0 };
+const SECTION_CONTROL_TUBE_RADIAL_SEGMENTS = 10;
+const SECTION_CONTROL_TUBE_COLOR = new THREE.Color(0x63e6ff);
 const fatlineBaseColor = new THREE.Color();
 let paused = false;
 let cutting = false;
@@ -205,6 +212,186 @@ function hairColor() {
     coily: 0x171116,
   };
   return colors[solver.preset];
+}
+
+function createSectionControlTubeGeometry(segments, radialSegments) {
+  const positions = new Float32Array((segments + 1) * radialSegments * 3);
+  const indices = [];
+  for (let segment = 0; segment < segments; segment += 1) {
+    for (let radial = 0; radial < radialSegments; radial += 1) {
+      const nextRadial = (radial + 1) % radialSegments;
+      const a = segment * radialSegments + radial;
+      const b = segment * radialSegments + nextRadial;
+      const c = (segment + 1) * radialSegments + radial;
+      const d = (segment + 1) * radialSegments + nextRadial;
+      indices.push(a, c, b, b, c, d);
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  const position = new THREE.BufferAttribute(positions, 3);
+  position.setUsage(THREE.DynamicDrawUsage);
+  geometry.setAttribute("position", position);
+  geometry.setIndex(indices);
+  return geometry;
+}
+
+function rebuildSectionControlTube() {
+  if (sectionControlTube) {
+    scene.remove(sectionControlTube);
+    sectionControlTube.geometry.dispose();
+    sectionControlTube.material.dispose();
+  }
+  sectionControlTubeTimings = [];
+  const geometry = createSectionControlTubeGeometry(
+    solver.segments,
+    SECTION_CONTROL_TUBE_RADIAL_SEGMENTS
+  );
+  const material = new THREE.MeshBasicMaterial({
+    color: SECTION_CONTROL_TUBE_COLOR,
+    transparent: true,
+    opacity: 0,
+    depthTest: false,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  material.forceSinglePass = true;
+  sectionControlTube = new THREE.Mesh(geometry, material);
+  sectionControlTube.frustumCulled = false;
+  sectionControlTube.renderOrder = 8;
+  sectionControlTube.visible = false;
+  scene.add(sectionControlTube);
+}
+
+function updateSectionPresentation() {
+  if (!sectionControlTubeEnabled || solver.sectionPose.section < 0) {
+    sectionPresentation = { phase: "off", hydration: 1, tubeOpacity: 0 };
+    return;
+  }
+  sectionPresentation = sectionPosePresentationAtStep(
+    deterministicReplay.enabled ? deterministicReplay.state.step : 0,
+    deterministicReplay.enabled ? deterministicReplay.config.sectionPoseCycle : undefined
+  );
+}
+
+function sectionHydrationForGuide(guide) {
+  return sectionControlTubeEnabled && solver.guideSections[guide] === solver.sectionPose.section
+    ? sectionPresentation.hydration
+    : 1;
+}
+
+function writeHydratedFiberStyle(
+  colors,
+  widthsStart,
+  widthsEnd,
+  instance,
+  cursor,
+  guide,
+  copy,
+  segment,
+  activeSegments
+) {
+  const hydration = sectionHydrationForGuide(guide);
+  const colorScale = fatlineColorScale(guide, copy);
+  const proxy = 1 - hydration;
+  const hairContribution = 0.32 + 0.68 * hydration;
+  colors[cursor] = Math.min(
+    1,
+    fatlineBaseColor.r * colorScale * hairContribution + SECTION_CONTROL_TUBE_COLOR.r * proxy * 0.72
+  );
+  colors[cursor + 1] = Math.min(
+    1,
+    fatlineBaseColor.g * colorScale * hairContribution + SECTION_CONTROL_TUBE_COLOR.g * proxy * 0.72
+  );
+  colors[cursor + 2] = Math.min(
+    1,
+    fatlineBaseColor.b * colorScale * hairContribution + SECTION_CONTROL_TUBE_COLOR.b * proxy * 0.72
+  );
+  const widthScale = 0.12 + 0.88 * hydration;
+  widthsStart[instance] = fatlineHalfWidthAt(segment, activeSegments) * widthScale;
+  widthsEnd[instance] = fatlineHalfWidthAt(segment + 1, activeSegments) * widthScale;
+}
+
+function updateSectionControlTube() {
+  if (!sectionControlTube) return;
+  const started = performance.now();
+  const section = solver.sectionPose.section;
+  sectionControlTube.material.opacity = sectionPresentation.tubeOpacity;
+  sectionControlTube.visible =
+    sectionControlTubeEnabled && section >= 0 && sectionPresentation.tubeOpacity > 0.002;
+  if (!sectionControlTube.visible) return;
+  const radialSegments = SECTION_CONTROL_TUBE_RADIAL_SEGMENTS;
+  const positions = sectionControlTube.geometry.attributes.position.array;
+  const centers = new Float64Array((solver.segments + 1) * 3);
+  let priorNx = 0;
+  let priorNy = 0;
+  let priorNz = 0;
+  for (let particle = 0; particle <= solver.segments; particle += 1) {
+    let count = 0;
+    for (let guide = 0; guide < solver.guideCount; guide += 1) {
+      if (solver.guideSections[guide] !== section || particle > solver.activeSegments[guide])
+        continue;
+      const point = solver.index(guide, particle);
+      centers[particle * 3] += solver.positions[point];
+      centers[particle * 3 + 1] += solver.positions[point + 1];
+      centers[particle * 3 + 2] += solver.positions[point + 2];
+      count += 1;
+    }
+    if (count > 0) {
+      centers[particle * 3] /= count;
+      centers[particle * 3 + 1] /= count;
+      centers[particle * 3 + 2] /= count;
+    } else if (particle > 0) {
+      centers[particle * 3] = centers[(particle - 1) * 3];
+      centers[particle * 3 + 1] = centers[(particle - 1) * 3 + 1];
+      centers[particle * 3 + 2] = centers[(particle - 1) * 3 + 2];
+    }
+  }
+  for (let particle = 0; particle <= solver.segments; particle += 1) {
+    const prior = Math.max(0, particle - 1) * 3;
+    const next = Math.min(solver.segments, particle + 1) * 3;
+    let tx = centers[next] - centers[prior];
+    let ty = centers[next + 1] - centers[prior + 1];
+    let tz = centers[next + 2] - centers[prior + 2];
+    const tangentLength = Math.hypot(tx, ty, tz) || 1;
+    tx /= tangentLength;
+    ty /= tangentLength;
+    tz /= tangentLength;
+    const referenceX = Math.abs(ty) > 0.9 ? 1 : 0;
+    const referenceY = Math.abs(ty) > 0.9 ? 0 : 1;
+    let nx = ty * 0 - tz * referenceY;
+    let ny = tz * referenceX - tx * 0;
+    let nz = tx * referenceY - ty * referenceX;
+    const normalLength = Math.hypot(nx, ny, nz) || 1;
+    nx /= normalLength;
+    ny /= normalLength;
+    nz /= normalLength;
+    if (particle > 0 && nx * priorNx + ny * priorNy + nz * priorNz < 0) {
+      nx *= -1;
+      ny *= -1;
+      nz *= -1;
+    }
+    priorNx = nx;
+    priorNy = ny;
+    priorNz = nz;
+    const bx = ty * nz - tz * ny;
+    const by = tz * nx - tx * nz;
+    const bz = tx * ny - ty * nx;
+    const fraction = particle / Math.max(1, solver.segments);
+    const radius = (0.19 + 0.07 * Math.sin(Math.PI * fraction)) * (1 - 0.3 * fraction);
+    for (let radial = 0; radial < radialSegments; radial += 1) {
+      const angle = (radial / radialSegments) * Math.PI * 2;
+      const radialNormal = Math.cos(angle) * radius;
+      const radialBinormal = Math.sin(angle) * radius;
+      const target = (particle * radialSegments + radial) * 3;
+      positions[target] = centers[particle * 3] + nx * radialNormal + bx * radialBinormal;
+      positions[target + 1] = centers[particle * 3 + 1] + ny * radialNormal + by * radialBinormal;
+      positions[target + 2] = centers[particle * 3 + 2] + nz * radialNormal + bz * radialBinormal;
+    }
+  }
+  sectionControlTube.geometry.attributes.position.needsUpdate = true;
+  sectionControlTube.geometry.computeBoundingSphere();
+  sectionControlTubeTimings.push(performance.now() - started);
+  if (sectionControlTubeTimings.length > 660) sectionControlTubeTimings.shift();
 }
 
 function createFatlineMaterial() {
@@ -352,6 +539,7 @@ function rebuildSolver() {
   deterministicReplay.state = createReplayState();
   applyMaterialControls();
   rebuildHairObject();
+  rebuildSectionControlTube();
   const activeExperiments = [
     solver.spatialFriction.enabled ? "spatial friction" : null,
     solver.rootDirector.enabled ? solver.rootDirector.mode.replaceAll("_", " ") : null,
@@ -447,11 +635,13 @@ function applyMaterialControls() {
 }
 
 function updateHairGeometry() {
+  updateSectionPresentation();
   const geometryStart = performance.now();
   if (hairRenderMode === "fatline") {
     updateFatlineGeometry();
     hairGeometryTimings.push(performance.now() - geometryStart);
     if (hairGeometryTimings.length > 660) hairGeometryTimings.shift();
+    updateSectionControlTube();
     return;
   }
   let cursor = 0;
@@ -477,6 +667,7 @@ function updateHairGeometry() {
   hair.geometry.attributes.position.needsUpdate = true;
   hair.geometry.computeBoundingSphere();
   hairDrawCount = cursor / 6;
+  updateSectionControlTube();
 }
 
 function updateFatlineGeometry() {
@@ -499,7 +690,6 @@ function updateFatlineGeometry() {
       const offset = copy === 0 ? 0 : 0.009 + (strand % 3) * 0.0018;
       const offsetX = Math.cos(phase) * offset;
       const offsetZ = Math.sin(phase) * offset;
-      const colorScale = fatlineColorScale(strand, copy);
       for (let segment = 0; segment < activeSegments; segment += 1) {
         const start = solver.index(strand, segment);
         const end = solver.index(strand, segment + 1);
@@ -510,11 +700,17 @@ function updateFatlineGeometry() {
         ends[cursor] = solver.positions[end] + offsetX;
         ends[cursor + 1] = solver.positions[end + 1];
         ends[cursor + 2] = solver.positions[end + 2] + offsetZ;
-        colors[cursor] = Math.min(1, fatlineBaseColor.r * colorScale);
-        colors[cursor + 1] = Math.min(1, fatlineBaseColor.g * colorScale);
-        colors[cursor + 2] = Math.min(1, fatlineBaseColor.b * colorScale);
-        widthsStart[instance] = fatlineHalfWidthAt(segment, activeSegments);
-        widthsEnd[instance] = fatlineHalfWidthAt(segment + 1, activeSegments);
+        writeHydratedFiberStyle(
+          colors,
+          widthsStart,
+          widthsEnd,
+          instance,
+          cursor,
+          strand,
+          copy,
+          segment,
+          activeSegments
+        );
         instance += 1;
       }
     }
@@ -553,7 +749,6 @@ function updateSectionInterpolatedFatlineGeometry() {
     );
     const secondaryActiveSegments = solver.activeSegments[secondaryNeighbor];
     const copy = binding % renderFibersPerGuide;
-    const colorScale = fatlineColorScale(owner, copy);
     for (let segment = 0; segment < activeSegments; segment += 1) {
       const secondaryStartWeight = groomSecondaryWeightAt(
         segment,
@@ -590,11 +785,17 @@ function updateSectionInterpolatedFatlineGeometry() {
           secondaryEndWeight
         );
       }
-      colors[cursor] = Math.min(1, fatlineBaseColor.r * colorScale);
-      colors[cursor + 1] = Math.min(1, fatlineBaseColor.g * colorScale);
-      colors[cursor + 2] = Math.min(1, fatlineBaseColor.b * colorScale);
-      widthsStart[instance] = fatlineHalfWidthAt(segment, activeSegments);
-      widthsEnd[instance] = fatlineHalfWidthAt(segment + 1, activeSegments);
+      writeHydratedFiberStyle(
+        colors,
+        widthsStart,
+        widthsEnd,
+        instance,
+        cursor,
+        owner,
+        copy,
+        segment,
+        activeSegments
+      );
       instance += 1;
     }
   }
@@ -734,6 +935,9 @@ function updateTelemetry(now) {
     receipt.section_pose.selected_section === null
       ? "off"
       : `${receipt.section_pose.phase} · s${receipt.section_pose.selected_section} · ${receipt.section_pose.affected_guides} guides · ${receipt.section_pose.lift_meters.toFixed(2)} / ${receipt.section_pose.tangential_sweep_meters.toFixed(2)} m`;
+  document.querySelector("#metric-control-tube").textContent = sectionControlTubeEnabled
+    ? `${sectionPresentation.phase} · ${(sectionPresentation.hydration * 100).toFixed(0)}% hair · ${(sectionPresentation.tubeOpacity * 100).toFixed(0)}% tube`
+    : "off";
   document.querySelector("#metric-geometry").textContent =
     geometryTiming.p99_ms === null
       ? "warming"
@@ -766,11 +970,14 @@ function updateTelemetry(now) {
   assumptionMetric.textContent = receipt.assumption_receipt.status;
   assumptionMetric.dataset.status = receipt.assumption_receipt.status;
   drawCombTrace(receipt.comb.force_displacement_trace);
-  document.querySelector("#showcase-phase").textContent = solver.comb.enabled
-    ? `${solver.comb.phase} comb pass`
-    : receipt.assumption_receipt.measurement_window === "comb_cycle"
-      ? "two-pass complete · wind orbit continues"
-      : receipt.assumption_receipt.measurement_window.replaceAll("_", " ");
+  document.querySelector("#showcase-phase").textContent =
+    sectionControlTubeEnabled && sectionPresentation.phase !== "simulation"
+      ? `control tube · ${sectionPresentation.phase}`
+      : solver.comb.enabled
+        ? `${solver.comb.phase} comb pass`
+        : receipt.assumption_receipt.measurement_window === "comb_cycle"
+          ? "two-pass complete · wind orbit continues"
+          : receipt.assumption_receipt.measurement_window.replaceAll("_", " ");
   document.querySelector("#showcase-wind").textContent =
     `wind ${windDegrees.toFixed(0)}° · ${receipt.wind.magnitude.toFixed(2)}`;
   document.querySelector("#showcase-stretch").textContent =
@@ -942,6 +1149,10 @@ function applyQueryConfiguration() {
           ? "section_interp"
           : "radial_xz";
   document.querySelector("#groom-display").value = hairRenderMode === "lines" ? "lines" : groomMode;
+  sectionControlTubeEnabled = params.get("controlTube") === "1";
+  document.querySelector("#pose-visual").value = sectionControlTubeEnabled
+    ? "control_tube"
+    : "hair_only";
   renderReceiptEnabled = params.get("renderReceipt") === "1";
   if (params.get("film") === "1") {
     filmDirection.enabled = true;
@@ -1041,6 +1252,11 @@ for (const [id, output, format] of [
 }
 
 document.querySelector("#preset").addEventListener("change", rebuildSolver);
+document.querySelector("#pose-visual").addEventListener("change", (event) => {
+  sectionControlTubeEnabled = event.currentTarget.value === "control_tube";
+  sectionControlTubeTimings = [];
+  updateHairGeometry();
+});
 document.querySelector("#pose-section").addEventListener("input", applyMaterialControls);
 document.querySelector("#root-field").addEventListener("change", (event) => {
   rootDirectorMode = event.currentTarget.value;
@@ -1135,6 +1351,8 @@ window.hairMaterialReplay = {
 };
 
 function createRenderReceipt() {
+  const tubePositions =
+    sectionControlTube?.geometry.attributes.position.array ?? new Float32Array();
   return {
     schema: "hair-render/1",
     hair_render_mode: hairRenderMode,
@@ -1143,6 +1361,22 @@ function createRenderReceipt() {
     root_director: solver.receipt().root_director,
     section_lift: solver.receipt().section_lift,
     section_pose: solver.receipt().section_pose,
+    section_control_tube: {
+      enabled: sectionControlTubeEnabled,
+      field_identity: "mean_guide_tube_hydration_v1",
+      phase: sectionPresentation.phase,
+      hydration: sectionPresentation.hydration,
+      opacity: sectionPresentation.tubeOpacity,
+      selected_section: solver.sectionPose.section >= 0 ? solver.sectionPose.section : null,
+      affected_guides: solver.sectionPose.affectedGuideCount,
+      radial_segments: SECTION_CONTROL_TUBE_RADIAL_SEGMENTS,
+      force_single_pass: sectionControlTube?.material.forceSinglePass ?? false,
+      vertex_count: tubePositions.length / 3,
+      triangle_count: sectionControlTube ? sectionControlTube.geometry.index.count / 3 : 0,
+      geometry_update: summarizeGeometryTimings(sectionControlTubeTimings),
+      position_buffer_fnv1a32: float32BufferDigest(tubePositions),
+      physics_authority: "none_renderer_only",
+    },
     guide_count: solver.guideCount,
     fiber_copies: renderFibersPerGuide,
     segments_per_guide: solver.segments,

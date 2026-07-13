@@ -1,6 +1,51 @@
 export const FATLINE_ROOT_HALF_WIDTH_PX = 1.6;
 export const FATLINE_TIP_HALF_WIDTH_PX = 0.3;
 
+function smoothStep01(value) {
+  const t = Math.max(0, Math.min(1, value));
+  return t * t * (3 - 2 * t);
+}
+
+export function sectionPosePresentationAtStep(step, cycle) {
+  if (!cycle) return { phase: "static_control", hydration: 1, tubeOpacity: 0.14 };
+  const startStep = cycle.startStep ?? 30;
+  const peakStep = cycle.peakStep ?? 90;
+  const holdEndStep = cycle.holdEndStep ?? 170;
+  const endStep = cycle.endStep ?? 255;
+  const authorLeadSteps = Math.max(1, cycle.authorLeadSteps ?? 30);
+  const authorStartStep = Math.max(0, startStep - authorLeadSteps);
+  const fadeEndStep = Math.min(endStep, cycle.fadeEndStep ?? holdEndStep + 45);
+  if (!(authorStartStep <= startStep && startStep < peakStep && peakStep <= holdEndStep)) {
+    throw new Error("section pose presentation steps are invalid");
+  }
+  if (step < authorStartStep) return { phase: "waiting", hydration: 0.08, tubeOpacity: 0 };
+  if (step < startStep) {
+    return {
+      phase: "authoring",
+      hydration: 0.08,
+      tubeOpacity:
+        0.18 * smoothStep01((step - authorStartStep) / Math.max(1, startStep - authorStartStep)),
+    };
+  }
+  if (step < peakStep) {
+    const progress = smoothStep01((step - startStep) / (peakStep - startStep));
+    return {
+      phase: "hydrating",
+      hydration: 0.08 + 0.92 * progress,
+      tubeOpacity: 0.18 * (1 - 0.7 * progress),
+    };
+  }
+  if (step < holdEndStep) return { phase: "hydrated", hydration: 1, tubeOpacity: 0.055 };
+  if (step < fadeEndStep) {
+    return {
+      phase: "dissolving",
+      hydration: 1,
+      tubeOpacity: 0.055 * (1 - smoothStep01((step - holdEndStep) / (fadeEndStep - holdEndStep))),
+    };
+  }
+  return { phase: "simulation", hydration: 1, tubeOpacity: 0 };
+}
+
 export function fatlineHalfWidthAt(
   particle,
   activeSegments,

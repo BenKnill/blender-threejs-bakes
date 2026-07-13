@@ -107,6 +107,11 @@ hair-section-pose-showcase:
     ./scripts/serve.sh start
     @echo "http://127.0.0.1:8091/physics/labs/hair_material/demo/?replay=1&showcase=1&comb=1&cycle=1&poseCycle=1&poseSection=7&poseLift=0.32&poseSweep=0.34&cut=diagonal&cutAt=5.5&cutDuration=1.2&guides=256&iterations=6&preset=wavy&wetness=0.35&product=0.45&wind=0.28&gust=0.38&windRotation=0.58&orbit=0.18&hairRender=fatline&fibers=15&groomVolume=1&rootField=styled-side-part&rootStrength=0.22&renderReceipt=1&scenario=section-pose-hold-release"
 
+# Start the transient authoring-tube-to-hydrated-hair presentation.
+hair-control-tube-showcase:
+    PORT=8199 ./scripts/serve.sh start
+    @echo "http://127.0.0.1:8199/physics/labs/hair_material/demo/?replay=1&showcase=1&poseCycle=1&poseSection=7&poseLift=0.32&poseSweep=0.34&controlTube=1&cut=diagonal&cutAt=5.5&cutDuration=1.2&guides=256&iterations=6&preset=wavy&wetness=0.35&product=0.45&wind=0.28&gust=0.38&windRotation=0.58&orbit=0.18&hairRender=fatline&fibers=15&groomVolume=1&rootField=styled-side-part&rootStrength=0.22&renderReceipt=1&scenario=control-tube-hydration"
+
 # Run the fixed 256-guide section-pose acceptance gate.
 hair-section-pose-ab:
     node scripts/run_hair_section_pose_ab.mjs

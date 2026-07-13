@@ -21,6 +21,7 @@ import {
   fatlineColorScale,
   fatlineHalfWidthAt,
   float32BufferDigest,
+  sectionPosePresentationAtStep,
   summarizeGeometryTimings,
 } from "../physics/labs/hair_material/demo/rendering.js";
 import {
@@ -71,6 +72,35 @@ import {
 
 function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} != ${expected}`);
+}
+
+{
+  const cycle = { startStep: 30, peakStep: 90, holdEndStep: 170, endStep: 255 };
+  assert.deepEqual(sectionPosePresentationAtStep(0, cycle), {
+    phase: "authoring",
+    hydration: 0.08,
+    tubeOpacity: 0,
+  });
+  assert.equal(sectionPosePresentationAtStep(20, cycle).phase, "authoring");
+  assert.ok(sectionPosePresentationAtStep(20, cycle).tubeOpacity > 0.1);
+  assert.equal(sectionPosePresentationAtStep(60, cycle).phase, "hydrating");
+  nearlyEqual(sectionPosePresentationAtStep(60, cycle).hydration, 0.54);
+  assert.deepEqual(sectionPosePresentationAtStep(90, cycle), {
+    phase: "hydrated",
+    hydration: 1,
+    tubeOpacity: 0.055,
+  });
+  assert.equal(sectionPosePresentationAtStep(180, cycle).phase, "dissolving");
+  assert.deepEqual(sectionPosePresentationAtStep(215, cycle), {
+    phase: "simulation",
+    hydration: 1,
+    tubeOpacity: 0,
+  });
+  assert.deepEqual(sectionPosePresentationAtStep(0), {
+    phase: "static_control",
+    hydration: 1,
+    tubeOpacity: 0.14,
+  });
 }
 
 {
