@@ -6,6 +6,89 @@ export const COMB_MATERIAL_CONDITIONS = Object.freeze({
   product: Object.freeze({ label: "Product-heavy", moisture: 0.35, product: 0.85 }),
 });
 
+export const PREVIEW_WIND_PROGRAM_ID = "hydrated_strong_then_moderate_full_orbits_v1";
+export const PREVIEW_WIND_PROGRAM = Object.freeze({
+  setupEndStep: 240,
+  strongEndStep: 600,
+  moderateEndStep: 960,
+  loopEndStep: 1020,
+  setupMagnitude: 0.12,
+  strongMagnitude: 0.58,
+  moderateMagnitude: 0.29,
+});
+
+export function previewWindProgramAtStep(step, overrides = {}) {
+  if (!Number.isFinite(step) || step < 0) throw new Error("preview wind step is invalid");
+  const program = { ...PREVIEW_WIND_PROGRAM, ...overrides };
+  const {
+    setupEndStep,
+    strongEndStep,
+    moderateEndStep,
+    loopEndStep,
+    setupMagnitude,
+    strongMagnitude,
+    moderateMagnitude,
+  } = program;
+  if (
+    !(
+      0 < setupEndStep &&
+      setupEndStep < strongEndStep &&
+      strongEndStep < moderateEndStep &&
+      moderateEndStep < loopEndStep
+    ) ||
+    ![setupMagnitude, strongMagnitude, moderateMagnitude].every(
+      (magnitude) => Number.isFinite(magnitude) && magnitude >= 0
+    )
+  ) {
+    throw new Error("preview wind program is invalid");
+  }
+  const tau = Math.PI * 2;
+  if (step < setupEndStep) {
+    return {
+      fieldIdentity: PREVIEW_WIND_PROGRAM_ID,
+      phase: "calm_setup",
+      magnitude: setupMagnitude,
+      angleRadians: 0,
+      orbit: 0,
+      orbitProgress: 0,
+      completedOrbits: 0,
+    };
+  }
+  if (step < strongEndStep) {
+    const orbitProgress = (step - setupEndStep) / (strongEndStep - setupEndStep);
+    return {
+      fieldIdentity: PREVIEW_WIND_PROGRAM_ID,
+      phase: "strong_orbit",
+      magnitude: strongMagnitude,
+      angleRadians: tau * orbitProgress,
+      orbit: 1,
+      orbitProgress,
+      completedOrbits: 0,
+    };
+  }
+  if (step < moderateEndStep) {
+    const orbitProgress = (step - strongEndStep) / (moderateEndStep - strongEndStep);
+    return {
+      fieldIdentity: PREVIEW_WIND_PROGRAM_ID,
+      phase: "moderate_orbit",
+      magnitude: moderateMagnitude,
+      angleRadians: tau * (1 + orbitProgress),
+      orbit: 2,
+      orbitProgress,
+      completedOrbits: 1,
+    };
+  }
+  return {
+    fieldIdentity: PREVIEW_WIND_PROGRAM_ID,
+    phase: "orbit_complete",
+    magnitude: moderateMagnitude,
+    angleRadians: tau * 2,
+    orbit: 2,
+    orbitProgress: 1,
+    completedOrbits: 2,
+  };
+}
+
 const FNV_OFFSET = 0xcbf29ce484222325n;
 const FNV_PRIME = 0x100000001b3n;
 const MASK_64 = 0xffffffffffffffffn;
@@ -213,10 +296,19 @@ export function advanceHairReplay(solver, config, state, targetStep) {
   const dt = config.dt ?? 1 / 60;
   while (state.step < targetStep) {
     const elapsed = state.step * dt;
-    const gustWave = 0.5 + 0.5 * Math.sin(elapsed * 2.4 - Math.PI * 0.5);
-    solver.wind = (config.baseWind ?? 0.18) + (config.gust ?? 0) * gustWave;
-    if (config.windRotationRate || config.windAngle !== undefined) {
-      solver.setWindDirection((config.windAngle ?? 0) + elapsed * (config.windRotationRate ?? 0));
+    if (config.previewWindProgram) {
+      const wind = previewWindProgramAtStep(
+        state.step,
+        config.previewWindProgram === true ? undefined : config.previewWindProgram
+      );
+      solver.wind = wind.magnitude;
+      solver.setWindDirection(wind.angleRadians);
+    } else {
+      const gustWave = 0.5 + 0.5 * Math.sin(elapsed * 2.4 - Math.PI * 0.5);
+      solver.wind = (config.baseWind ?? 0.18) + (config.gust ?? 0) * gustWave;
+      if (config.windRotationRate || config.windAngle !== undefined) {
+        solver.setWindDirection((config.windAngle ?? 0) + elapsed * (config.windRotationRate ?? 0));
+      }
     }
     if (config.cut === "diagonal") applyDiagonalCut(solver, config, elapsed, state);
     applySectionLiftCycle(solver, config, state);

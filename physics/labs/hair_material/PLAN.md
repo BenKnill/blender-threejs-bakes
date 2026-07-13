@@ -222,6 +222,13 @@ strand rendering; do not add another many-hair operator first.
       0.34 authored-direction dot prevents root-flow reversal. The 5,376
       coverage endpoints move 4.61 mm RMS / 8.86 mm p95 / 34.68 mm max over
       the same interval without writing solver state.
+- [x] Replace the ambiguous 450-step wind loop with a complete two-act preview.
+      The hydrated groom now receives one 360-degree strong orbit at magnitude
+      0.58, then one 360-degree moderate orbit at 0.29, before the fade/reset.
+      HUD phase and revolution progress make the sequence explicit. The
+      256-guide fixture repeats at digest `9c5a319aa70970b5`; post-settle live
+      stretch peaks at 3.4998%, and settled quarter-orbit tip motion separates
+      to roughly 55-79 mm RMS strong versus 26-29 mm RMS moderate.
 - [ ] Better scalp/strand contact and a clearer calibration path.
 - [x] Define three receipt-distinct reel shots before packaging video variants.
 - [ ] Package short 16:9 and vertical reels from those named moving shots.

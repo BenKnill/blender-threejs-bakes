@@ -24,9 +24,9 @@ const canonicalParameters = new URLSearchParams([
   ["preset", "wavy"],
   ["wetness", "0.35"],
   ["product", "0.45"],
-  ["wind", "0.28"],
-  ["gust", "0.38"],
-  ["windRotation", "0.58"],
+  ["windProgram", "strong-then-moderate-orbits"],
+  ["strongWind", "0.58"],
+  ["moderateWind", "0.29"],
   ["hairRender", "fatline"],
   ["hairShade", "fiber"],
   ["fibers", "21"],
@@ -37,7 +37,7 @@ const canonicalParameters = new URLSearchParams([
   ["mannequin", "realistic"],
   ["reel", "control"],
   ["renderReceipt", "1"],
-  ["scenario", "canonical-pages-hair-demo"],
+  ["scenario", "canonical-two-orbit-wind-demo"],
 ]).toString();
 
 await rm(output, { recursive: true, force: true });
