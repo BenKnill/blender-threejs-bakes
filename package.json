@@ -6,6 +6,8 @@
   "scripts": {
     "prepare": "lefthook install",
     "serve": "./scripts/serve.sh",
+    "build:hair-pages": "node scripts/build_hair_pages.mjs",
+    "deploy:hair-pages": "npm run build:hair-pages && npx wrangler pages deploy dist/hair-material-bench --project-name=hair-material-bench --branch=main",
     "lint": "eslint editor physics/labs/contact_shell/demo/main.js physics/labs/hair_material/demo/*.js scripts/test_hair_material_solver.mjs scripts/run_hair_operator_ab.mjs scripts/run_hair_contact_discovery_ab.mjs && prettier --check 'editor/**/*.{js,css,html}' 'physics/labs/contact_shell/demo/**/*.{js,css,html,json}' 'physics/labs/hair_material/demo/**/*.{js,css,html}'",
     "format": "prettier --write 'editor/**/*.{js,css,html}' 'physics/labs/contact_shell/demo/**/*.{js,css,html,json}' 'physics/labs/hair_material/demo/**/*.{js,css,html}'"
   },

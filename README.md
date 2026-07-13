@@ -7,6 +7,9 @@ For agent-facing operating notes, see [AGENTS.md](AGENTS.md).
 For the stable physics/render boundary and deliberate non-claims, see
 [the integration handoff](docs/INTEGRATION_HANDOFF.md).
 
+Canonical Hair Material Bench:
+[hair-material-bench.pages.dev](https://hair-material-bench.pages.dev/).
+
 ## Run the editor
 
 ```sh
