@@ -23,10 +23,50 @@ for (const relativePath of [
   "vendor/three.module.js",
   "vendor/controls/OrbitControls.js",
   "vendor/loaders/GLTFLoader.js",
+  "vendor/utils/BufferGeometryUtils.js",
   "build.json",
 ]) {
   await access(path.join(output, relativePath));
 }
+
+const moduleSpecifiers = (source) => {
+  const specifiers = [];
+  const pattern = /(?:import|export)\s+(?:[^'\"]*?\s+from\s*)?["']([^"']+)["']/gs;
+  for (const match of source.matchAll(pattern)) specifiers.push(match[1]);
+  return specifiers;
+};
+
+const resolveModule = (importer, specifier) => {
+  const cleanSpecifier = specifier.replace(/[?#].*$/, "");
+  if (cleanSpecifier === "three") {
+    return path.join(output, "vendor/three.module.js");
+  }
+  if (cleanSpecifier.startsWith("three/addons/")) {
+    return path.join(output, "vendor", cleanSpecifier.slice("three/addons/".length));
+  }
+  if (cleanSpecifier.startsWith(".")) {
+    return path.resolve(path.dirname(importer), cleanSpecifier);
+  }
+  throw new Error(`unsupported bare module import ${specifier} in ${path.relative(output, importer)}`);
+};
+
+const pendingModules = [path.join(output, "main.js")];
+const visitedModules = new Set();
+while (pendingModules.length > 0) {
+  const modulePath = pendingModules.pop();
+  if (visitedModules.has(modulePath)) continue;
+  assert.ok(
+    modulePath.startsWith(`${output}${path.sep}`),
+    `module import escapes Pages bundle: ${modulePath}`
+  );
+  await access(modulePath);
+  visitedModules.add(modulePath);
+  const source = await readFile(modulePath, "utf8");
+  for (const specifier of moduleSpecifiers(source)) {
+    pendingModules.push(resolveModule(modulePath, specifier));
+  }
+}
+assert.ok(visitedModules.has(path.join(output, "vendor/utils/BufferGeometryUtils.js")));
 
 const index = await readFile(path.join(output, "index.html"), "utf8");
 assert.ok(index.includes('"three": "./vendor/three.module.js"'));

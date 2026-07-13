@@ -48,6 +48,7 @@ for (const relativePath of [
   "three.module.js",
   "controls/OrbitControls.js",
   "loaders/GLTFLoader.js",
+  "utils/BufferGeometryUtils.js",
 ]) {
   const target = path.join(output, "vendor", relativePath);
   await mkdir(path.dirname(target), { recursive: true });
