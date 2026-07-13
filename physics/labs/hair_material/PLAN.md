@@ -236,6 +236,15 @@ strand rendering; do not add another many-hair operator first.
       326-402 mm RMS settled strong quarter motion versus 132-150 mm moderate,
       stays under 3.5% post-settle live stretch, and reads directionally in the
       fixed-camera Canary frames.
+- [x] Build a bounded native Box3D mechanics swatch before attempting a browser
+      solver rewrite. Sixteen guides × eight capsule links use 128 spherical
+      target-spring joints plus anisotropic quadratic drag. One strong and one
+      moderate six-second wind orbit move the mean tips 1.662 m and 1.156 m,
+      visit 23/24 and 24/24 azimuth bins, keep maximum joint separation to
+      2.40 mm, and replay at digest `eb3ebea59ffbb5af`. The 128-body wind lane
+      runs roughly 43× real time on the first accepted Apple Silicon release
+      receipt. This proves responsiveness and leaves browser/WASM integration,
+      calibration, hydration, and custom stiction explicitly open.
 - [ ] Better scalp/strand contact and a clearer calibration path.
 - [x] Define three receipt-distinct reel shots before packaging video variants.
 - [ ] Package short 16:9 and vertical reels from those named moving shots.
