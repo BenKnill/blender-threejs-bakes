@@ -214,6 +214,14 @@ strand rendering; do not add another many-hair operator first.
       error is below `4.5e-16`, every coverage control point retains at least
       11.1 mm outward clearance, and the unchanged styled replay repeats at
       `810dcc040586fc06` with 3.4995% peak stretch.
+- [x] Couple the hydrated scalp-coverage locks back to live wind motion after
+      the canonical groom looked static while its physics rods moved. The
+      solver guide tips already move 69.0 mm RMS over replay steps 270-285, but
+      the baked-only coverage endpoints moved exactly zero. The v3 hydration
+      field blends 86% live particle-7 tangent with 14% authored root flow; a
+      0.34 authored-direction dot prevents root-flow reversal. The 5,376
+      coverage endpoints move 4.61 mm RMS / 8.86 mm p95 / 34.68 mm max over
+      the same interval without writing solver state.
 - [ ] Better scalp/strand contact and a clearer calibration path.
 - [x] Define three receipt-distinct reel shots before packaging video variants.
 - [ ] Package short 16:9 and vertical reels from those named moving shots.

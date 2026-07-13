@@ -20,6 +20,7 @@ import { spatialFrictionPerformanceReceipt } from "../physics/labs/hair_material
 import {
   buildUndercoatCoverageProfile,
   buildRootCoverageCurve,
+  blendRootCoverageFlow,
   catmullRomScalar,
   fatlineColorScale,
   fatlineHalfWidthAt,
@@ -34,6 +35,9 @@ import {
   lockAwareFiberEmergenceScaleAt,
   LOCK_AWARE_RENDER_SUBDIVISIONS,
   LOCK_AWARE_ROOT_COVER_LENGTH_METERS,
+  LOCK_AWARE_ROOT_COVER_LIVE_WEIGHT,
+  LOCK_AWARE_ROOT_COVER_MIN_AUTHORED_DOT,
+  LOCK_AWARE_ROOT_COVER_PROBE_PARTICLE,
   LOCK_AWARE_ROOT_COVER_SEGMENTS,
   physicsSkeletonDepthWriteAt,
   PHYSICS_SKELETON_STYLE,
@@ -109,10 +113,13 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.equal(REEL_CAMERA_FIELD_ID, "three_shot_orbit_450_step_v1");
   assert.equal(FULL_GROOM_HYDRATION_ID, "uniform_rod_joint_hydration_450_v3");
   assert.equal(PHYSICS_SKELETON_STYLE_ID, "uniform_world_space_rods_joints_v1");
-  assert.equal(LOCK_AWARE_COVERAGE_ID, "styled_root_cover_locks_catmull_rom_v2");
+  assert.equal(LOCK_AWARE_COVERAGE_ID, "live_root_cover_locks_catmull_rom_v3");
   assert.equal(LOCK_AWARE_RENDER_SUBDIVISIONS, 2);
   assert.equal(LOCK_AWARE_ROOT_COVER_SEGMENTS, 3);
   nearlyEqual(LOCK_AWARE_ROOT_COVER_LENGTH_METERS, 0.24);
+  assert.equal(LOCK_AWARE_ROOT_COVER_PROBE_PARTICLE, 7);
+  nearlyEqual(LOCK_AWARE_ROOT_COVER_LIVE_WEIGHT, 0.86);
+  nearlyEqual(LOCK_AWARE_ROOT_COVER_MIN_AUTHORED_DOT, 0.34);
   assert.equal(PHYSICS_SKELETON_STYLE.guideLimit, 20);
   assert.equal(PHYSICS_SKELETON_STYLE.rootJointScale, 1);
   assert.ok(PHYSICS_SKELETON_STYLE.rodRadiusMeters > 0);
@@ -136,6 +143,13 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     Array.from(rootCoverage),
     Array.from(buildRootCoverageCurve(0, 2.5, 0, 0, 1, 0, 1, 0.6, 0, 8, 4, 0.24))
   );
+  const liveCoverageFlow = blendRootCoverageFlow(0, 1, 0, 1, 0.4, 0, 0, 0.2, 1);
+  nearlyEqual(Math.hypot(...liveCoverageFlow), 1);
+  nearlyEqual(liveCoverageFlow[1], 0);
+  assert.ok(liveCoverageFlow[0] > 0);
+  assert.ok(liveCoverageFlow[2] > liveCoverageFlow[0]);
+  const reversedCoverageFlow = blendRootCoverageFlow(0, 1, 0, 1, 0, 0, -1, 0, 0, 1);
+  assert.ok(reversedCoverageFlow[0] >= LOCK_AWARE_ROOT_COVER_MIN_AUTHORED_DOT - 1e-12);
   nearlyEqual(presentationLoopOpacityAtStep(0), 0);
   nearlyEqual(presentationLoopOpacityAtStep(15), 0.5);
   nearlyEqual(presentationLoopOpacityAtStep(30), 1);

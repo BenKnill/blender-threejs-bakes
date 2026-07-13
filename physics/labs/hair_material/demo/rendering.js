@@ -5,10 +5,13 @@ export const HAIR_PRESENTATION_LOOP_ID = "fade_reset_450_step_v1";
 export const REEL_CAMERA_FIELD_ID = "three_shot_orbit_450_step_v1";
 export const FULL_GROOM_HYDRATION_ID = "uniform_rod_joint_hydration_450_v3";
 export const PHYSICS_SKELETON_STYLE_ID = "uniform_world_space_rods_joints_v1";
-export const LOCK_AWARE_COVERAGE_ID = "styled_root_cover_locks_catmull_rom_v2";
+export const LOCK_AWARE_COVERAGE_ID = "live_root_cover_locks_catmull_rom_v3";
 export const LOCK_AWARE_RENDER_SUBDIVISIONS = 2;
 export const LOCK_AWARE_ROOT_COVER_SEGMENTS = 3;
 export const LOCK_AWARE_ROOT_COVER_LENGTH_METERS = 0.24;
+export const LOCK_AWARE_ROOT_COVER_PROBE_PARTICLE = 7;
+export const LOCK_AWARE_ROOT_COVER_LIVE_WEIGHT = 0.86;
+export const LOCK_AWARE_ROOT_COVER_MIN_AUTHORED_DOT = 0.34;
 export const PHYSICS_SKELETON_STYLE = Object.freeze({
   guideLimit: 20,
   rodRadiusMeters: 0.011,
@@ -42,6 +45,90 @@ export function catmullRomScalar(p0, p1, p2, p3, t, tangentScale = 0.5) {
     (-2 * t3 + 3 * t2) * p2 +
     (t3 - t2) * m2
   );
+}
+
+export function blendRootCoverageFlow(
+  normalX,
+  normalY,
+  normalZ,
+  authoredX,
+  authoredY,
+  authoredZ,
+  liveX,
+  liveY,
+  liveZ,
+  liveWeight = LOCK_AWARE_ROOT_COVER_LIVE_WEIGHT,
+  output = []
+) {
+  const normalLength = Math.hypot(normalX, normalY, normalZ) || 1;
+  const nx = normalX / normalLength;
+  const ny = normalY / normalLength;
+  const nz = normalZ / normalLength;
+  const authoredOutward = authoredX * nx + authoredY * ny + authoredZ * nz;
+  let authoredTangentX = authoredX - authoredOutward * nx;
+  let authoredTangentY = authoredY - authoredOutward * ny;
+  let authoredTangentZ = authoredZ - authoredOutward * nz;
+  let authoredLength = Math.hypot(authoredTangentX, authoredTangentY, authoredTangentZ);
+  if (authoredLength < 1e-8) {
+    authoredTangentX = nz;
+    authoredTangentY = 0;
+    authoredTangentZ = -nx;
+    authoredLength = Math.hypot(authoredTangentX, authoredTangentY, authoredTangentZ) || 1;
+  }
+  authoredTangentX /= authoredLength;
+  authoredTangentY /= authoredLength;
+  authoredTangentZ /= authoredLength;
+  const liveOutward = liveX * nx + liveY * ny + liveZ * nz;
+  let liveTangentX = liveX - liveOutward * nx;
+  let liveTangentY = liveY - liveOutward * ny;
+  let liveTangentZ = liveZ - liveOutward * nz;
+  let liveLength = Math.hypot(liveTangentX, liveTangentY, liveTangentZ);
+  if (liveLength < 1e-8) {
+    liveTangentX = authoredTangentX;
+    liveTangentY = authoredTangentY;
+    liveTangentZ = authoredTangentZ;
+    liveLength = 1;
+  }
+  liveTangentX /= liveLength;
+  liveTangentY /= liveLength;
+  liveTangentZ /= liveLength;
+  const weight = Math.max(0, Math.min(1, liveWeight));
+  let flowX = authoredTangentX * (1 - weight) + liveTangentX * weight;
+  let flowY = authoredTangentY * (1 - weight) + liveTangentY * weight;
+  let flowZ = authoredTangentZ * (1 - weight) + liveTangentZ * weight;
+  const flowLength = Math.hypot(flowX, flowY, flowZ) || 1;
+  flowX /= flowLength;
+  flowY /= flowLength;
+  flowZ /= flowLength;
+  const authoredDot =
+    flowX * authoredTangentX + flowY * authoredTangentY + flowZ * authoredTangentZ;
+  if (authoredDot < LOCK_AWARE_ROOT_COVER_MIN_AUTHORED_DOT) {
+    let perpendicularX = flowX - authoredDot * authoredTangentX;
+    let perpendicularY = flowY - authoredDot * authoredTangentY;
+    let perpendicularZ = flowZ - authoredDot * authoredTangentZ;
+    let perpendicularLength = Math.hypot(perpendicularX, perpendicularY, perpendicularZ);
+    if (perpendicularLength < 1e-8) {
+      perpendicularX = ny * authoredTangentZ - nz * authoredTangentY;
+      perpendicularY = nz * authoredTangentX - nx * authoredTangentZ;
+      perpendicularZ = nx * authoredTangentY - ny * authoredTangentX;
+      perpendicularLength = Math.hypot(perpendicularX, perpendicularY, perpendicularZ) || 1;
+    }
+    const perpendicularScale =
+      Math.sqrt(1 - LOCK_AWARE_ROOT_COVER_MIN_AUTHORED_DOT ** 2) / perpendicularLength;
+    flowX =
+      authoredTangentX * LOCK_AWARE_ROOT_COVER_MIN_AUTHORED_DOT +
+      perpendicularX * perpendicularScale;
+    flowY =
+      authoredTangentY * LOCK_AWARE_ROOT_COVER_MIN_AUTHORED_DOT +
+      perpendicularY * perpendicularScale;
+    flowZ =
+      authoredTangentZ * LOCK_AWARE_ROOT_COVER_MIN_AUTHORED_DOT +
+      perpendicularZ * perpendicularScale;
+  }
+  output[0] = flowX;
+  output[1] = flowY;
+  output[2] = flowZ;
+  return output;
 }
 
 export function buildRootCoverageCurve(
