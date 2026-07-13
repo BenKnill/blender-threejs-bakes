@@ -87,6 +87,13 @@ proof boundaries must remain explicit.
       showcase now fades, resets the same deterministic fixture at step 450,
       and repeats; fixed frames remain validation receipts rather than the
       product experience.
+- [x] Give the looping groom a reel-ready visual plate and repeatable framing.
+      A tracked CC0 Blender Studio head replaces the primitive mannequin on
+      demand while the analytic ellipsoid remains the sole collision proxy.
+      Named `beauty`, `control`, and `cut` camera fields follow the same
+      450-step loop, so a capture can be reconstructed from query parameters
+      rather than hand-orbiting the viewport. Three `just hair-reel-*` recipes
+      preserve the uninterrupted animation as the product experience.
 - [x] Build a small explicit-guide rod/reference fixture before raising guide
       count or enabling spatial friction in the browser by default. The
       settled axial/transverse lanes reproduce exactly, remain under 1.9%
@@ -159,7 +166,8 @@ strand rendering; do not add another many-hair operator first.
       finished 560x720 fat-line showcase reads as a swept part instead of the
       scalp-normal cap, holds 3.03% stretch, and observes 0.50 ms geometry p99.
 - [ ] Better scalp/strand contact and a clearer calibration path.
-- [ ] Video variants only after the underlying receipt distinguishes them.
+- [x] Define three receipt-distinct reel shots before packaging video variants.
+- [ ] Package short 16:9 and vertical reels from those named moving shots.
 
 Generated frames, videos, and benchmark JSON stay untracked and are pruned
 eagerly. Durable code, small receipts, proof sources, and conclusions stay here.

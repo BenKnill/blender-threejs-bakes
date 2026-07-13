@@ -25,6 +25,8 @@ import {
   HAIR_FIBER_SHADING_ID,
   HAIR_PRESENTATION_LOOP_ID,
   presentationLoopOpacityAtStep,
+  reelCameraPoseAtStep,
+  REEL_CAMERA_FIELD_ID,
   sectionPosePresentationAtStep,
   summarizeGeometryTimings,
 } from "../physics/labs/hair_material/demo/rendering.js";
@@ -81,6 +83,7 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
 {
   assert.equal(HAIR_FIBER_SHADING_ID, "tangent_dual_lobe_ms_fill_v1");
   assert.equal(HAIR_PRESENTATION_LOOP_ID, "fade_reset_450_step_v1");
+  assert.equal(REEL_CAMERA_FIELD_ID, "three_shot_orbit_450_step_v1");
   nearlyEqual(presentationLoopOpacityAtStep(0), 0);
   nearlyEqual(presentationLoopOpacityAtStep(15), 0.5);
   nearlyEqual(presentationLoopOpacityAtStep(30), 1);
@@ -93,6 +96,10 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.ok(root.g < tip.g);
   assert.ok(root.b < tip.b);
   assert.deepEqual(tip, hairFiberColorAt({ r: 0.4, g: 0.2, b: 0.1 }, 8, 3, 1));
+  assert.deepEqual(reelCameraPoseAtStep(0, "beauty"), reelCameraPoseAtStep(450, "beauty"));
+  assert.notDeepEqual(reelCameraPoseAtStep(0, "beauty"), reelCameraPoseAtStep(225, "beauty"));
+  assert.notDeepEqual(reelCameraPoseAtStep(330, "control"), reelCameraPoseAtStep(330, "cut"));
+  assert.equal(reelCameraPoseAtStep(0, "free"), null);
 }
 
 {

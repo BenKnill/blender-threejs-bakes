@@ -2,6 +2,7 @@ export const FATLINE_ROOT_HALF_WIDTH_PX = 1.22;
 export const FATLINE_TIP_HALF_WIDTH_PX = 0.2;
 export const HAIR_FIBER_SHADING_ID = "tangent_dual_lobe_ms_fill_v1";
 export const HAIR_PRESENTATION_LOOP_ID = "fade_reset_450_step_v1";
+export const REEL_CAMERA_FIELD_ID = "three_shot_orbit_450_step_v1";
 
 function smoothStep01(value) {
   const t = Math.max(0, Math.min(1, value));
@@ -28,6 +29,40 @@ export function hairFiberColorAt(baseColor, strand, copy, rootFraction, target =
   target.g = Math.min(1, baseColor.g * variation * rootToTip * (1 + 0.025 * fraction));
   target.b = Math.min(1, baseColor.b * variation * rootToTip * (1 - 0.035 * fraction));
   return target;
+}
+
+export function reelCameraPoseAtStep(step, shot, loopSteps = 450) {
+  if (!Number.isFinite(step) || !(loopSteps > 0)) throw new Error("reel camera step is invalid");
+  if (!["beauty", "control", "cut"].includes(shot)) return null;
+  const cycleStep = ((step % loopSteps) + loopSteps) % loopSteps;
+  const phase = cycleStep / loopSteps;
+  let azimuth;
+  let radius;
+  let height;
+  let targetHeight;
+  if (shot === "beauty") {
+    azimuth = 0.08 + 0.2 * Math.sin(phase * Math.PI * 2 - 0.5);
+    radius = 6.15 - 0.42 * Math.sin(phase * Math.PI);
+    height = 1.42 + 0.12 * Math.sin(phase * Math.PI * 2);
+    targetHeight = 1.18;
+  } else if (shot === "control") {
+    azimuth = -0.24 + 0.14 * Math.sin(phase * Math.PI * 2);
+    radius = 6.35;
+    height = 1.72 + 0.08 * Math.sin(phase * Math.PI * 2);
+    targetHeight = 1.42;
+  } else {
+    const cutProgress = smoothStep01((cycleStep - 285) / 105);
+    azimuth = -0.22 + 0.5 * cutProgress;
+    radius = 6.05 - 0.52 * cutProgress;
+    height = 1.35 - 0.16 * cutProgress;
+    targetHeight = 1.08 - 0.3 * cutProgress;
+  }
+  return {
+    shot,
+    cycleStep,
+    position: [Math.sin(azimuth) * radius, height, Math.cos(azimuth) * radius],
+    target: [0, targetHeight, 0],
+  };
 }
 
 export function sectionPosePresentationAtStep(step, cycle) {
