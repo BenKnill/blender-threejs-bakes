@@ -1,9 +1,33 @@
-export const FATLINE_ROOT_HALF_WIDTH_PX = 1.6;
-export const FATLINE_TIP_HALF_WIDTH_PX = 0.3;
+export const FATLINE_ROOT_HALF_WIDTH_PX = 1.22;
+export const FATLINE_TIP_HALF_WIDTH_PX = 0.2;
+export const HAIR_FIBER_SHADING_ID = "tangent_dual_lobe_ms_fill_v1";
+export const HAIR_PRESENTATION_LOOP_ID = "fade_reset_450_step_v1";
 
 function smoothStep01(value) {
   const t = Math.max(0, Math.min(1, value));
   return t * t * (3 - 2 * t);
+}
+
+export function presentationLoopOpacityAtStep(
+  step,
+  { fadeInEndStep = 30, fadeOutStartStep = 420, endStep = 450 } = {}
+) {
+  if (!(0 < fadeInEndStep && fadeInEndStep < fadeOutStartStep && fadeOutStartStep < endStep)) {
+    throw new Error("presentation loop steps are invalid");
+  }
+  if (step < fadeInEndStep) return smoothStep01(step / fadeInEndStep);
+  if (step < fadeOutStartStep) return 1;
+  return 1 - smoothStep01((step - fadeOutStartStep) / (endStep - fadeOutStartStep));
+}
+
+export function hairFiberColorAt(baseColor, strand, copy, rootFraction, target = {}) {
+  const fraction = Math.max(0, Math.min(1, rootFraction));
+  const variation = fatlineColorScale(strand, copy);
+  const rootToTip = 0.72 + 0.3 * smoothStep01(fraction);
+  target.r = Math.min(1, baseColor.r * variation * rootToTip * (1 + 0.08 * fraction));
+  target.g = Math.min(1, baseColor.g * variation * rootToTip * (1 + 0.025 * fraction));
+  target.b = Math.min(1, baseColor.b * variation * rootToTip * (1 - 0.035 * fraction));
+  return target;
 }
 
 export function sectionPosePresentationAtStep(step, cycle) {

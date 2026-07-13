@@ -10,12 +10,15 @@ import {
   summarizeCombReceipt,
 } from "./replay.js?v=112";
 import {
-  fatlineColorScale,
   fatlineHalfWidthAt,
   float32BufferDigest,
+  hairFiberColorAt,
+  HAIR_FIBER_SHADING_ID,
+  HAIR_PRESENTATION_LOOP_ID,
+  presentationLoopOpacityAtStep,
   sectionPosePresentationAtStep,
   summarizeGeometryTimings,
-} from "./rendering.js?v=108";
+} from "./rendering.js?v=109";
 import {
   buildGroomInterpolationBindings,
   groomBindingActiveSegments,
@@ -33,6 +36,10 @@ let rootDirectorMode = "free";
 let rootDirectorStrength = 0.22;
 let renderReceiptEnabled = false;
 let sectionControlTubeEnabled = false;
+let hairShadingMode = "fiber_lobes";
+let presentationLoopEnabled = false;
+let presentationLoopRestarts = 0;
+const PRESENTATION_LOOP_END_STEP = 450;
 const FATLINE_DYNAMIC_ATTRIBUTES = Object.freeze([
   "instanceStart",
   "instanceEnd",
@@ -168,6 +175,7 @@ let sectionPresentation = { phase: "off", hydration: 1, tubeOpacity: 0 };
 const SECTION_CONTROL_TUBE_RADIAL_SEGMENTS = 10;
 const SECTION_CONTROL_TUBE_COLOR = new THREE.Color(0x63e6ff);
 const fatlineBaseColor = new THREE.Color();
+const hairFiberColorScratch = { r: 0, g: 0, b: 0 };
 let paused = false;
 let cutting = false;
 let cuttingPointer = false;
@@ -291,20 +299,26 @@ function writeHydratedFiberStyle(
   activeSegments
 ) {
   const hydration = sectionHydrationForGuide(guide);
-  const colorScale = fatlineColorScale(guide, copy);
+  const hairColorAtSegment = hairFiberColorAt(
+    fatlineBaseColor,
+    guide,
+    copy,
+    (segment + 0.5) / Math.max(1, activeSegments),
+    hairFiberColorScratch
+  );
   const proxy = 1 - hydration;
   const hairContribution = 0.32 + 0.68 * hydration;
   colors[cursor] = Math.min(
     1,
-    fatlineBaseColor.r * colorScale * hairContribution + SECTION_CONTROL_TUBE_COLOR.r * proxy * 0.72
+    hairColorAtSegment.r * hairContribution + SECTION_CONTROL_TUBE_COLOR.r * proxy * 0.72
   );
   colors[cursor + 1] = Math.min(
     1,
-    fatlineBaseColor.g * colorScale * hairContribution + SECTION_CONTROL_TUBE_COLOR.g * proxy * 0.72
+    hairColorAtSegment.g * hairContribution + SECTION_CONTROL_TUBE_COLOR.g * proxy * 0.72
   );
   colors[cursor + 2] = Math.min(
     1,
-    fatlineBaseColor.b * colorScale * hairContribution + SECTION_CONTROL_TUBE_COLOR.b * proxy * 0.72
+    hairColorAtSegment.b * hairContribution + SECTION_CONTROL_TUBE_COLOR.b * proxy * 0.72
   );
   const widthScale = 0.12 + 0.88 * hydration;
   widthsStart[instance] = fatlineHalfWidthAt(segment, activeSegments) * widthScale;
@@ -398,6 +412,13 @@ function createFatlineMaterial() {
   return new THREE.ShaderMaterial({
     uniforms: {
       resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+      shadingEnabled: { value: hairShadingMode === "fiber_lobes" ? 1 : 0 },
+      keyDirectionWorld: { value: new THREE.Vector3(4, 6, 5).normalize() },
+      rimDirectionWorld: { value: new THREE.Vector3(-3, 1, 3).normalize() },
+      keyColor: { value: new THREE.Color(0xffddcf) },
+      rimColor: { value: new THREE.Color(0x667dd8) },
+      longitudinalRoughness: { value: 0.34 },
+      multipleScatteringFill: { value: 0.11 },
     },
     vertexShader: `
       uniform vec2 resolution;
@@ -407,6 +428,9 @@ function createFatlineMaterial() {
       attribute float instanceWidthStart;
       attribute float instanceWidthEnd;
       varying vec3 vColor;
+      varying vec3 vTangentView;
+      varying vec3 vPositionView;
+      varying float vAcross;
 
       void main() {
         float along = position.x;
@@ -420,19 +444,79 @@ function createFatlineMaterial() {
         vec2 side = vec2(-direction.y, direction.x);
         float width = mix(instanceWidthStart, instanceWidthEnd, along);
         float capSign = along * 2.0 - 1.0;
-        vec2 offsetPixels = side * sideSign * width + direction * capSign * min(width, 1.0);
+        vec2 offsetPixels = side * sideSign * width + direction * capSign * min(width, 0.35);
         vec2 offsetNdc = offsetPixels * 2.0 / resolution;
         vec4 clipPosition = mix(startClip, endClip, along);
         clipPosition.xy += offsetNdc * clipPosition.w;
         gl_Position = clipPosition;
         vColor = instanceColor;
+        vec4 startView = modelViewMatrix * vec4(instanceStart, 1.0);
+        vec4 endView = modelViewMatrix * vec4(instanceEnd, 1.0);
+        vTangentView = normalize(endView.xyz - startView.xyz);
+        vPositionView = mix(startView.xyz, endView.xyz, along);
+        vAcross = sideSign;
       }
     `,
     fragmentShader: `
+      uniform float shadingEnabled;
+      uniform vec3 keyDirectionWorld;
+      uniform vec3 rimDirectionWorld;
+      uniform vec3 keyColor;
+      uniform vec3 rimColor;
+      uniform float longitudinalRoughness;
+      uniform float multipleScatteringFill;
       varying vec3 vColor;
+      varying vec3 vTangentView;
+      varying vec3 vPositionView;
+      varying float vAcross;
+
+      float strandDiffuse(vec3 tangent, vec3 lightDirection) {
+        float cosine = clamp(dot(tangent, lightDirection), -1.0, 1.0);
+        return sqrt(max(0.0, 1.0 - cosine * cosine));
+      }
+
+      float longitudinalLobe(float tangentHalf, float shift, float width) {
+        float offset = (tangentHalf - shift) / max(0.001, width);
+        return exp(-offset * offset);
+      }
 
       void main() {
-        gl_FragColor = vec4(vColor, 1.0);
+        if (shadingEnabled < 0.5) {
+          gl_FragColor = vec4(vColor, 1.0);
+          return;
+        }
+
+        vec3 tangent = normalize(vTangentView);
+        vec3 viewDirection = normalize(-vPositionView);
+        vec3 keyDirection = normalize((viewMatrix * vec4(keyDirectionWorld, 0.0)).xyz);
+        vec3 rimDirection = normalize((viewMatrix * vec4(rimDirectionWorld, 0.0)).xyz);
+        vec3 keyHalf = normalize(keyDirection + viewDirection);
+        vec3 rimHalf = normalize(rimDirection + viewDirection);
+        float tangentKeyHalf = dot(tangent, keyHalf);
+        float tangentRimHalf = dot(tangent, rimHalf);
+
+        float diffuse = strandDiffuse(tangent, keyDirection);
+        float primary = longitudinalLobe(tangentKeyHalf, 0.10, longitudinalRoughness);
+        float transmission = longitudinalLobe(
+          tangentKeyHalf,
+          -0.16,
+          longitudinalRoughness * 1.65
+        );
+        float rimPrimary = longitudinalLobe(
+          tangentRimHalf,
+          0.08,
+          longitudinalRoughness * 1.15
+        );
+        float cylinderEdge = 0.68 + 0.32 * abs(vAcross);
+        vec3 scatteringTint = pow(max(vColor, vec3(0.0)), vec3(0.46));
+
+        vec3 color = vColor * (0.34 + 0.62 * diffuse);
+        color += keyColor * primary * cylinderEdge * 0.23;
+        color += scatteringTint * keyColor * transmission * 0.1;
+        color += rimColor * rimPrimary * cylinderEdge * 0.16;
+        color += scatteringTint * multipleScatteringFill * (0.72 + 0.28 * diffuse);
+        color = color / (vec3(0.94) + color);
+        gl_FragColor = vec4(color, 1.0);
       }
     `,
     depthTest: true,
@@ -467,8 +551,8 @@ function rebuildFatlineObject() {
   scene.add(hair);
   const undercoatGeometry = new THREE.SphereGeometry(1, 48, 20, 0, Math.PI * 2, 0, 1.18);
   const undercoatMaterial = new THREE.MeshStandardMaterial({
-    color: hairColor(),
-    roughness: 0.88,
+    color: fatlineBaseColor.clone().multiplyScalar(0.42),
+    roughness: 0.96,
     metalness: 0,
   });
   hairUndercoat = new THREE.Mesh(undercoatGeometry, undercoatMaterial);
@@ -920,6 +1004,8 @@ function updateTelemetry(now) {
   const geometryTiming = summarizeGeometryTimings(hairGeometryTimings);
   document.querySelector("#metric-render-mode").textContent = hairRenderMode;
   document.querySelector("#metric-groom-mode").textContent = groomMode;
+  document.querySelector("#metric-hair-surface").textContent =
+    `${hairShadingMode.replaceAll("_", " ")} · ${presentationLoopEnabled ? `loop ${presentationLoopRestarts + 1}` : "continuous"}`;
   document.querySelector("#metric-root-director").textContent = receipt.root_director.enabled
     ? `${receipt.root_director.mode.replaceAll("_", " ")} · ${receipt.root_director.strength.toFixed(2)}`
     : "off";
@@ -1058,6 +1144,13 @@ function animate(now) {
     const start = performance.now();
     if (deterministicReplay.enabled) {
       if (deterministicReplay.autoplay) {
+        if (
+          presentationLoopEnabled &&
+          deterministicReplay.state.step >= PRESENTATION_LOOP_END_STEP
+        ) {
+          rebuildSolver();
+          presentationLoopRestarts += 1;
+        }
         advanceHairReplay(
           solver,
           deterministicReplay.config,
@@ -1072,6 +1165,9 @@ function animate(now) {
     }
     smoothedSolverMs = smoothedSolverMs * 0.9 + (performance.now() - start) * 0.1;
   }
+  renderer.domElement.style.opacity = presentationLoopEnabled
+    ? String(presentationLoopOpacityAtStep(deterministicReplay.state.step))
+    : "1";
   updateHairGeometry();
   updateWindVisual();
   comb.visible = Boolean(deterministicReplay.config.comb && solver.comb.enabled);
@@ -1149,11 +1245,14 @@ function applyQueryConfiguration() {
           ? "section_interp"
           : "radial_xz";
   document.querySelector("#groom-display").value = hairRenderMode === "lines" ? "lines" : groomMode;
+  hairShadingMode = params.get("hairShade") === "flat" ? "flat" : "fiber_lobes";
+  document.querySelector("#hair-surface").value = hairShadingMode;
   sectionControlTubeEnabled = params.get("controlTube") === "1";
   document.querySelector("#pose-visual").value = sectionControlTubeEnabled
     ? "control_tube"
     : "hair_only";
   renderReceiptEnabled = params.get("renderReceipt") === "1";
+  presentationLoopEnabled = params.get("presentationLoop") === "1";
   if (params.get("film") === "1") {
     filmDirection.enabled = true;
     filmDirection.baseWind = Number(params.get("wind") ?? 0.18);
@@ -1268,6 +1367,12 @@ document.querySelector("#groom-display").addEventListener("change", (event) => {
   groomMode = requestedMode === "lines" ? "radial_xz" : requestedMode;
   rebuildSolver();
 });
+document.querySelector("#hair-surface").addEventListener("change", (event) => {
+  hairShadingMode = event.currentTarget.value === "flat" ? "flat" : "fiber_lobes";
+  if (hairRenderMode === "fatline") {
+    hair.material.uniforms.shadingEnabled.value = hairShadingMode === "fiber_lobes" ? 1 : 0;
+  }
+});
 document.querySelector("#reset").addEventListener("click", rebuildSolver);
 document.querySelector("#pause").addEventListener("click", (event) => {
   paused = !paused;
@@ -1358,6 +1463,28 @@ function createRenderReceipt() {
     hair_render_mode: hairRenderMode,
     groom_mode: groomMode,
     groom_interpolation: groomInterpolationReceipt(groomBindings, groomBindingBuildCount),
+    hair_shading: {
+      mode: hairShadingMode,
+      field_identity: HAIR_FIBER_SHADING_ID,
+      geometry: "screen_aligned_strand_ribbons",
+      primary_lobe: "white_shifted_root_reflection",
+      secondary_lobe: "hair_tinted_tip_transmission",
+      longitudinal_roughness: 0.34,
+      multiple_scattering_fill: 0.11,
+      color_variation: "deterministic_fiber_plus_root_tip_v1",
+      physics_authority: "none_renderer_only",
+    },
+    presentation_loop: {
+      enabled: presentationLoopEnabled,
+      field_identity: HAIR_PRESENTATION_LOOP_ID,
+      end_step: PRESENTATION_LOOP_END_STEP,
+      current_step: deterministicReplay.state.step,
+      opacity: presentationLoopEnabled
+        ? presentationLoopOpacityAtStep(deterministicReplay.state.step)
+        : 1,
+      restarts: presentationLoopRestarts,
+      physics_authority: "restarts_same_deterministic_fixture_only",
+    },
     root_director: solver.receipt().root_director,
     section_lift: solver.receipt().section_lift,
     section_pose: solver.receipt().section_pose,

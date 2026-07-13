@@ -261,6 +261,22 @@ fixed step 90, tube-on and hair-only modes share physics digest
 p99 and 1.20 ms total hair-geometry p99 at 256 guides × 15 fibers. These are
 single-browser render costs; the tube has no solver authority.
 
+The dense fat-line path now defaults to `hairShade=fiber`, a compact real-time
+strand approximation informed by Disney fiber models and TressFX rather than a
+2D noise texture. It uses the segment tangent for diffuse response, separates a
+neutral primary reflection from a hair-tinted internal-reflection lobe, adds a
+small multiple-scattering fill, and varies color deterministically from root to
+tip. `hairShade=flat` preserves the diagnostic A/B. At fixed step 90, both modes
+share physics digest `1b50f30cdfdff721` and render-position digest `8019ba02`;
+both reached the browser's 120 fps ceiling in the 560×720 isolated gate. This
+is renderer-only and does not implement full Marschner/Chiang transport, deep
+hair shadows, or order-independent transparency.
+
+`presentationLoop=1` restores the showcase as an animation: the deterministic
+fixture fades in, hydrates, simulates wind and the cut, fades out after step
+420, then resets at step 450. One live browser observation crossed the boundary
+and reported restart count 1. Fixed-step screenshots remain receipts only.
+
 ## Claim boundary
 
 This is a material-aware graphics solver, not continuum hair mechanics or a
