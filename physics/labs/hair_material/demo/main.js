@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
+import { loadBox3dGuideClip, sampleQuantizedGuideClip } from "./box3d_clip.js?v=125";
 import { HairSolver } from "./solver.js?v=124";
 import {
   advanceHairReplay,
@@ -80,6 +81,17 @@ let mannequinMode = "primitive";
 let mannequinStatus = "primitive_ready";
 let heroMannequin;
 let reelShot = "free";
+const nativeClipPlayback = {
+  enabled: false,
+  asset: null,
+  clip: null,
+  elapsed: 0,
+  sampleTime: 0,
+  opacity: 1,
+  restarts: 0,
+  error: null,
+};
+const NATIVE_CLIP_RESET_FADE_SECONDS = 0.6;
 const PRESENTATION_LOOP_END_STEP = PREVIEW_WIND_PROGRAM.loopEndStep;
 const FATLINE_DYNAMIC_ATTRIBUTES = Object.freeze([
   "instanceStart",
@@ -1045,7 +1057,7 @@ function rebuildSolver() {
   const preset = document.querySelector("#preset").value;
   solver = new HairSolver({
     guideCount,
-    segments: 12,
+    segments: nativeClipPlayback.enabled ? 8 : 12,
     iterations,
     preset,
     renderFibersPerGuide,
@@ -1599,6 +1611,7 @@ function updateTelemetry(now) {
   if (now - telemetryClock < 220) return;
   telemetryClock = now;
   const receipt = solver.receipt();
+  const rootDirectorReceipt = rootDirectorReceiptForDisplay(receipt.root_director);
   document.querySelector("#metric-guides").textContent = receipt.guide_count.toLocaleString();
   document.querySelector("#metric-fibers").textContent =
     receipt.render_fiber_count.toLocaleString();
@@ -1636,15 +1649,15 @@ function updateTelemetry(now) {
     `${hairShadingMode.replaceAll("_", " ")} · ${presentationLoopEnabled ? `loop ${presentationLoopRestarts + 1}` : "continuous"}`;
   document.querySelector("#metric-reel-presentation").textContent =
     `${mannequinStatus.replaceAll("_", " ")} · ${reelShot.replaceAll("_", " ")}`;
-  document.querySelector("#metric-root-director").textContent = receipt.root_director.enabled
-    ? `${receipt.root_director.mode.replaceAll("_", " ")} · ${receipt.root_director.strength.toFixed(2)}`
+  document.querySelector("#metric-root-director").textContent = rootDirectorReceipt.enabled
+    ? `${rootDirectorReceipt.mode.replaceAll("_", " ")} · ${rootDirectorReceipt.strength.toFixed(2)}`
     : "off";
   document.querySelector("#metric-root-alignment").textContent =
-    `${receipt.root_director.minimum_first_segment_normal_dot.toFixed(3)} / ${receipt.root_director.mean_first_segment_normal_dot.toFixed(3)}`;
+    `${rootDirectorReceipt.minimum_first_segment_normal_dot.toFixed(3)} / ${rootDirectorReceipt.mean_first_segment_normal_dot.toFixed(3)}`;
   document.querySelector("#metric-root-field-alignment").textContent =
-    `${receipt.root_director.minimum_first_segment_target_dot.toFixed(3)} / ${receipt.root_director.mean_first_segment_target_dot.toFixed(3)}`;
+    `${rootDirectorReceipt.minimum_first_segment_target_dot.toFixed(3)} / ${rootDirectorReceipt.mean_first_segment_target_dot.toFixed(3)}`;
   document.querySelector("#metric-root-field-outward").textContent =
-    `${receipt.root_director.minimum_target_outward_dot.toFixed(3)} / ${receipt.root_director.mean_target_tangential_magnitude.toFixed(3)}`;
+    `${rootDirectorReceipt.minimum_target_outward_dot.toFixed(3)} / ${rootDirectorReceipt.mean_target_tangential_magnitude.toFixed(3)}`;
   document.querySelector("#metric-section-lift").textContent =
     `${receipt.section_lift.phase} · ${receipt.section_lift.target_meters.toFixed(2)} m`;
   document.querySelector("#metric-section-pose").textContent =
@@ -1696,6 +1709,10 @@ function updateTelemetry(now) {
           : deterministicReplay.config.previewWindProgram
       )
     : null;
+  const nativeWind =
+    nativeClipPlayback.enabled && nativeClipPlayback.clip
+      ? nativeClipWindAtTime(nativeClipPlayback.sampleTime)
+      : null;
   document.querySelector("#showcase-phase").textContent =
     fullGroomHydrationEnabled && fullGroomPresentation.phase !== "hydrated"
       ? fullGroomPresentation.phase === "mechanical_skeleton"
@@ -1703,19 +1720,25 @@ function updateTelemetry(now) {
         : `groom hydration · ${fullGroomPresentation.phase.replaceAll("_", " ")}`
       : previewWind?.phase === "strong_orbit"
         ? `STRONG breeze · orbit ${Math.round(previewWind.orbitProgress * 100)}%`
-        : previewWind?.phase === "moderate_orbit"
-          ? `MODERATE breeze · orbit ${Math.round(previewWind.orbitProgress * 100)}%`
-          : previewWind?.phase === "orbit_complete"
-            ? "two complete wind orbits · resetting"
-            : previewWind?.phase === "calm_setup"
-              ? "calm setup · wind begins after hydration"
-              : sectionControlTubeEnabled && sectionPresentation.phase !== "simulation"
-                ? `control tube · ${sectionPresentation.phase}`
-                : solver.comb.enabled
-                  ? `${solver.comb.phase} comb pass`
-                  : receipt.assumption_receipt.measurement_window === "comb_cycle"
-                    ? "two-pass complete · wind orbit continues"
-                    : receipt.assumption_receipt.measurement_window.replaceAll("_", " ");
+        : nativeClipPlayback.enabled && nativeClipPlayback.elapsed > 12
+          ? "two complete Box3D wind orbits · resetting"
+          : nativeWind?.phase === "strong_orbit"
+            ? `STRONG native breeze · orbit ${Math.round(nativeWind.orbitProgress * 100)}%`
+            : nativeWind?.phase === "moderate_orbit"
+              ? `MODERATE native breeze · orbit ${Math.round(nativeWind.orbitProgress * 100)}%`
+              : previewWind?.phase === "moderate_orbit"
+                ? `MODERATE breeze · orbit ${Math.round(previewWind.orbitProgress * 100)}%`
+                : previewWind?.phase === "orbit_complete"
+                  ? "two complete wind orbits · resetting"
+                  : previewWind?.phase === "calm_setup"
+                    ? "calm setup · wind begins after hydration"
+                    : sectionControlTubeEnabled && sectionPresentation.phase !== "simulation"
+                      ? `control tube · ${sectionPresentation.phase}`
+                      : solver.comb.enabled
+                        ? `${solver.comb.phase} comb pass`
+                        : receipt.assumption_receipt.measurement_window === "comb_cycle"
+                          ? "two-pass complete · wind orbit continues"
+                          : receipt.assumption_receipt.measurement_window.replaceAll("_", " ");
   const windStrength =
     previewWind?.phase === "strong_orbit"
       ? "STRONG"
@@ -1724,14 +1747,21 @@ function updateTelemetry(now) {
         : "setup";
   document.querySelector("#showcase-wind").textContent = previewWind
     ? `${windStrength} · ${windDegrees.toFixed(0)}° · force ${receipt.wind.magnitude.toFixed(2)}`
-    : `wind ${windDegrees.toFixed(0)}° · ${receipt.wind.magnitude.toFixed(2)}`;
+    : nativeWind
+      ? `${nativeWind.speed.toFixed(2)} m/s · ${windDegrees.toFixed(0)}° · native clip`
+      : `wind ${windDegrees.toFixed(0)}° · ${receipt.wind.magnitude.toFixed(2)}`;
   const stretchWindow = receipt.assumption_receipt.measurement_window;
   const stretchQualifier =
     stretchWindow === "full_simulation"
       ? "live"
       : `gate ${receipt.assumption_receipt.stretch.satisfied ? "pass" : "fail"}`;
-  document.querySelector("#showcase-stretch").textContent =
-    `stretch ${(receipt.max_relative_stretch_error * 100).toFixed(2)}% · ${stretchQualifier}`;
+  const settledJointGap =
+    nativeClipPlayback.clip?.metadata.accepted_metrics?.max_settled_joint_gap_m;
+  document.querySelector("#showcase-stretch").textContent = nativeClipPlayback.enabled
+    ? settledJointGap
+      ? `joint gap ${(settledJointGap * 1000).toFixed(1)} mm · native gate pass`
+      : "native Box3D clip · loading gate receipt"
+    : `stretch ${(receipt.max_relative_stretch_error * 100).toFixed(2)}% · ${stretchQualifier}`;
   if (performance.memory) {
     document.querySelector("#metric-memory").textContent = `${(
       performance.memory.usedJSHeapSize /
@@ -1739,6 +1769,20 @@ function updateTelemetry(now) {
       1024
     ).toFixed(1)} MiB`;
   }
+}
+
+function rootDirectorReceiptForDisplay(rootDirectorReceipt) {
+  const accepted = nativeClipPlayback.clip?.metadata.accepted_metrics;
+  if (!nativeClipPlayback.enabled || !accepted) return rootDirectorReceipt;
+  return {
+    ...rootDirectorReceipt,
+    minimum_first_segment_normal_dot: accepted.minimum_settled_root_outward_dot,
+    mean_first_segment_normal_dot: accepted.mean_settled_root_outward_dot,
+    minimum_first_segment_target_dot: accepted.minimum_settled_root_target_dot,
+    mean_first_segment_target_dot: accepted.mean_settled_root_target_dot,
+    measurement_window: "native_box3d_settled_2s_to_12s",
+    physics_authority: "native_box3d_precomputed_capsule_transforms",
+  };
 }
 
 function updateWindVisual() {
@@ -1765,6 +1809,77 @@ function updateWindVisual() {
     windStreakPositions[cursor + 5] = centerZ + direction.z * 0.12;
   }
   windStreaks.geometry.attributes.position.needsUpdate = true;
+}
+
+function nativeClipWindAtTime(timeSeconds) {
+  const strong = timeSeconds < 6;
+  const phaseTime = strong ? timeSeconds : Math.max(0, timeSeconds - 6);
+  const angle = (phaseTime / 6) * Math.PI * 2;
+  return {
+    phase: strong ? "strong_orbit" : "moderate_orbit",
+    speed: strong ? 6 : 3.25,
+    angle,
+    orbitProgress: Math.max(0, Math.min(1, phaseTime / 6)),
+  };
+}
+
+function advanceNativeClip(frameDt) {
+  if (!nativeClipPlayback.enabled || !nativeClipPlayback.clip) return false;
+  const { metadata, quantized } = nativeClipPlayback.clip;
+  const cycleDuration = metadata.duration_s + 2 * NATIVE_CLIP_RESET_FADE_SECONDS;
+  nativeClipPlayback.elapsed += frameDt;
+  if (nativeClipPlayback.elapsed >= cycleDuration) {
+    nativeClipPlayback.elapsed %= cycleDuration;
+    nativeClipPlayback.restarts += 1;
+  }
+  if (nativeClipPlayback.elapsed <= metadata.duration_s) {
+    nativeClipPlayback.sampleTime = nativeClipPlayback.elapsed;
+    nativeClipPlayback.opacity = 1;
+  } else if (nativeClipPlayback.elapsed <= metadata.duration_s + NATIVE_CLIP_RESET_FADE_SECONDS) {
+    nativeClipPlayback.sampleTime = metadata.duration_s;
+    nativeClipPlayback.opacity =
+      1 - (nativeClipPlayback.elapsed - metadata.duration_s) / NATIVE_CLIP_RESET_FADE_SECONDS;
+  } else {
+    nativeClipPlayback.sampleTime = 0;
+    nativeClipPlayback.opacity =
+      (nativeClipPlayback.elapsed - metadata.duration_s - NATIVE_CLIP_RESET_FADE_SECONDS) /
+      NATIVE_CLIP_RESET_FADE_SECONDS;
+  }
+  solver.previous.set(solver.positions);
+  sampleQuantizedGuideClip(metadata, quantized, nativeClipPlayback.sampleTime, solver.positions);
+  solver.time = nativeClipPlayback.sampleTime;
+  deterministicReplay.state.step = Math.round(nativeClipPlayback.sampleTime * 60);
+  const wind = nativeClipWindAtTime(nativeClipPlayback.sampleTime);
+  solver.wind = wind.speed;
+  solver.windAngle = wind.angle;
+  solver.windDirection = [Math.cos(wind.angle), 0, Math.sin(wind.angle)];
+  solver.directionalWind = true;
+  return true;
+}
+
+async function initializeNativeClipPlayback() {
+  if (!nativeClipPlayback.enabled) return;
+  try {
+    const clip = await loadBox3dGuideClip(nativeClipPlayback.asset);
+    if (
+      clip.metadata.guide_count !== solver.guideCount ||
+      clip.metadata.segments !== solver.segments
+    ) {
+      throw new Error(
+        `Box3D clip expects ${clip.metadata.guide_count} × ${clip.metadata.segments}; ` +
+          `solver is ${solver.guideCount} × ${solver.segments}`
+      );
+    }
+    nativeClipPlayback.clip = clip;
+    advanceNativeClip(0);
+    updateHairGeometry();
+    status.textContent =
+      "Playing native Box3D scalp groom · recorded mechanics, live browser hydration.";
+  } catch (error) {
+    nativeClipPlayback.error = String(error);
+    status.textContent = `Native Box3D clip failed: ${error}`;
+    console.error(error);
+  }
 }
 
 function drawCombTrace(trace) {
@@ -1806,7 +1921,9 @@ function animate(now) {
   smoothedFps = smoothedFps * 0.92 + (1 / frameDt) * 0.08;
   if (!paused) {
     const start = performance.now();
-    if (deterministicReplay.enabled) {
+    if (nativeClipPlayback.enabled) {
+      advanceNativeClip(frameDt);
+    } else if (deterministicReplay.enabled) {
       if (deterministicReplay.autoplay) {
         if (
           presentationLoopEnabled &&
@@ -1829,9 +1946,11 @@ function animate(now) {
     }
     smoothedSolverMs = smoothedSolverMs * 0.9 + (performance.now() - start) * 0.1;
   }
-  renderer.domElement.style.opacity = presentationLoopEnabled
-    ? String(presentationLoopOpacityAtStep(deterministicReplay.state.step))
-    : "1";
+  renderer.domElement.style.opacity = nativeClipPlayback.enabled
+    ? String(nativeClipPlayback.opacity)
+    : presentationLoopEnabled
+      ? String(presentationLoopOpacityAtStep(deterministicReplay.state.step))
+      : "1";
   updateHairGeometry();
   updateWindVisual();
   comb.visible = Boolean(deterministicReplay.config.comb && solver.comb.enabled);
@@ -1859,6 +1978,17 @@ function resize() {
 
 function applyQueryConfiguration() {
   const params = new URLSearchParams(window.location.search);
+  const physicsClip = params.get("physicsClip");
+  const nativeClipGuides =
+    physicsClip === "box3d-scalp-256" ? 256 : physicsClip === "box3d-scalp-64" ? 64 : null;
+  nativeClipPlayback.enabled = nativeClipGuides !== null;
+  nativeClipPlayback.asset = nativeClipPlayback.enabled
+    ? `./assets/box3d_scalp_groom_${nativeClipGuides}.meta.json`
+    : null;
+  if (nativeClipPlayback.enabled) {
+    document.querySelector("#guides").min = "64";
+    if (!params.has("guides")) document.querySelector("#guides").value = String(nativeClipGuides);
+  }
   const showcase = params.get("showcase") === "1";
   document.body.classList.toggle("showcase", showcase);
   const controlsByParameter = {
@@ -1903,7 +2033,11 @@ function applyQueryConfiguration() {
       "Hair material study · experimental k=1 spatial friction";
   }
   if (params.has("fibers")) {
-    renderFibersPerGuide = Math.max(1, Math.min(21, Number(params.get("fibers")) || 9));
+    const maximumFiberCopies = nativeClipPlayback.enabled ? 84 : 21;
+    renderFibersPerGuide = Math.max(
+      1,
+      Math.min(maximumFiberCopies, Number(params.get("fibers")) || 9)
+    );
   }
   hairRenderMode = params.get("hairRender") === "fatline" ? "fatline" : "lines";
   groomMode =
@@ -2012,6 +2146,18 @@ function applyQueryConfiguration() {
       controls.autoRotateSpeed = Number(params.get("orbit") ?? 0.35);
     }
   }
+  if (nativeClipPlayback.enabled) {
+    deterministicReplay.enabled = false;
+    deterministicReplay.autoplay = false;
+    filmDirection.enabled = false;
+    fullGroomHydrationEnabled = true;
+    sectionControlTubeEnabled = false;
+    presentationLoopEnabled = false;
+    document.querySelector("#pose-visual").value = "full_groom_hydration";
+    document.querySelector("#scenario-label").textContent =
+      "Native Box3D scalp groom · recorded mechanics + live hydration";
+    document.querySelector("#showcase-groom").textContent = "Box3D styled scalp groom";
+  }
 }
 
 for (const [id, output, format] of [
@@ -2119,6 +2265,7 @@ resize();
 rebuildSolver();
 applyQueryConfiguration();
 rebuildSolver();
+initializeNativeClipPlayback();
 
 if (deterministicReplay.enabled && deterministicReplay.targetStep > 0) {
   const replayResult = advanceHairReplay(
@@ -2165,6 +2312,18 @@ function createRenderReceipt() {
   const hairWidthsEnd = hairAttributes?.instanceWidthEnd?.array ?? new Float32Array();
   return {
     schema: "hair-render/1",
+    native_box3d_clip: {
+      enabled: nativeClipPlayback.enabled,
+      status: nativeClipPlayback.error ? "error" : nativeClipPlayback.clip ? "playing" : "loading",
+      error: nativeClipPlayback.error,
+      metadata: nativeClipPlayback.clip?.metadata ?? null,
+      sample_time_s: nativeClipPlayback.sampleTime,
+      loop_elapsed_s: nativeClipPlayback.elapsed,
+      loop_opacity: nativeClipPlayback.opacity,
+      restarts: nativeClipPlayback.restarts,
+      browser_role: "linear_interpolation_plus_display_hydration_only",
+      physics_authority: nativeClipPlayback.clip?.metadata.physics_authority ?? null,
+    },
     hair_render_mode: hairRenderMode,
     groom_mode: groomMode,
     groom_interpolation: groomInterpolationReceipt(groomBindings, groomBindingBuildCount),
@@ -2277,7 +2436,7 @@ function createRenderReceipt() {
         reelShot === "free" ? null : reelCameraPoseAtStep(deterministicReplay.state.step, reelShot),
       physics_authority: "none_camera_only",
     },
-    root_director: solver.receipt().root_director,
+    root_director: rootDirectorReceiptForDisplay(solver.receipt().root_director),
     scalp_layout: solver.receipt().scalp_layout,
     face_clear_groom: solver.receipt().face_clear_groom,
     section_lift: solver.receipt().section_lift,

@@ -10,21 +10,14 @@ const source = path.join(root, "physics/labs/hair_material/demo");
 const output = path.join(root, "dist/hair-material-bench");
 const canonicalUrl = "https://hair-material-bench.pages.dev/";
 const canonicalParameters = new URLSearchParams([
-  ["replay", "1"],
-  ["autoplay", "1"],
+  ["physicsClip", "box3d-scalp-256"],
   ["showcase", "1"],
-  ["presentationLoop", "1"],
-  ["poseCycle", "1"],
-  ["poseSection", "7"],
-  ["poseLift", "0.32"],
-  ["poseSweep", "0.34"],
   ["groomHydration", "1"],
   ["guides", "256"],
   ["iterations", "6"],
   ["preset", "wavy"],
   ["wetness", "0.35"],
   ["product", "0.45"],
-  ["windProgram", "strong-then-moderate-orbits"],
   ["hairRender", "fatline"],
   ["hairShade", "fiber"],
   ["fibers", "21"],
@@ -35,7 +28,7 @@ const canonicalParameters = new URLSearchParams([
   ["mannequin", "realistic"],
   ["reel", "control"],
   ["renderReceipt", "1"],
-  ["scenario", "canonical-visible-two-orbit-wind-demo"],
+  ["scenario", "native-box3d-scalp-groom-two-orbit-playback"],
 ]).toString();
 
 await rm(output, { recursive: true, force: true });

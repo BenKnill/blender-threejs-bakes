@@ -2,6 +2,7 @@
 
 import assert from "node:assert/strict";
 
+import { sampleQuantizedGuideClip } from "../physics/labs/hair_material/demo/box3d_clip.js";
 import {
   closestSegmentPoints,
   discoverSegmentPairs,
@@ -112,6 +113,27 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
 }
 
 {
+  const metadata = {
+    schema: "hair-box3d-guide-clip/1",
+    guide_count: 1,
+    particles_per_guide: 2,
+    frame_count: 2,
+    sample_hz: 1,
+    duration_s: 1,
+    quantization_m: 0.25,
+  };
+  const quantized = new Int16Array([0, 4, 8, 12, 16, 20, 4, 8, 12, 16, 20, 24]);
+  const output = new Float64Array(6);
+  const sample = sampleQuantizedGuideClip(metadata, quantized, 0.5, output);
+  assert.deepEqual(sample, { frameA: 0, frameB: 1, alpha: 0.5, timeSeconds: 0.5 });
+  assert.deepEqual([...output], [0.5, 1.5, 2.5, 3.5, 4.5, 5.5]);
+  assert.throws(
+    () => sampleQuantizedGuideClip(metadata, quantized, 0, new Float64Array(3)),
+    /wrong length/
+  );
+}
+
+{
   assert.equal(HAIR_FIBER_SHADING_ID, "tangent_dual_lobe_root_emergence_v2");
   assert.equal(HAIR_PRESENTATION_LOOP_ID, "visible_two_wind_orbits_1020_step_v3");
   assert.equal(REEL_CAMERA_FIELD_ID, "fixed_control_two_orbit_1020_step_v3");
@@ -133,8 +155,8 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     moderateMagnitude: 0.9,
     legacyScaleMigrated: false,
   });
-  assert.equal(FULL_GROOM_HYDRATION_ID, "uniform_rod_joint_hydration_450_v3");
-  assert.equal(PHYSICS_SKELETON_STYLE_ID, "uniform_world_space_rods_joints_v1");
+  assert.equal(FULL_GROOM_HYDRATION_ID, "uniform_64guide_rod_joint_hydration_v4");
+  assert.equal(PHYSICS_SKELETON_STYLE_ID, "uniform_world_space_rods_joints_v2");
   assert.equal(LOCK_AWARE_COVERAGE_ID, "live_root_cover_locks_catmull_rom_v3");
   assert.equal(LOCK_AWARE_RENDER_SUBDIVISIONS, 2);
   assert.equal(LOCK_AWARE_ROOT_COVER_SEGMENTS, 3);
@@ -142,7 +164,7 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.equal(LOCK_AWARE_ROOT_COVER_PROBE_PARTICLE, 7);
   nearlyEqual(LOCK_AWARE_ROOT_COVER_LIVE_WEIGHT, 0.86);
   nearlyEqual(LOCK_AWARE_ROOT_COVER_MIN_AUTHORED_DOT, 0.34);
-  assert.equal(PHYSICS_SKELETON_STYLE.guideLimit, 20);
+  assert.equal(PHYSICS_SKELETON_STYLE.guideLimit, 64);
   assert.equal(PHYSICS_SKELETON_STYLE.rootJointScale, 1);
   assert.ok(PHYSICS_SKELETON_STYLE.rodRadiusMeters > 0);
   assert.ok(PHYSICS_SKELETON_STYLE.jointRadiusMeters > PHYSICS_SKELETON_STYLE.rodRadiusMeters);

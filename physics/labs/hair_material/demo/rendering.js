@@ -3,8 +3,8 @@ export const FATLINE_TIP_HALF_WIDTH_PX = 0.07;
 export const HAIR_FIBER_SHADING_ID = "tangent_dual_lobe_root_emergence_v2";
 export const HAIR_PRESENTATION_LOOP_ID = "visible_two_wind_orbits_1020_step_v3";
 export const REEL_CAMERA_FIELD_ID = "fixed_control_two_orbit_1020_step_v3";
-export const FULL_GROOM_HYDRATION_ID = "uniform_rod_joint_hydration_450_v3";
-export const PHYSICS_SKELETON_STYLE_ID = "uniform_world_space_rods_joints_v1";
+export const FULL_GROOM_HYDRATION_ID = "uniform_64guide_rod_joint_hydration_v4";
+export const PHYSICS_SKELETON_STYLE_ID = "uniform_world_space_rods_joints_v2";
 export const LOCK_AWARE_COVERAGE_ID = "live_root_cover_locks_catmull_rom_v3";
 export const LOCK_AWARE_RENDER_SUBDIVISIONS = 2;
 export const LOCK_AWARE_ROOT_COVER_SEGMENTS = 3;
@@ -13,7 +13,7 @@ export const LOCK_AWARE_ROOT_COVER_PROBE_PARTICLE = 7;
 export const LOCK_AWARE_ROOT_COVER_LIVE_WEIGHT = 0.86;
 export const LOCK_AWARE_ROOT_COVER_MIN_AUTHORED_DOT = 0.34;
 export const PHYSICS_SKELETON_STYLE = Object.freeze({
-  guideLimit: 20,
+  guideLimit: 64,
   rodRadiusMeters: 0.011,
   jointRadiusMeters: 0.02,
   rootJointScale: 1,

@@ -3,12 +3,13 @@
 Issues: [#79](https://github.com/BenKnill/blender-threejs-bakes/issues/79),
 [#86](https://github.com/BenKnill/blender-threejs-bakes/issues/86),
 [#130](https://github.com/BenKnill/blender-threejs-bakes/issues/130),
-[#132](https://github.com/BenKnill/blender-threejs-bakes/issues/132)
+[#132](https://github.com/BenKnill/blender-threejs-bakes/issues/132),
+[#175](https://github.com/BenKnill/blender-threejs-bakes/issues/175)
 
 This laboratory is the first interactive step beyond the rendered mannequin
-cut. It runs hundreds of 3D mechanical guides in the browser, couples nearby
-guides with bounded friction and cohesion constraints, and interpolates nine
-visible fibers from each guide.
+cut. Its editable mode runs hundreds of 3D mechanical guides in the browser.
+The canonical hands-off reel now plays a recorded 256-guide native Box3D scalp
+fixture and hydrates those mechanics into the same dense browser material.
 
 The canonical refreshable front door is
 [hair-material-bench.pages.dev](https://hair-material-bench.pages.dev/). With
@@ -39,7 +40,7 @@ required vendored Three.js modules. Repository-scoped Cloudflare credentials
 are not configured in GitHub, so this is currently an authenticated local
 direct upload rather than an automatic deployment workflow.
 
-The default fixture uses 512 guides, 12 segments per guide, five constraint
+The browser-solver lab default uses 512 guides, 12 segments per guide, five constraint
 iterations, and 4,608 visible fibers. Controls expose four deterministic rest-
 shape/material families, guide count, solver iterations, wetness, product,
 section elevation, and wind. The scissors brush cuts strands under the pointer;
@@ -382,6 +383,37 @@ dense hydrated groom and therefore read frozen. The corrected fixture moves
 guide tips approximately 326-402 mm RMS per settled strong quarter-orbit versus
 132-150 mm moderate while remaining below 3.5% post-settle live stretch. See
 `docs/receipts/hair_visible_wind_amplitude.md`.
+
+## Native Box3D canonical playback
+
+The no-query canonical page now selects `physicsClip=box3d-scalp-256`. The
+source fixture contains 256 scalp-rooted guides, 2,048 dynamic capsules, and
+2,048 spherical target-spring joints. Its anisotropic persistent-contact
+operator runs natively during capture; the resulting twelve seconds contain
+one full 6.0 m/s orbit followed by one full 3.25 m/s orbit. Fixed replay repeats
+at digest `5aaf6c2db5806b28`.
+
+The first spherical joint now aligns its cone frame with the capsule long axis,
+uses a 6 Hz target spring, and limits root swing to 12 degrees. Across the
+settled clip, minimum target alignment is 0.929 and minimum scalp-outward
+alignment is 0.231. The maximum settled joint gap is 11.31 mm. The browser
+receipt reports those native measurements instead of stale metrics from its
+inactive Verlet solver.
+
+For the diagnostic phase, the reel exposes 64 evenly sampled native guides as
+512 uniform rods and 576 uniform joints. It then hydrates all 256 guide paths
+into 5,376 display fibers. The 181-frame int16 clip is 2,502,144 bytes and is
+sampled at 15 Hz; the browser linearly interpolates positions for display. One
+local Chrome observation measured the dense 102,144-primitives geometry update
+at 23.49 ms mean / 34.90 ms p99 / 44.30 ms maximum, while the instanced rod
+subset measured 0.22 ms mean / 0.70 ms p99.
+
+This is recorded native physics, not Box3D/WASM execution. The realistic head
+is still a visual plate and not a native collision proxy, so strands can cross
+the face during wind. The remaining ribbon-like surface and head/strand contact
+are visible next boundaries rather than accepted realism claims. See
+`docs/receipts/hair_box3d_scalp_scale_v1.json` and
+`docs/HAIR_BOX3D_SWATCH.md`.
 
 ## Hero mannequin and reel cameras
 

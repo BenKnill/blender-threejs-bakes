@@ -1,0 +1,32 @@
+{
+  "schema": "hair-box3d-guide-clip/1",
+  "fixture": "hair_box3d_scalp_groom_256",
+  "condition": "rotating_wind_stiction",
+  "guide_count": 256,
+  "segments": 8,
+  "particles_per_guide": 9,
+  "frame_count": 181,
+  "sample_hz": 15,
+  "duration_s": 12,
+  "quantization_m": 0.000125,
+  "binary": "box3d_scalp_groom_256.positions.i16",
+  "binary_bytes": 2502144,
+  "binary_sha256": "bee02827d8533090f123b3a9fca681aaa5c5ab84c5db12e65e7d4fa9cc0aa68d",
+  "trajectory_digest": "5aaf6c2db5806b28",
+  "accepted_metrics": {
+    "max_settled_joint_gap_m": 0.0113093229,
+    "minimum_settled_root_target_dot": 0.929245055,
+    "mean_settled_root_target_dot": 0.960371278,
+    "minimum_settled_root_outward_dot": 0.231088907,
+    "mean_settled_root_outward_dot": 0.464144064,
+    "captures": 39314,
+    "releases": 31658,
+    "mean_relative_speed_before_m_s": 0.0783468238,
+    "mean_predicted_speed_after_m_s": 0.0266063262
+  },
+  "visible_fiber_target": 5376,
+  "root_mechanics": "styled_spherical_joint_frames_plus_12_degree_root_cone",
+  "head_collision": false,
+  "physics_authority": "native_box3d_precomputed_capsule_transforms",
+  "display_boundary": "browser linearly interpolates recorded guide nodes and hydrates them; it does not rerun Box3D, and the mannequin is a visual plate rather than a collision proxy"
+}
