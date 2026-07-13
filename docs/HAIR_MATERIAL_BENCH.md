@@ -10,6 +10,12 @@ cut. It runs hundreds of 3D mechanical guides in the browser, couples nearby
 guides with bounded friction and cohesion constraints, and interpolates nine
 visible fibers from each guide.
 
+The canonical refreshable front door is
+[hair-material-bench.pages.dev](https://hair-material-bench.pages.dev/). With
+no query string it enters the current hands-off rod-to-hydrated-hair loop. Use
+`?lab=1` to keep the full control panel instead. The exact deployed commit is
+reported by [`/build.json`](https://hair-material-bench.pages.dev/build.json).
+
 ```sh
 just hair-material
 ```
@@ -19,6 +25,19 @@ Then open:
 ```text
 http://127.0.0.1:8091/physics/labs/hair_material/demo/
 ```
+
+The localhost server is only a development surface. The production payload is
+self-contained and can be rebuilt and direct-uploaded with:
+
+```sh
+just hair-pages-build
+just hair-pages-deploy
+```
+
+The packager copies only the demo, its realistic-head asset, and the three
+required vendored Three.js modules. Repository-scoped Cloudflare credentials
+are not configured in GitHub, so this is currently an authenticated local
+direct upload rather than an automatic deployment workflow.
 
 The default fixture uses 512 guides, 12 segments per guide, five constraint
 iterations, and 4,608 visible fibers. Controls expose four deterministic rest-

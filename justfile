@@ -10,7 +10,7 @@ default:
 
 # Lint everything (no changes) — JS + Python
 lint:
-    npx eslint editor physics/labs/contact_shell/demo/main.js physics/labs/hair_material/demo/*.js scripts/test_hair_material_solver.mjs scripts/run_hair_operator_ab.mjs scripts/run_hair_comb_benchmark.mjs scripts/run_hair_comb_cycle.mjs scripts/run_hair_contact_discovery_ab.mjs scripts/run_hair_contact_churn.mjs scripts/run_hair_face_clear_ab.mjs scripts/run_hair_spatial_friction_ab.mjs scripts/run_hair_rod_reference.mjs scripts/run_hair_spatial_step_benchmark.mjs scripts/run_hair_root_field_ab.mjs scripts/run_hair_section_lift_ab.mjs scripts/run_hair_section_pose_ab.mjs
+    npx eslint editor physics/labs/contact_shell/demo/main.js physics/labs/hair_material/demo/*.js scripts/build_hair_pages.mjs scripts/test_hair_pages_build.mjs scripts/test_hair_material_solver.mjs scripts/run_hair_operator_ab.mjs scripts/run_hair_comb_benchmark.mjs scripts/run_hair_comb_cycle.mjs scripts/run_hair_contact_discovery_ab.mjs scripts/run_hair_contact_churn.mjs scripts/run_hair_face_clear_ab.mjs scripts/run_hair_spatial_friction_ab.mjs scripts/run_hair_rod_reference.mjs scripts/run_hair_spatial_step_benchmark.mjs scripts/run_hair_root_field_ab.mjs scripts/run_hair_section_lift_ab.mjs scripts/run_hair_section_pose_ab.mjs
     npx prettier --check 'editor/**/*.{js,css,html}' 'physics/labs/contact_shell/demo/**/*.{js,css,html,json}' 'physics/labs/hair_material/demo/**/*.{js,css,html}'
     {{ruff}} check scripts
 
@@ -22,6 +22,7 @@ test:
     python3 scripts/test_bake_telemetry.py
     python3 scripts/test_wind_canopy_math.py
     python3 scripts/test_haircut_math.py
+    node scripts/test_hair_pages_build.mjs
     node scripts/test_hair_material_solver.mjs
     python3 scripts/test_contact_shell_demo.py
 
@@ -73,6 +74,14 @@ mannequin-haircut: wind-garden
 hair-material:
     ./scripts/serve.sh start
     @echo "http://127.0.0.1:8091/physics/labs/hair_material/demo/"
+
+# Build the self-contained static Cloudflare Pages payload.
+hair-pages-build:
+    npm run build:hair-pages
+
+# Deploy the current checkout to the canonical Pages project.
+hair-pages-deploy:
+    npm run deploy:hair-pages
 
 # Start and print the autonomous narrow-preview rotating-wind showcase.
 hair-wind-showcase:
