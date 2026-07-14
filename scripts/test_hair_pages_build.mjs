@@ -85,24 +85,15 @@ while (pendingModules.length > 0) {
   }
 }
 assert.ok(visitedModules.has(path.join(output, "vendor/utils/BufferGeometryUtils.js")));
+assert.ok(visitedModules.has(path.join(output, "curated_scenes.js")));
 
 const index = await readFile(path.join(output, "index.html"), "utf8");
 assert.ok(index.includes('"three": "./vendor/three.module.js"'));
 assert.ok(index.includes('"three/addons/": "./vendor/"'));
-assert.ok(index.includes("disney-layered-mass-lab"));
-assert.ok(index.includes("physicsClip=box3d-scalp-256"));
-assert.ok(index.includes("hydrationRecipe=natural-balanced"));
-assert.ok(index.includes("hydrationGeometry=balanced-full"));
-assert.ok(index.includes("groomEnvelope=cinematic-mass"));
-assert.ok(index.includes("envelopeScale=1.25"));
-assert.ok(index.includes("massFill=cinematic-deep"));
-assert.ok(index.includes("massDensity=1.25"));
-assert.ok(index.includes("hydrationOptical=artist-dual"));
-assert.ok(index.includes("hydrationColor=chestnut"));
-assert.ok(index.includes("hydrationDetail=natural-variation"));
-assert.ok(index.includes("hydrationTour=1"));
-assert.ok(index.includes("guides=256"));
-assert.ok(index.includes("fibers=21"));
+assert.ok(index.includes("scene=rig-becomes-hair"));
+assert.ok(!index.includes("disney-layered-mass-lab"));
+assert.ok(!index.includes("physicsClip=box3d-scalp-256"));
+assert.ok(!index.includes("massDensity=1.25"));
 assert.ok(!index.includes("windProgram=strong-then-moderate-orbits"));
 assert.ok(!index.includes("strongWind="));
 assert.ok(!index.includes("moderateWind="));
@@ -117,6 +108,7 @@ assert.equal(receipt.schema, "hair-material-pages-build/1");
 assert.equal(receipt.commit, commit);
 assert.equal(receipt.canonical_url, "https://hair-material-bench.pages.dev/");
 assert.equal(receipt.source_path, "physics/labs/hair_material/demo");
+assert.equal(receipt.default_query, "scene=rig-becomes-hair");
 assert.ok((await stat(path.join(output, "assets/realistic-head-animation.glb"))).size > 100_000);
 const clipMetadata = JSON.parse(
   await readFile(path.join(output, "assets/box3d_scalp_groom_64.meta.json"), "utf8")

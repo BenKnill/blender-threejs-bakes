@@ -7,7 +7,11 @@ import path from "node:path";
 const canary = "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary";
 const targetUrl = process.argv[2];
 const outputDirectory = process.argv[3] ?? "/tmp/hair-canary-qa";
+const windowSize = process.env.HAIR_QA_WINDOW_SIZE ?? "960,900";
 if (!targetUrl) throw new Error("usage: qa_hair_canary.mjs URL [OUTPUT_DIRECTORY]");
+if (!/^\d{3,4},\d{3,4}$/.test(windowSize)) {
+  throw new Error("HAIR_QA_WINDOW_SIZE must be WIDTH,HEIGHT");
+}
 
 const profile = path.join(outputDirectory, "profile");
 await rm(outputDirectory, { recursive: true, force: true });
@@ -21,7 +25,7 @@ const browser = spawn(
     "--no-default-browser-check",
     "--remote-debugging-port=0",
     `--user-data-dir=${profile}`,
-    "--window-size=960,900",
+    `--window-size=${windowSize}`,
     "--force-device-scale-factor=1",
     "about:blank",
   ],
@@ -170,11 +174,41 @@ try {
     if (Date.now() >= readyDeadline) throw new Error("native Box3D clip readiness timeout");
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
+  const entryState = await evaluate(`(() => {
+    const receipt = window.hairMaterialReplay.renderReceipt();
+    return {
+      scene_id: receipt.curated_scene?.id ?? null,
+      scene_title: receipt.curated_scene?.title ?? null,
+      phase: receipt.full_groom_hydration?.phase ?? null,
+      clip_phase: receipt.native_box3d_clip?.presentation_phase ?? null,
+      clip_sample_time_s: receipt.native_box3d_clip?.sample_time_s ?? null,
+      loop_start_s: receipt.native_box3d_clip?.loop_start_s ?? null,
+      physics_digest: receipt.physics_state_digest ?? null,
+      next_button_label: document.querySelector("#scene-next")?.getAttribute("aria-label") ?? null,
+      control_panel_visible: getComputedStyle(document.querySelector(".panel")).display !== "none"
+    };
+  })()`);
   const captures = [];
   for (const [seconds, name] of captureSchedule) {
     await evaluate(`window.hairMaterialReplay.seekPresentation(${JSON.stringify(seconds)})`);
     captures.push({ seconds, name, ...(await capture(name)) });
   }
+  const loopWrapProbe = await evaluate(`(() => {
+    const before = window.hairMaterialReplay.renderReceipt();
+    const requestedSeconds =
+      before.native_box3d_clip.hydration_pre_roll_s +
+      before.native_box3d_clip.metadata.duration_s +
+      0.7;
+    window.hairMaterialReplay.seekPresentation(requestedSeconds);
+    const after = window.hairMaterialReplay.renderReceipt();
+    return {
+      requested_seconds: requestedSeconds,
+      resulting_elapsed_s: after.native_box3d_clip.loop_elapsed_s,
+      loop_start_s: after.native_box3d_clip.loop_start_s,
+      clip_phase: after.native_box3d_clip.presentation_phase,
+      sample_time_s: after.native_box3d_clip.sample_time_s
+    };
+  })()`);
   const receipt = captures.findLast((captureItem) => captureItem.receipt)?.receipt ?? null;
   await writeFile(
     path.join(outputDirectory, "qa.json"),
@@ -182,6 +216,9 @@ try {
       {
         url: targetUrl,
         browser: "Google Chrome Canary",
+        window_size: windowSize.split(",").map(Number),
+        entry_state: entryState,
+        loop_wrap_probe: loopWrapProbe,
         captures: captures.map(({ receipt: ignored, ...captureItem }) => captureItem),
         exceptions,
         console_errors: consoleErrors,

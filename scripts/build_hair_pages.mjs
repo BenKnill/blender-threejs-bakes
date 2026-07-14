@@ -9,37 +9,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = path.join(root, "physics/labs/hair_material/demo");
 const output = path.join(root, "dist/hair-material-bench");
 const canonicalUrl = "https://hair-material-bench.pages.dev/";
-const canonicalParameters = new URLSearchParams([
-  ["physicsClip", "box3d-scalp-256"],
-  ["showcase", "1"],
-  ["groomHydration", "1"],
-  ["hydrationRecipe", "natural-balanced"],
-  ["hydrationGeometry", "balanced-full"],
-  ["groomEnvelope", "cinematic-mass"],
-  ["envelopeScale", "1.25"],
-  ["massFill", "cinematic-deep"],
-  ["massDensity", "1.25"],
-  ["hydrationOptical", "artist-dual"],
-  ["hydrationColor", "chestnut"],
-  ["hydrationDetail", "natural-variation"],
-  ["hydrationTour", "1"],
-  ["guides", "256"],
-  ["iterations", "6"],
-  ["preset", "wavy"],
-  ["wetness", "0.35"],
-  ["product", "0.45"],
-  ["hairRender", "fatline"],
-  ["hairShade", "fiber"],
-  ["fibers", "21"],
-  ["groomVolume", "1"],
-  ["rootField", "styled-side-part"],
-  ["rootStrength", "0.22"],
-  ["faceClear", "1"],
-  ["mannequin", "realistic"],
-  ["reel", "control"],
-  ["renderReceipt", "1"],
-  ["scenario", "disney-layered-mass-lab"],
-]).toString();
+const canonicalParameters = new URLSearchParams([["scene", "rig-becomes-hair"]]).toString();
 
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });

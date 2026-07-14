@@ -27,6 +27,10 @@ body {
   display: none;
 }
 
+#scene-nav {
+  display: none;
+}
+
 body.showcase .panel,
 body.showcase #cut-cursor {
   display: none;
@@ -55,12 +59,94 @@ body.showcase #showcase-hud strong {
   font-size: 0.9rem;
 }
 
+body.curated #scene-nav {
+  position: fixed;
+  top: clamp(1rem, 3vw, 2.2rem);
+  left: clamp(1rem, 3vw, 2.2rem);
+  z-index: 6;
+  display: grid;
+  width: min(22rem, calc(100vw - 2rem));
+  padding: 1.05rem 1.1rem 1.1rem;
+  border: 1px solid rgb(255 255 255 / 16%);
+  border-radius: 1rem;
+  background: linear-gradient(145deg, rgb(8 9 17 / 88%), rgb(12 10 18 / 70%));
+  box-shadow: 0 22px 70px rgb(0 0 0 / 38%);
+  backdrop-filter: blur(16px);
+}
+
+.scene-nav__meta,
+.scene-nav__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.scene-nav__meta {
+  color: #ee93ad;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.scene-nav h1 {
+  margin: 0.35rem 0 0.25rem;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  line-height: 1;
+}
+
+.scene-nav p {
+  max-width: 32rem;
+  margin: 0 0 1rem;
+  color: #c9c0c8;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+#scene-cue {
+  color: #8bdff0;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+#scene-next {
+  min-width: 9.5rem;
+  min-height: 2.75rem;
+  border-color: rgb(239 114 151 / 70%);
+  background: linear-gradient(135deg, #8c2947, #bd4569);
+  box-shadow: 0 10px 28px rgb(190 56 96 / 30%);
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+#scene-next:hover,
+#scene-next:focus-visible {
+  border-color: #ffc1d3;
+  background: linear-gradient(135deg, #a73557, #d0557a);
+  outline: none;
+  transform: translateY(-1px);
+}
+
 #viewport {
   position: fixed;
   inset: 0;
   background:
     radial-gradient(circle at 70% 22%, rgb(127 40 62 / 28%), transparent 34%),
     radial-gradient(circle at 38% 70%, rgb(32 71 148 / 28%), transparent 40%), #05060b;
+}
+
+body[data-curated-scene="copper-gale"] #viewport {
+  background:
+    radial-gradient(circle at 72% 24%, rgb(190 73 40 / 34%), transparent 36%),
+    radial-gradient(circle at 34% 72%, rgb(79 42 115 / 30%), transparent 42%), #07050a;
+}
+
+body[data-curated-scene="after-the-rain"] #viewport {
+  background:
+    radial-gradient(circle at 67% 20%, rgb(60 74 132 / 30%), transparent 34%),
+    radial-gradient(circle at 36% 70%, rgb(16 91 113 / 24%), transparent 42%), #03070d;
 }
 
 #viewport canvas {
@@ -302,6 +388,34 @@ body.cutting #cut-cursor {
 }
 
 @media (max-width: 700px) {
+  body.curated #scene-nav {
+    top: 0.7rem;
+    left: 0.7rem;
+    width: min(20rem, calc(100vw - 1.4rem));
+    padding: 0.8rem;
+  }
+
+  body.curated .scene-nav h1 {
+    font-size: 1.45rem;
+  }
+
+  body.curated .scene-nav p {
+    display: none;
+  }
+
+  body.curated .scene-nav__footer {
+    margin-top: 0.7rem;
+  }
+
+  body.curated #scene-next {
+    min-width: 7.8rem;
+    min-height: 2.35rem;
+  }
+
+  body.curated #showcase-hud {
+    display: none;
+  }
+
   .panel {
     top: auto;
     bottom: 10px;

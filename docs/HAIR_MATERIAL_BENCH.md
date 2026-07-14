@@ -5,8 +5,9 @@ Issues: [#79](https://github.com/BenKnill/blender-threejs-bakes/issues/79),
 [#130](https://github.com/BenKnill/blender-threejs-bakes/issues/130),
 [#132](https://github.com/BenKnill/blender-threejs-bakes/issues/132),
 [#175](https://github.com/BenKnill/blender-threejs-bakes/issues/175),
-[#181](https://github.com/BenKnill/blender-threejs-bakes/issues/181), and
-[#183](https://github.com/BenKnill/blender-threejs-bakes/issues/183)
+[#181](https://github.com/BenKnill/blender-threejs-bakes/issues/181),
+[#183](https://github.com/BenKnill/blender-threejs-bakes/issues/183), and
+[#185](https://github.com/BenKnill/blender-threejs-bakes/issues/185)
 
 This laboratory is the first interactive step beyond the rendered mannequin
 cut. Its editable mode runs hundreds of 3D mechanical guides in the browser.
@@ -18,8 +19,8 @@ The canonical refreshable front door is
 no query string it enters the current hands-off rod-to-hydrated-hair loop. Use
 `?lab=1` to keep the full control panel instead. The exact deployed commit is
 reported by [`/build.json`](https://hair-material-bench.pages.dev/build.json).
-The current canonical hydration uses the bounded `cinematic-mass` envelope and
-the layered `cinematic-deep` occupancy profile at 1.25x density.
+The canonical page now exposes one Next button rather than the laboratory
+control wall. The complete controls remain available explicitly at `?lab=1`.
 
 ```sh
 just hair-material
@@ -43,6 +44,28 @@ The packager copies only the demo, its realistic-head asset, and the three
 required vendored Three.js modules. Repository-scoped Cloudflare credentials
 are not configured in GitHub, so this is currently an authenticated local
 direct upload rather than an automatic deployment workflow.
+
+## Three curated scenes
+
+The canonical sequence is deliberately small and authored:
+
+1. **Rig Becomes Hair** starts at the uniform 64-guide / 512-link Box3D cage,
+   then builds groom volumes, locks, and a bounded chestnut mass.
+2. **Copper Gale** starts fully hydrated with the wide storybook envelope,
+   copper dual-highlight material, beauty camera, and the strong 360-degree
+   wind orbit.
+3. **After the Rain** starts at the moderate orbit with a smaller salon
+   envelope, wet grouped geometry, near-black pigment, and compact lock fill.
+
+The Next button advances `rig-becomes-hair` → `copper-gale` →
+`after-the-rain` → `rig-becomes-hair`. Each scene reloads from a short URL so no
+material or timeline state leaks from the prior scene. Copper Gale loops from
+the start of strong wind; After the Rain loops from the start of moderate wind;
+only Rig Becomes Hair returns to its mechanical hydration opening. The render
+receipt records the scene identity, complete composition, next scene, and loop
+start under `curated_scene` and `native_box3d_clip.loop_start_s`.
+See `docs/receipts/hair_curated_scenes_v1.json` for the Canary entry, narrow
+preview, lab-visibility, fixed-sample, and loop-wrap checks.
 
 The browser-solver lab default uses 512 guides, 12 segments per guide, five constraint
 iterations, and 4,608 visible fibers. Controls expose four deterministic rest-

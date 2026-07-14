@@ -311,6 +311,14 @@ strand rendering; do not add another many-hair operator first.
       Canary pass. Two final runs repeat all 20 PNG hashes with no browser
       exceptions or console errors. This is denser, still visibly procedural
       hydration rather than a production hair claim.
+- [x] Replace the canonical control wall with exactly three authored scenes and
+      one Next button. Rig Becomes Hair owns the rod-to-hydration opening;
+      Copper Gale enters at the strong orbit with wide copper volume; After the
+      Rain enters at the moderate orbit with compact wet locks. Each short scene
+      URL reloads its full composition, receipt identity, camera, and bounded
+      loop start. `?lab=1` remains the explicit full-control surface. Canary
+      checks cover all three entry phases, cyclic Next ordering, a 520x760
+      narrow preview, and the strong/moderate loop-wrap boundaries.
 - [x] Define three receipt-distinct reel shots before packaging video variants.
 - [ ] Package short 16:9 and vertical reels from those named moving shots.
 

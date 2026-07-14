@@ -90,6 +90,13 @@ import {
   summarizeHairMassFill,
 } from "./hair_mass_fill.js?v=2";
 import {
+  CURATED_HAIR_SCENE_FIELD_ID,
+  CURATED_HAIR_SCENES,
+  curatedHairSceneParameters,
+  nextCuratedHairSceneId,
+  resolveCuratedHairScene,
+} from "./curated_scenes.js?v=1";
+import {
   projectPointToScalpShell,
   scalpPolarLimit,
   SCALP_CENTER,
@@ -129,6 +136,7 @@ let mannequinMode = "primitive";
 let mannequinStatus = "primitive_ready";
 let heroMannequin;
 let reelShot = "free";
+let activeCuratedScene = null;
 const nativeClipPlayback = {
   enabled: false,
   asset: null,
@@ -138,6 +146,7 @@ const nativeClipPlayback = {
   presentationPhase: "loading",
   opacity: 1,
   restarts: 0,
+  loopStartSeconds: 0,
   error: null,
 };
 const NATIVE_CLIP_RESET_FADE_SECONDS = 0.6;
@@ -2744,15 +2753,27 @@ function advanceNativeClip(frameDt) {
   if (!nativeClipPlayback.enabled || !nativeClipPlayback.clip) return false;
   const { metadata, quantized } = nativeClipPlayback.clip;
   nativeClipPlayback.elapsed += frameDt;
-  const presentation = nativeClipPresentationAtTime(
+  let presentation = nativeClipPresentationAtTime(
     nativeClipPlayback.elapsed,
     metadata.duration_s,
     NATIVE_HYDRATION_PRE_ROLL_SECONDS,
     NATIVE_CLIP_RESET_FADE_SECONDS
   );
   if (nativeClipPlayback.elapsed >= presentation.cycleDuration) {
-    nativeClipPlayback.elapsed %= presentation.cycleDuration;
+    const loopStart = Math.min(
+      presentation.cycleDuration - NATIVE_CLIP_RESET_FADE_SECONDS,
+      nativeClipPlayback.loopStartSeconds
+    );
+    const loopDuration = presentation.cycleDuration - loopStart;
+    nativeClipPlayback.elapsed =
+      loopStart + ((nativeClipPlayback.elapsed - loopStart) % loopDuration);
     nativeClipPlayback.restarts += 1;
+    presentation = nativeClipPresentationAtTime(
+      nativeClipPlayback.elapsed,
+      metadata.duration_s,
+      NATIVE_HYDRATION_PRE_ROLL_SECONDS,
+      NATIVE_CLIP_RESET_FADE_SECONDS
+    );
   }
   nativeClipPlayback.sampleTime = presentation.sampleTime;
   nativeClipPlayback.opacity = presentation.opacity;
@@ -2784,6 +2805,7 @@ async function initializeNativeClipPlayback() {
       );
     }
     nativeClipPlayback.clip = clip;
+    nativeClipPlayback.elapsed = nativeClipPlayback.loopStartSeconds;
     advanceNativeClip(0);
     updateHairGeometry();
     status.textContent =
@@ -2890,7 +2912,32 @@ function resize() {
 }
 
 function applyQueryConfiguration() {
-  const params = new URLSearchParams(window.location.search);
+  const rawParams = new URLSearchParams(window.location.search);
+  activeCuratedScene = resolveCuratedHairScene(rawParams.get("scene"));
+  const labMode = rawParams.get("lab") === "1";
+  const params = activeCuratedScene
+    ? curatedHairSceneParameters(activeCuratedScene)
+    : new URLSearchParams(rawParams);
+  if (activeCuratedScene) {
+    for (const [key, value] of rawParams) {
+      if (key !== "scene" && key !== "lab") params.set(key, value);
+    }
+    const sceneIndex = CURATED_HAIR_SCENES.indexOf(activeCuratedScene);
+    document.body.dataset.curatedScene = activeCuratedScene.id;
+    document.body.classList.toggle("curated", !labMode);
+    document.querySelector("#scene-count").textContent =
+      `${sceneIndex + 1} / ${CURATED_HAIR_SCENES.length}`;
+    document.querySelector("#scene-title").textContent = activeCuratedScene.title;
+    document.querySelector("#scene-description").textContent = activeCuratedScene.description;
+    document.querySelector("#scene-cue").textContent = activeCuratedScene.cue;
+    const nextScene = resolveCuratedHairScene(nextCuratedHairSceneId(activeCuratedScene.id));
+    document
+      .querySelector("#scene-next")
+      .setAttribute("aria-label", `Next scene: ${nextScene?.title ?? "curated hair scene"}`);
+  } else {
+    delete document.body.dataset.curatedScene;
+    document.body.classList.remove("curated");
+  }
   const physicsClip = params.get("physicsClip");
   const nativeClipGuides =
     physicsClip === "box3d-scalp-256" ? 256 : physicsClip === "box3d-scalp-64" ? 64 : null;
@@ -2898,11 +2945,12 @@ function applyQueryConfiguration() {
   nativeClipPlayback.asset = nativeClipPlayback.enabled
     ? `./assets/box3d_scalp_groom_${nativeClipGuides}.meta.json`
     : null;
+  nativeClipPlayback.loopStartSeconds = Math.max(0, Number(params.get("nativeStart") ?? 0) || 0);
   if (nativeClipPlayback.enabled) {
     document.querySelector("#guides").min = "64";
     if (!params.has("guides")) document.querySelector("#guides").value = String(nativeClipGuides);
   }
-  const showcase = params.get("showcase") === "1";
+  const showcase = params.get("showcase") === "1" && !labMode;
   document.body.classList.toggle("showcase", showcase);
   const controlsByParameter = {
     guides: "guides",
@@ -3113,6 +3161,11 @@ function applyQueryConfiguration() {
       "Native Box3D scalp groom · recorded mechanics + live hydration";
     document.querySelector("#showcase-groom").textContent = "Box3D styled scalp groom";
   }
+  if (activeCuratedScene) {
+    document.querySelector("#scenario-label").textContent =
+      `Curated hair film · ${activeCuratedScene.title}`;
+    document.querySelector("#showcase-groom").textContent = activeCuratedScene.title;
+  }
 }
 
 for (const [id, output, format] of [
@@ -3211,6 +3264,17 @@ document.querySelector("#reel-shot").addEventListener("change", (event) => {
     ? event.currentTarget.value
     : "free";
   controls.autoRotate = false;
+});
+document.querySelector("#scene-next").addEventListener("click", () => {
+  if (!activeCuratedScene) return;
+  const nextSceneId = nextCuratedHairSceneId(activeCuratedScene.id);
+  const nextScene = resolveCuratedHairScene(nextSceneId);
+  const url = new URL(window.location.href);
+  url.search = new URLSearchParams({ scene: nextSceneId }).toString();
+  document
+    .querySelector("#scene-next")
+    .setAttribute("aria-label", `Loading next scene: ${nextScene?.title ?? nextSceneId}`);
+  window.location.assign(url);
 });
 document.querySelector("#reset").addEventListener("click", rebuildSolver);
 document.querySelector("#pause").addEventListener("click", (event) => {
@@ -3335,6 +3399,20 @@ function createRenderReceipt() {
   const hairMassSummary = summarizeHairMassFill(hairMassFillId, hairMassDensity);
   return {
     schema: "hair-render/1",
+    curated_scene: activeCuratedScene
+      ? {
+          field_identity: CURATED_HAIR_SCENE_FIELD_ID,
+          id: activeCuratedScene.id,
+          title: activeCuratedScene.title,
+          description: activeCuratedScene.description,
+          cue: activeCuratedScene.cue,
+          index: CURATED_HAIR_SCENES.indexOf(activeCuratedScene),
+          scene_count: CURATED_HAIR_SCENES.length,
+          next_scene_id: nextCuratedHairSceneId(activeCuratedScene.id),
+          parameters: activeCuratedScene.parameters,
+          physics_authority: "none_composition_and_timeline_selection_only",
+        }
+      : null,
     native_box3d_clip: {
       enabled: nativeClipPlayback.enabled,
       status: nativeClipPlayback.error ? "error" : nativeClipPlayback.clip ? "playing" : "loading",
@@ -3346,6 +3424,7 @@ function createRenderReceipt() {
       hydration_pre_roll_s: NATIVE_HYDRATION_PRE_ROLL_SECONDS,
       loop_opacity: nativeClipPlayback.opacity,
       restarts: nativeClipPlayback.restarts,
+      loop_start_s: nativeClipPlayback.loopStartSeconds,
       browser_role: "linear_interpolation_plus_display_hydration_only",
       physics_authority: nativeClipPlayback.clip?.metadata.physics_authority ?? null,
     },
