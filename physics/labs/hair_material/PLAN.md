@@ -301,6 +301,16 @@ strand rendering; do not add another many-hair operator first.
       geometry cost from the first 18.93 ms mean to 9.74 ms versus 8.64 ms off,
       with zero exceptions or console errors across 20 exact-time frames; all
       20 final PNG hashes repeat exactly in a second Canary run.
+- [x] Separate silhouette breadth from optical occupancy with five layered mass
+      profiles. The accepted cinematic 1.25x profile combines two textured,
+      live section shells with family-specific widths and bounded screen-space
+      width floors; front sections 5 and 6 receive neither shell opacity nor the
+      added floor. The neutral off and deep passes keep the same final physics
+      digest `fa11b33849011648` and hydrated position digest `b7113a24`; shell
+      geometry adds 0.171 ms mean / 0.40 ms p99 and maximum in the narrow solo
+      Canary pass. Two final runs repeat all 20 PNG hashes with no browser
+      exceptions or console errors. This is denser, still visibly procedural
+      hydration rather than a production hair claim.
 - [x] Define three receipt-distinct reel shots before packaging video variants.
 - [ ] Package short 16:9 and vertical reels from those named moving shots.
 

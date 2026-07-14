@@ -88,6 +88,16 @@ import {
   summarizeGroomEnvelope,
 } from "../physics/labs/hair_material/demo/groom_envelope.js";
 import {
+  HAIR_MASS_FILL_FIELD_ID,
+  HAIR_MASS_FILL_PROFILES,
+  HAIR_MASS_FILL_PROFILE_ORDER,
+  HAIR_MASS_SECTION_OPACITY,
+  hairMassFamilyWidthScale,
+  hairMassLayerOpacity,
+  hairMassMinimumHalfWidth,
+  summarizeHairMassFill,
+} from "../physics/labs/hair_material/demo/hair_mass_fill.js";
+import {
   bakeRootDirectorTarget,
   projectRootDirectorPoint,
 } from "../physics/labs/hair_material/demo/root_director.js";
@@ -233,6 +243,44 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.ok(envelopeSummary.outward_radius_meters.max > 0.7);
   assert.ok(envelopeSummary.lateral_radius_meters.max > 0.5);
   assert.equal(envelopeSummary.physics_authority, "none_renderer_hydration_only");
+  assert.equal(HAIR_MASS_FILL_FIELD_ID, "layered_section_occupancy_v1");
+  assert.deepEqual(HAIR_MASS_FILL_PROFILE_ORDER, [
+    "off",
+    "air_shell",
+    "studio_dense",
+    "cinematic_deep",
+    "wet_compact",
+  ]);
+  assert.equal(Object.keys(HAIR_MASS_FILL_PROFILES).length, 5);
+  assert.deepEqual(HAIR_MASS_SECTION_OPACITY, [1, 1, 1, 1, 0.62, 0, 0, 0.62]);
+  assert.ok(
+    hairMassLayerOpacity("cinematic_deep", "core", 1) >
+      hairMassLayerOpacity("studio_dense", "core", 1)
+  );
+  assert.ok(
+    hairMassFamilyWidthScale("studio_dense", 0, 21, 1) >
+      hairMassFamilyWidthScale("studio_dense", 8, 21, 1)
+  );
+  assert.ok(
+    hairMassFamilyWidthScale("wet_compact", 1, 21, 1) >
+      hairMassFamilyWidthScale("air_shell", 1, 21, 1)
+  );
+  assert.ok(
+    hairMassMinimumHalfWidth("cinematic_deep", 8, 21, 1) >
+      hairMassMinimumHalfWidth("studio_dense", 8, 21, 1)
+  );
+  assert.equal(hairMassMinimumHalfWidth("off", 8, 21, 1), 0);
+  assert.equal(hairMassFamilyWidthScale("off", 8, 21, 2), 1);
+  assert.equal(hairMassFamilyWidthScale("off", 20, 21, 2), 1);
+  nearlyEqual(hairMassLayerOpacity("cinematic_deep", "core", 10), 0.72);
+  const massSummary = summarizeHairMassFill("studio_dense", 1);
+  assert.equal(massSummary.field_identity, HAIR_MASS_FILL_FIELD_ID);
+  assert.equal(massSummary.shell_layers.length, 2);
+  assert.equal(
+    massSummary.front_section_contract,
+    "sections_5_and_6_have_zero_shell_opacity_and_width_floor"
+  );
+  assert.equal(massSummary.physics_authority, "none_renderer_hydration_only");
   assert.equal(Object.keys(HAIR_OPTICAL_MODELS).length, 6);
   assert.equal(Object.keys(HAIR_COLOR_PROFILES).length, 6);
   assert.equal(Object.keys(HAIR_DETAIL_PROFILES).length, 6);

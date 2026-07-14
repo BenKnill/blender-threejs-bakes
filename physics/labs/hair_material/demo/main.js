@@ -63,7 +63,7 @@ import {
   resolveHairHydrationState,
   sectionPosePresentationAtStep,
   summarizeGeometryTimings,
-} from "./rendering.js?v=128";
+} from "./rendering.js?v=129";
 import {
   buildGroomInterpolationBindings,
   groomBindingActiveSegments,
@@ -79,6 +79,16 @@ import {
   resolveGroomEnvelopeProfile,
   summarizeGroomEnvelope,
 } from "./groom_envelope.js?v=1";
+import {
+  HAIR_MASS_FILL_PROFILES,
+  HAIR_MASS_FILL_PROFILE_ORDER,
+  HAIR_MASS_SECTION_OPACITY,
+  hairMassFamilyWidthScale,
+  hairMassLayerOpacity,
+  hairMassMinimumHalfWidth,
+  resolveHairMassFillProfile,
+  summarizeHairMassFill,
+} from "./hair_mass_fill.js?v=2";
 import {
   projectPointToScalpShell,
   scalpPolarLimit,
@@ -108,6 +118,8 @@ let hydrationColorId = "chestnut";
 let hydrationDetailId = "natural_variation";
 let groomEnvelopeId = "cinematic_mass";
 let groomEnvelopeScale = 1.25;
+let hairMassFillId = "cinematic_deep";
+let hairMassDensity = 1.25;
 let activeHydrationSelection = hydrationRecipeSelection(hydrationRecipeId);
 let activeHydrationState = resolveHairHydrationState(activeHydrationSelection);
 let hydrationTourEnabled = true;
@@ -367,6 +379,9 @@ let sectionControlTube;
 let sectionControlTubeTimings = [];
 let groomEnvelopeBoundaryMeshes = [];
 let groomEnvelopeBoundaryTimings = [];
+let hairMassMeshes = [];
+let hairMassGeometryTimings = [];
+let hairMassAlphaTextures = null;
 let groomEnvelopeCenters = new Float64Array();
 let groomEnvelopeTangents = new Float64Array();
 let groomEnvelopeOutwards = new Float64Array();
@@ -405,6 +420,7 @@ let physicsSkeletonGuides = [];
 const SECTION_CONTROL_TUBE_RADIAL_SEGMENTS = 10;
 const GROOM_ENVELOPE_SECTION_COUNT = 8;
 const GROOM_ENVELOPE_RADIAL_SEGMENTS = 14;
+const HAIR_MASS_RADIAL_SEGMENTS = 20;
 const GROOM_ENVELOPE_FACE_CLEAR_ID = "front_aperture_display_projection_v1";
 const GROOM_ENVELOPE_PART_X = -0.18;
 const SECTION_CONTROL_TUBE_COLOR = new THREE.Color(0x63e6ff);
@@ -836,7 +852,15 @@ function hairColor() {
 
 function createSectionControlTubeGeometry(segments, radialSegments) {
   const positions = new Float32Array((segments + 1) * radialSegments * 3);
+  const uvs = new Float32Array((segments + 1) * radialSegments * 2);
   const indices = [];
+  for (let segment = 0; segment <= segments; segment += 1) {
+    for (let radial = 0; radial < radialSegments; radial += 1) {
+      const vertex = segment * radialSegments + radial;
+      uvs[vertex * 2] = radial / radialSegments;
+      uvs[vertex * 2 + 1] = segment / Math.max(1, segments);
+    }
+  }
   for (let segment = 0; segment < segments; segment += 1) {
     for (let radial = 0; radial < radialSegments; radial += 1) {
       const nextRadial = (radial + 1) % radialSegments;
@@ -851,6 +875,7 @@ function createSectionControlTubeGeometry(segments, radialSegments) {
   const position = new THREE.BufferAttribute(positions, 3);
   position.setUsage(THREE.DynamicDrawUsage);
   geometry.setAttribute("position", position);
+  geometry.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
   geometry.setIndex(indices);
   return geometry;
 }
@@ -914,6 +939,103 @@ function rebuildGroomEnvelopeBoundaryMeshes() {
   }
 }
 
+function createHairMassAlphaTexture(layer) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 256;
+  const context = canvas.getContext("2d");
+  const isCore = layer === "core";
+  const background = isCore ? 84 : 10;
+  context.fillStyle = `rgb(${background}, ${background}, ${background})`;
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  const lineCount = isCore ? 84 : 52;
+  for (let line = 0; line < lineCount; line += 1) {
+    const baseX = ((line + 0.5) / lineCount) * canvas.width;
+    const phase = line * 2.39996322973;
+    const brightness = Math.round((isCore ? 132 : 104) + 80 * (0.5 + 0.5 * Math.sin(phase * 1.7)));
+    context.strokeStyle = `rgb(${brightness}, ${brightness}, ${brightness})`;
+    context.lineWidth = (isCore ? 0.55 : 0.42) + ((line * 17) % 7) * 0.08;
+    context.beginPath();
+    for (let step = 0; step <= 16; step += 1) {
+      const fraction = step / 16;
+      const x =
+        baseX +
+        Math.sin(phase + fraction * Math.PI * (isCore ? 1.7 : 2.4)) *
+          (isCore ? 1.8 : 3.1) *
+          Math.sin(Math.PI * fraction);
+      const y = fraction * canvas.height;
+      if (step === 0) context.moveTo(x, y);
+      else context.lineTo(x, y);
+    }
+    context.stroke();
+  }
+  context.globalCompositeOperation = "multiply";
+  const taper = context.createLinearGradient(0, 0, 0, canvas.height);
+  taper.addColorStop(0, "rgb(255,255,255)");
+  taper.addColorStop(0.72, "rgb(255,255,255)");
+  taper.addColorStop(1, isCore ? "rgb(128,128,128)" : "rgb(72,72,72)");
+  context.fillStyle = taper;
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.NoColorSpace;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  texture.repeat.set(isCore ? 2.6 : 3.2, 1);
+  texture.magFilter = THREE.LinearFilter;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function ensureHairMassAlphaTextures() {
+  if (hairMassAlphaTextures) return hairMassAlphaTextures;
+  hairMassAlphaTextures = {
+    core: createHairMassAlphaTexture("core"),
+    middle: createHairMassAlphaTexture("middle"),
+  };
+  return hairMassAlphaTextures;
+}
+
+function rebuildHairMassMeshes() {
+  for (const mesh of hairMassMeshes) {
+    scene.remove(mesh);
+    mesh.geometry.dispose();
+    mesh.material.dispose();
+  }
+  hairMassMeshes = [];
+  hairMassGeometryTimings = [];
+  const alphaTextures = ensureHairMassAlphaTextures();
+  for (let section = 0; section < GROOM_ENVELOPE_SECTION_COUNT; section += 1) {
+    for (const layer of ["core", "middle"]) {
+      const geometry = createSectionControlTubeGeometry(solver.segments, HAIR_MASS_RADIAL_SEGMENTS);
+      const material = new THREE.MeshStandardMaterial({
+        color: 0x120b0d,
+        emissive: 0x080405,
+        emissiveIntensity: 0.08,
+        roughness: 0.82,
+        metalness: 0,
+        transparent: true,
+        opacity: 0,
+        alphaMap: alphaTextures[layer],
+        alphaTest: 0.012,
+        depthTest: true,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      });
+      material.forceSinglePass = true;
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.frustumCulled = false;
+      mesh.renderOrder = layer === "core" ? -5 : -4;
+      mesh.visible = false;
+      mesh.userData.section = section;
+      mesh.userData.layer = layer;
+      hairMassMeshes.push(mesh);
+      scene.add(mesh);
+    }
+  }
+}
+
 function updateGroomEnvelopeBoundaryMeshes() {
   if (!groomEnvelopeBoundaryMeshes.length) return;
   const started = performance.now();
@@ -963,6 +1085,69 @@ function updateGroomEnvelopeBoundaryMeshes() {
   if (visible) {
     groomEnvelopeBoundaryTimings.push(performance.now() - started);
     if (groomEnvelopeBoundaryTimings.length > 660) groomEnvelopeBoundaryTimings.shift();
+  }
+}
+
+function updateHairMassMeshes() {
+  if (!hairMassMeshes.length) return;
+  const started = performance.now();
+  const massProfile = resolveHairMassFillProfile(hairMassFillId);
+  const envelopeProfile = resolveGroomEnvelopeProfile(groomEnvelopeId);
+  const presentation = fullGroomHydrationEnabled ? fullGroomPresentation.microfiberHydration : 1;
+  const visible =
+    Boolean(groomBindings) &&
+    massProfile.id !== "off" &&
+    envelopeProfile.id !== "off" &&
+    presentation > 0.002;
+  const stations = solver.segments + 1;
+  for (const mesh of hairMassMeshes) {
+    const section = mesh.userData.section;
+    const layer = mesh.userData.layer;
+    const sectionOpacity = HAIR_MASS_SECTION_OPACITY[section];
+    const layerScale = layer === "core" ? massProfile.coreScale : massProfile.middleScale;
+    mesh.visible = visible && sectionOpacity > 0.002 && layerScale > 0.002;
+    mesh.material.opacity =
+      hairMassLayerOpacity(massProfile, layer, hairMassDensity) * sectionOpacity * presentation;
+    mesh.material.color
+      .setHex(activeHydrationState.baseColor)
+      .lerp(undercoatShadowTarget, layer === "core" ? 0.32 : 0.18)
+      .multiplyScalar(layer === "core" ? 0.9 : 1);
+    mesh.material.emissive.copy(mesh.material.color).multiplyScalar(0.07);
+    if (!mesh.visible) continue;
+    const positions = mesh.geometry.attributes.position.array;
+    for (let particle = 0; particle < stations; particle += 1) {
+      const frame = (section * stations + particle) * 3;
+      const radii = groomEnvelopeRadiiAt(
+        envelopeProfile,
+        section,
+        particle / Math.max(1, solver.segments),
+        activeGroomEnvelopeScale()
+      );
+      for (let radial = 0; radial < HAIR_MASS_RADIAL_SEGMENTS; radial += 1) {
+        const angle = (radial / HAIR_MASS_RADIAL_SEGMENTS) * Math.PI * 2;
+        const outward = Math.cos(angle) * radii.outward * layerScale;
+        const lateral = Math.sin(angle) * radii.lateral * layerScale;
+        const target = (particle * HAIR_MASS_RADIAL_SEGMENTS + radial) * 3;
+        positions[target] =
+          groomEnvelopeCenters[frame] +
+          groomEnvelopeOutwards[frame] * outward +
+          groomEnvelopeLaterals[frame] * lateral;
+        positions[target + 1] =
+          groomEnvelopeCenters[frame + 1] +
+          groomEnvelopeOutwards[frame + 1] * outward +
+          groomEnvelopeLaterals[frame + 1] * lateral;
+        positions[target + 2] =
+          groomEnvelopeCenters[frame + 2] +
+          groomEnvelopeOutwards[frame + 2] * outward +
+          groomEnvelopeLaterals[frame + 2] * lateral;
+      }
+    }
+    mesh.geometry.attributes.position.needsUpdate = true;
+    mesh.geometry.computeBoundingSphere();
+  }
+  if (visible) {
+    hairMassGeometryTimings.push(performance.now() - started);
+    if (hairMassGeometryTimings.length > 660) hairMassGeometryTimings.shift();
   }
 }
 
@@ -1079,6 +1264,11 @@ function updateFullGroomPresentation() {
     const uniforms = hair.material.uniforms;
     uniforms.presentationHydration.value =
       fullGroomPresentation.hairHydration * activeHydrationState.opacity;
+    const massProfile = resolveHairMassFillProfile(hairMassFillId);
+    uniforms.fiberOpacityScale.value = Math.max(
+      0.2,
+      Math.min(1.8, 1 + (massProfile.fiberOpacityScale - 1) * hairMassDensity)
+    );
     uniforms.shadingEnabled.value =
       hairShadingMode === "fiber_lobes"
         ? fullGroomPresentation.shadingMix * activeHydrationState.shadingMix
@@ -1255,18 +1445,44 @@ function writeHydratedFiberStyle(
     ? fullGroomPresentation.widthScale
     : 0.12 + 0.88 * hydration;
   const emergenceScaleAt = groomBindings ? lockAwareFiberEmergenceScaleAt : fiberEmergenceScaleAt;
-  widthsStart[instance] =
+  const massFamilyScale = hairMassFamilyWidthScale(
+    hairMassFillId,
+    copy,
+    renderFibersPerGuide,
+    hairMassDensity
+  );
+  const sectionMassScale = HAIR_MASS_SECTION_OPACITY[solver.guideSections[guide]] ?? 1;
+  const minimumHalfWidth =
+    hairMassMinimumHalfWidth(hairMassFillId, copy, renderFibersPerGuide, hairMassDensity) *
+    sectionMassScale;
+  const startEmergence = emergenceScaleAt(
+    guide,
+    copy,
+    startParticle,
+    activeSegments,
+    solver.rootNormals[guide * 3 + 1]
+  );
+  const endEmergence = emergenceScaleAt(
+    guide,
+    copy,
+    endParticle,
+    activeSegments,
+    solver.rootNormals[guide * 3 + 1]
+  );
+  const startWidth =
     fatlineHalfWidthAt(startParticle, activeSegments) *
     presentationWidthScale *
     familyScale *
-    hydrationRecipeWidthScaleAt(activeHydrationState, startParticle / Math.max(1, activeSegments)) *
-    emergenceScaleAt(guide, copy, startParticle, activeSegments, solver.rootNormals[guide * 3 + 1]);
-  widthsEnd[instance] =
+    massFamilyScale *
+    hydrationRecipeWidthScaleAt(activeHydrationState, startParticle / Math.max(1, activeSegments));
+  const endWidth =
     fatlineHalfWidthAt(endParticle, activeSegments) *
     presentationWidthScale *
     familyScale *
-    hydrationRecipeWidthScaleAt(activeHydrationState, endParticle / Math.max(1, activeSegments)) *
-    emergenceScaleAt(guide, copy, endParticle, activeSegments, solver.rootNormals[guide * 3 + 1]);
+    massFamilyScale *
+    hydrationRecipeWidthScaleAt(activeHydrationState, endParticle / Math.max(1, activeSegments));
+  widthsStart[instance] = Math.max(minimumHalfWidth, startWidth) * startEmergence;
+  widthsEnd[instance] = Math.max(minimumHalfWidth, endWidth) * endEmergence;
 }
 
 function updateSectionControlTube() {
@@ -1358,6 +1574,7 @@ function createFatlineMaterial() {
       resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
       shadingEnabled: { value: hairShadingMode === "fiber_lobes" ? 1 : 0 },
       presentationHydration: { value: fullGroomHydrationEnabled ? 0 : 1 },
+      fiberOpacityScale: { value: 1 },
       keyDirectionWorld: { value: new THREE.Vector3(4, 6, 5).normalize() },
       rimDirectionWorld: { value: new THREE.Vector3(-3, 1, 3).normalize() },
       keyColor: { value: new THREE.Color(0xffddcf) },
@@ -1416,6 +1633,7 @@ function createFatlineMaterial() {
     fragmentShader: `
       uniform float shadingEnabled;
       uniform float presentationHydration;
+      uniform float fiberOpacityScale;
       uniform vec3 keyDirectionWorld;
       uniform vec3 rimDirectionWorld;
       uniform vec3 keyColor;
@@ -1451,8 +1669,15 @@ function createFatlineMaterial() {
         float crossSection = sqrt(max(0.0, 1.0 - vAcross * vAcross));
         float fiberCoverage = 1.0 - smoothstep(0.58, 1.0, abs(vAcross));
         float jointCoverage = 0.5 + 0.5 * sin(3.14159265 * clamp(vAlong, 0.0, 1.0));
-        float fiberAlpha =
-          fiberCoverage * jointCoverage * (0.72 + 0.22 * crossSection) * presentationHydration;
+        float fiberAlpha = clamp(
+          fiberCoverage *
+            jointCoverage *
+            (0.72 + 0.22 * crossSection) *
+            presentationHydration *
+            fiberOpacityScale,
+          0.0,
+          1.0
+        );
         vec3 tangent = normalize(vTangentView);
         vec3 viewDirection = normalize(-vPositionView);
         vec3 keyDirection = normalize((viewMatrix * vec4(keyDirectionWorld, 0.0)).xyz);
@@ -1700,6 +1925,7 @@ function rebuildSolver() {
   rebuildHairObject();
   rebuildSectionControlTube();
   rebuildGroomEnvelopeBoundaryMeshes();
+  rebuildHairMassMeshes();
   rebuildPhysicsGuideCage();
   const activeExperiments = [
     solver.spatialFriction.enabled ? "spatial friction" : null,
@@ -1807,6 +2033,7 @@ function updateHairGeometry() {
     updatePhysicsGuideCage();
     updateSectionControlTube();
     updateGroomEnvelopeBoundaryMeshes();
+    updateHairMassMeshes();
     return;
   }
   let cursor = 0;
@@ -1835,6 +2062,7 @@ function updateHairGeometry() {
   updatePhysicsGuideCage();
   updateSectionControlTube();
   updateGroomEnvelopeBoundaryMeshes();
+  updateHairMassMeshes();
 }
 
 function updateFatlineGeometry() {
@@ -2759,6 +2987,11 @@ function applyQueryConfiguration() {
     0.5,
     Math.min(2.5, Number(params.get("envelopeScale") ?? 1.25) || 1.25)
   );
+  const requestedMassFill = params.get("massFill")?.replaceAll("-", "_");
+  hairMassFillId = HAIR_MASS_FILL_PROFILE_ORDER.includes(requestedMassFill)
+    ? requestedMassFill
+    : "cinematic_deep";
+  hairMassDensity = Math.max(0, Math.min(2, Number(params.get("massDensity") ?? 1.25)));
   hydrationTourEnabled = params.get("hydrationTour") !== "0";
   document.querySelector("#hydration-recipe").value = hydrationRecipeId;
   document.querySelector("#hydration-geometry").value = hydrationGeometryId;
@@ -2769,6 +3002,9 @@ function applyQueryConfiguration() {
   document.querySelector("#envelope-breadth").value = String(groomEnvelopeScale);
   document.querySelector("#envelope-breadth-output").textContent =
     `${groomEnvelopeScale.toFixed(2)}×`;
+  document.querySelector("#mass-fill").value = hairMassFillId;
+  document.querySelector("#mass-density").value = String(hairMassDensity);
+  document.querySelector("#mass-density-output").textContent = `${hairMassDensity.toFixed(2)}×`;
   document.querySelector("#hydration-tour").checked = hydrationTourEnabled;
   setMannequinMode(params.get("mannequin") === "realistic" ? "realistic" : "primitive");
   document.querySelector("#mannequin").value = mannequinMode;
@@ -2888,6 +3124,7 @@ for (const [id, output, format] of [
   ["pose-lift", "pose-lift-output", (value) => `${Number(value).toFixed(2)} m`],
   ["pose-sweep", "pose-sweep-output", (value) => `${Number(value).toFixed(2)} m`],
   ["envelope-breadth", "envelope-breadth-output", (value) => `${Number(value).toFixed(2)}×`],
+  ["mass-density", "mass-density-output", (value) => `${Number(value).toFixed(2)}×`],
   ["wind", "wind-output", (value) => Number(value).toFixed(2)],
 ]) {
   const input = document.querySelector(`#${id}`);
@@ -2901,6 +3138,7 @@ for (const [id, output, format] of [
       applyMaterialControls();
     }
     if (id === "envelope-breadth") groomEnvelopeScale = Number(input.value);
+    if (id === "mass-density") hairMassDensity = Number(input.value);
   });
   if (["guides", "iterations"].includes(id)) input.addEventListener("change", rebuildSolver);
 }
@@ -2936,6 +3174,12 @@ document.querySelector("#groom-envelope").addEventListener("change", (event) => 
     ? event.currentTarget.value
     : "cinematic_mass";
   groomEnvelopeBoundaryTimings = [];
+});
+document.querySelector("#mass-fill").addEventListener("change", (event) => {
+  hairMassFillId = HAIR_MASS_FILL_PROFILES[event.currentTarget.value]
+    ? event.currentTarget.value
+    : "studio_dense";
+  hairMassGeometryTimings = [];
 });
 document.querySelector("#hydration-recipe").addEventListener("change", (event) => {
   setHydrationRecipe(event.currentTarget.value);
@@ -3088,6 +3332,7 @@ function createRenderReceipt() {
   const hairWidthsStart = hairAttributes?.instanceWidthStart?.array ?? new Float32Array();
   const hairWidthsEnd = hairAttributes?.instanceWidthEnd?.array ?? new Float32Array();
   const groomEnvelopeSummary = summarizeGroomEnvelope(groomEnvelopeId, activeGroomEnvelopeScale());
+  const hairMassSummary = summarizeHairMassFill(hairMassFillId, hairMassDensity);
   return {
     schema: "hair-render/1",
     native_box3d_clip: {
@@ -3143,6 +3388,24 @@ function createRenderReceipt() {
         float32BufferDigest(mesh.geometry.attributes.position.array)
       ),
       mechanical_digest_impact: "none_display_projection_after_solver_state",
+    },
+    hair_mass_fill: {
+      enabled: Boolean(groomBindings) && hairMassFillId !== "off" && groomEnvelopeId !== "off",
+      ...hairMassSummary,
+      mesh_count: hairMassMeshes.length,
+      radial_segments: HAIR_MASS_RADIAL_SEGMENTS,
+      alpha_texture_identity: "deterministic_longitudinal_card_bands_v1",
+      alpha_texture_resolution: [128, 256],
+      alpha_texture_layers: ["dense_core", "sparse_middle"],
+      visible_mesh_count: hairMassMeshes.filter((mesh) => mesh.visible).length,
+      geometry_update: summarizeGeometryTimings(hairMassGeometryTimings),
+      position_digests: hairMassMeshes.map((mesh) =>
+        float32BufferDigest(mesh.geometry.attributes.position.array)
+      ),
+      presentation_source: fullGroomHydrationEnabled
+        ? "microfiber_hydration_phase"
+        : "fully_hydrated",
+      mechanical_digest_impact: "none_display_meshes_read_live_section_frames",
     },
     hair_shading: {
       mode: hairShadingMode,
