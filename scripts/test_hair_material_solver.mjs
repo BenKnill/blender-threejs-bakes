@@ -66,17 +66,22 @@ import {
   reelCameraPoseAtStep,
   REEL_CAMERA_FIELD_ID,
   resolveHairHydrationState,
+  rootCoverageFiberCopies,
   sectionPosePresentationAtStep,
   summarizeGeometryTimings,
   undercoatCoverageAt,
 } from "../physics/labs/hair_material/demo/rendering.js";
 import {
   buildGroomInterpolationBindings,
+  GROOM_DONOR_SHAPE_LIMIT_METERS,
+  GROOM_DONOR_SHAPE_TRANSFER,
   groomBindingActiveSegments,
+  groomDonorShapeTransferAt,
   groomInterpolationReceipt,
   groomSecondaryWeightAt,
   groomSectionId,
   interpolateGroomScalar,
+  transportGroomPoint,
 } from "../physics/labs/hair_material/demo/groom_interpolation.js";
 import {
   boundGroomEnvelopeCoordinates,
@@ -202,7 +207,7 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     moderateMagnitude: 0.9,
     legacyScaleMigrated: false,
   });
-  assert.equal(FULL_GROOM_HYDRATION_ID, "hierarchy_plus_section_envelope_hydration_v7");
+  assert.equal(FULL_GROOM_HYDRATION_ID, "hierarchy_plus_owner_frame_hydration_v9");
   assert.equal(HAIR_HYDRATION_RECIPE_ID, "independent_geometry_optics_color_detail_space_v2");
   assert.equal(HAIR_HYDRATION_BREADTH_ID, "disney_reference_5x6x6x6_composition_space_v1");
   assert.deepEqual(HAIR_HYDRATION_RECIPE_ORDER, [
@@ -314,13 +319,15 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
       HAIR_HYDRATION_RECIPES.natural_balanced.populationFraction
   );
   assert.equal(PHYSICS_SKELETON_STYLE_ID, "uniform_world_space_rods_joints_v2");
-  assert.equal(LOCK_AWARE_COVERAGE_ID, "live_root_cover_locks_catmull_rom_v3");
+  assert.equal(LOCK_AWARE_COVERAGE_ID, "owner_clump_root_transitions_v5");
   assert.equal(LOCK_AWARE_RENDER_SUBDIVISIONS, 2);
   assert.equal(LOCK_AWARE_ROOT_COVER_SEGMENTS, 3);
-  nearlyEqual(LOCK_AWARE_ROOT_COVER_LENGTH_METERS, 0.24);
+  nearlyEqual(LOCK_AWARE_ROOT_COVER_LENGTH_METERS, 0.14);
   assert.equal(LOCK_AWARE_ROOT_COVER_PROBE_PARTICLE, 7);
   nearlyEqual(LOCK_AWARE_ROOT_COVER_LIVE_WEIGHT, 0.86);
   nearlyEqual(LOCK_AWARE_ROOT_COVER_MIN_AUTHORED_DOT, 0.34);
+  assert.equal(rootCoverageFiberCopies(1), 1);
+  assert.equal(rootCoverageFiberCopies(21), 2);
   assert.equal(PHYSICS_SKELETON_STYLE.guideLimit, 64);
   assert.equal(PHYSICS_SKELETON_STYLE.rootJointScale, 1);
   assert.ok(PHYSICS_SKELETON_STYLE.rodRadiusMeters > 0);
@@ -331,18 +338,61 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   nearlyEqual(catmullRomScalar(0, 1, 2, 3, 0), 1);
   nearlyEqual(catmullRomScalar(0, 1, 2, 3, 0.5), 1.5);
   nearlyEqual(catmullRomScalar(0, 1, 2, 3, 1), 2);
-  const rootCoverage = buildRootCoverageCurve(0, 2.5, 0, 0, 1, 0, 1, 0.6, 0, 8, 3, 0.24);
+  const rootCoverage = buildRootCoverageCurve(
+    0,
+    2.5,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0.6,
+    0,
+    8,
+    3,
+    LOCK_AWARE_ROOT_COVER_LENGTH_METERS
+  );
   assert.deepEqual(Array.from(rootCoverage.slice(0, 3)), [0, 2.5, 0]);
-  assert.ok(rootCoverage[9] > 0.18);
-  assert.ok(rootCoverage[10] > 2.5);
-  assert.ok(Math.hypot(rootCoverage[9], rootCoverage[11]) < 0.3);
+  assert.ok(rootCoverage[9] > 0.08);
+  assert.ok(rootCoverage[10] > 2.54);
+  assert.ok(Math.hypot(rootCoverage[9], rootCoverage[11]) < 0.18);
   assert.deepEqual(
     Array.from(rootCoverage),
-    Array.from(buildRootCoverageCurve(0, 2.5, 0, 0, 1, 0, 1, 0.6, 0, 8, 3, 0.24))
+    Array.from(
+      buildRootCoverageCurve(
+        0,
+        2.5,
+        0,
+        0,
+        1,
+        0,
+        1,
+        0.6,
+        0,
+        8,
+        3,
+        LOCK_AWARE_ROOT_COVER_LENGTH_METERS
+      )
+    )
   );
   assert.notDeepEqual(
     Array.from(rootCoverage),
-    Array.from(buildRootCoverageCurve(0, 2.5, 0, 0, 1, 0, 1, 0.6, 0, 8, 4, 0.24))
+    Array.from(
+      buildRootCoverageCurve(
+        0,
+        2.5,
+        0,
+        0,
+        1,
+        0,
+        1,
+        0.6,
+        0,
+        8,
+        4,
+        LOCK_AWARE_ROOT_COVER_LENGTH_METERS
+      )
+    )
   );
   const liveCoverageFlow = blendRootCoverageFlow(0, 1, 0, 1, 0.4, 0, 0, 0.2, 1);
   nearlyEqual(Math.hypot(...liveCoverageFlow), 1);
@@ -559,8 +609,8 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
 {
   assert.ok(fatlineHalfWidthAt(0, 12) > fatlineHalfWidthAt(6, 12));
   assert.ok(fatlineHalfWidthAt(6, 12) > fatlineHalfWidthAt(12, 12));
-  nearlyEqual(fatlineHalfWidthAt(0, 12), 0.84);
-  nearlyEqual(fatlineHalfWidthAt(12, 12), 0.07);
+  nearlyEqual(fatlineHalfWidthAt(0, 12), 1.18);
+  nearlyEqual(fatlineHalfWidthAt(12, 12), 0.16);
   nearlyEqual(fatlineHalfWidthAt(12, 12), fatlineHalfWidthAt(24, 12));
   assert.equal(fatlineColorScale(8, 3), fatlineColorScale(8, 3));
   assert.notEqual(fatlineColorScale(8, 3), fatlineColorScale(8, 4));
@@ -637,6 +687,39 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   }
   nearlyEqual(interpolateGroomScalar(2, 10, 0), 2);
   nearlyEqual(interpolateGroomScalar(2, 10, 0.25), 4);
+  nearlyEqual(GROOM_DONOR_SHAPE_TRANSFER, 0.18);
+  nearlyEqual(GROOM_DONOR_SHAPE_LIMIT_METERS, 0.055);
+  nearlyEqual(groomDonorShapeTransferAt(0.18), 0);
+  nearlyEqual(groomDonorShapeTransferAt(0.72), GROOM_DONOR_SHAPE_TRANSFER);
+  assert.ok(groomDonorShapeTransferAt(0.5) > 0);
+  const transportPositions = new Float64Array([0, 0, 0, 0, 1, 0, 1, 0, 0, 1.8, 1, 0]);
+  const transportedRoot = transportGroomPoint(
+    new Float64Array(3),
+    0,
+    transportPositions,
+    0,
+    0,
+    6,
+    6,
+    0.5,
+    0,
+    0,
+    0,
+    0
+  );
+  nearlyEqual(transportedRoot[0], 0.5);
+  const transportedShaft = transportGroomPoint(
+    new Float64Array(3),
+    0,
+    transportPositions,
+    0,
+    3,
+    6,
+    9,
+    0.5
+  );
+  nearlyEqual(transportedShaft[0], 0.555);
+  nearlyEqual(transportedShaft[1], 1);
   const activeSegments = new Uint16Array([12, 5]);
   assert.equal(groomBindingActiveSegments(activeSegments, 0, 1, 0), 12);
   assert.equal(groomBindingActiveSegments(activeSegments, 0, 1, 0.25), 5);
@@ -652,6 +735,9 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     cut_length_rule: "pure_owner_else_min_parents",
     secondary_weight_envelope: "none",
     secondary_cut_fade_segments: 0,
+    curve_transport: "owner_displacement_plus_bounded_donor_shape",
+    donor_shape_transfer: 0.18,
+    donor_shape_limit_m: 0.055,
   });
 
   const volumeBindings = buildGroomInterpolationBindings(roots, 8, 5, { parentCount: 3 });
@@ -701,6 +787,9 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     cut_length_rule: "owner_primary_length_secondary_donor_fade",
     secondary_weight_envelope: "smoothstep_45pct_to_90pct",
     secondary_cut_fade_segments: 2,
+    curve_transport: "owner_displacement_plus_bounded_donor_shape",
+    donor_shape_transfer: 0.18,
+    donor_shape_limit_m: 0.055,
   });
 
   const productionGroomSolver = new HairSolver({ guideCount: 256, segments: 12 });

@@ -6,6 +6,8 @@ const MAX_NEIGHBOR_WEIGHT = 0.45;
 const VOLUME_ENVELOPE_START_FRACTION = 0.45;
 const VOLUME_ENVELOPE_END_FRACTION = 0.9;
 const SECONDARY_CUT_FADE_SEGMENTS = 2;
+export const GROOM_DONOR_SHAPE_TRANSFER = 0.18;
+export const GROOM_DONOR_SHAPE_LIMIT_METERS = 0.055;
 
 export function groomSectionId(x, z, sectionCount = DEFAULT_GROOM_SECTION_COUNT) {
   if (!Number.isInteger(sectionCount) || sectionCount < 1) {
@@ -161,6 +163,68 @@ export function groomSecondaryWeightAt(
   return secondaryNeighborWeight * envelope * cutFade;
 }
 
+export function groomDonorShapeTransferAt(fraction) {
+  return GROOM_DONOR_SHAPE_TRANSFER * smoothStep01((fraction - 0.18) / (0.72 - 0.18));
+}
+
+export function transportGroomPoint(
+  output,
+  outputOffset,
+  positions,
+  ownerRoot,
+  ownerPoint,
+  neighborRoot,
+  neighborPoint,
+  neighborWeight,
+  secondaryRoot = ownerRoot,
+  secondaryPoint = ownerPoint,
+  secondaryWeight = 0,
+  shapeTransfer = GROOM_DONOR_SHAPE_TRANSFER,
+  maximumCorrection = GROOM_DONOR_SHAPE_LIMIT_METERS
+) {
+  let correctionSquared = 0;
+  for (let axis = 0; axis < 3; axis += 1) {
+    const ownerDisplacement = positions[ownerPoint + axis] - positions[ownerRoot + axis];
+    const neighborDisplacement = positions[neighborPoint + axis] - positions[neighborRoot + axis];
+    const secondaryDisplacement =
+      positions[secondaryPoint + axis] - positions[secondaryRoot + axis];
+    const donorDifference =
+      neighborWeight * (neighborDisplacement - ownerDisplacement) +
+      secondaryWeight * (secondaryDisplacement - ownerDisplacement);
+    const correction = donorDifference * Math.max(0, shapeTransfer);
+    output[outputOffset + axis] =
+      interpolateGroomScalar(
+        positions[ownerRoot + axis],
+        positions[neighborRoot + axis],
+        neighborWeight,
+        positions[secondaryRoot + axis],
+        secondaryWeight
+      ) +
+      ownerDisplacement +
+      correction;
+    correctionSquared += correction * correction;
+  }
+  const correctionLength = Math.sqrt(correctionSquared);
+  const boundedMaximum = Math.max(0, maximumCorrection);
+  if (correctionLength > boundedMaximum && correctionLength > 0) {
+    const correctionScale = boundedMaximum / correctionLength;
+    for (let axis = 0; axis < 3; axis += 1) {
+      const ownerDisplacement = positions[ownerPoint + axis] - positions[ownerRoot + axis];
+      const neighborDisplacement = positions[neighborPoint + axis] - positions[neighborRoot + axis];
+      const secondaryDisplacement =
+        positions[secondaryPoint + axis] - positions[secondaryRoot + axis];
+      const donorDifference =
+        neighborWeight * (neighborDisplacement - ownerDisplacement) +
+        secondaryWeight * (secondaryDisplacement - ownerDisplacement);
+      const uncorrected =
+        output[outputOffset + axis] - donorDifference * Math.max(0, shapeTransfer);
+      output[outputOffset + axis] =
+        uncorrected + donorDifference * Math.max(0, shapeTransfer) * correctionScale;
+    }
+  }
+  return output;
+}
+
 function hashByte(hash, byte) {
   return Math.imul(hash ^ byte, 0x01000193);
 }
@@ -210,5 +274,8 @@ export function groomInterpolationReceipt(bindings, buildCount) {
         : "pure_owner_else_min_parents",
     secondary_weight_envelope: bindings.parentCount === 3 ? "smoothstep_45pct_to_90pct" : "none",
     secondary_cut_fade_segments: bindings.parentCount === 3 ? SECONDARY_CUT_FADE_SEGMENTS : 0,
+    curve_transport: "owner_displacement_plus_bounded_donor_shape",
+    donor_shape_transfer: GROOM_DONOR_SHAPE_TRANSFER,
+    donor_shape_limit_m: GROOM_DONOR_SHAPE_LIMIT_METERS,
   };
 }
