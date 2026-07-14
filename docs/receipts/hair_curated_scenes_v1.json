@@ -1,0 +1,79 @@
+{
+  "schema": "hair-curated-scenes-receipt/1",
+  "issue": 185,
+  "field_identity": "three_authored_hair_scenes_v1",
+  "claim_boundary": "Scene selection changes presentation parameters, camera, and native clip entry/loop points. All three read the same recorded Box3D guide clip; scene selection does not rerun or alter Box3D mechanics.",
+  "canonical_query": "scene=rig-becomes-hair",
+  "ui_contract": {
+    "curated_control_count": 1,
+    "control": "Next scene",
+    "next_order": ["rig-becomes-hair", "copper-gale", "after-the-rain", "rig-becomes-hair"],
+    "full_control_escape_hatch": "?lab=1",
+    "narrow_preview_pixels": [520, 760],
+    "narrow_behavior": "title, count, cue, and Next remain; description and technical HUD hide below 700 CSS pixels"
+  },
+  "scenes": [
+    {
+      "id": "rig-becomes-hair",
+      "title": "Rig Becomes Hair",
+      "entry_phase": "mechanical_skeleton",
+      "loop_start_seconds": 0,
+      "loop_wrap_result_seconds": 0.1,
+      "composition": "balanced_full__artist_dual__chestnut__natural_variation",
+      "envelope": "cinematic_mass",
+      "envelope_scale": 1.25,
+      "mass_fill": "cinematic_deep",
+      "mass_density": 1.25,
+      "camera": "control",
+      "next": "copper-gale"
+    },
+    {
+      "id": "copper-gale",
+      "title": "Copper Gale",
+      "entry_phase": "wind_clip",
+      "entry_sample_time_seconds": 0.033333333333338544,
+      "loop_start_seconds": 22.5,
+      "loop_wrap_result_seconds": 22.6,
+      "loop_wrap_sample_time_seconds": 0.1,
+      "composition": "balanced_full__artist_dual__copper__soft_wave",
+      "envelope": "storybook_volume",
+      "envelope_scale": 1.1,
+      "mass_fill": "cinematic_deep",
+      "mass_density": 1.45,
+      "camera": "beauty",
+      "next": "after-the-rain"
+    },
+    {
+      "id": "after-the-rain",
+      "title": "After the Rain",
+      "entry_phase": "wind_clip",
+      "entry_sample_time_seconds": 6,
+      "loop_start_seconds": 28.5,
+      "loop_wrap_result_seconds": 28.6,
+      "loop_wrap_sample_time_seconds": 6.1,
+      "composition": "wet_locks__near_field_proxy__deep_ebony__wet_grouped",
+      "envelope": "salon_full",
+      "envelope_scale": 1.1,
+      "mass_fill": "wet_compact",
+      "mass_density": 1.6,
+      "camera": "cut",
+      "next": "rig-becomes-hair"
+    }
+  ],
+  "canary_validation": {
+    "browser": "Google Chrome Canary",
+    "wide_viewport_pixels": [960, 900],
+    "scene_runs": 3,
+    "lab_visibility_run": 1,
+    "javascript_exceptions": 0,
+    "console_errors": 0,
+    "curated_panel_visible": false,
+    "lab_panel_visible": true,
+    "shared_fixed_samples": {
+      "strong_wind_digest": "527b84a595220c1d",
+      "moderate_wind_digest": "fa11b33849011648"
+    },
+    "loop_wrap_probe_requested_seconds": 35.2,
+    "loop_wrap_expectations_met": true
+  }
+}
