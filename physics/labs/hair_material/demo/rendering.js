@@ -305,7 +305,7 @@ export const HAIR_COLOR_PROFILES = Object.freeze({
   chestnut: Object.freeze({
     id: "chestnut",
     label: "Chestnut brown",
-    baseColor: 0x3b1715,
+    baseColor: 0x55231e,
     absorptionTint: Object.freeze([0.78, 0.38, 0.3]),
   }),
   copper: Object.freeze({

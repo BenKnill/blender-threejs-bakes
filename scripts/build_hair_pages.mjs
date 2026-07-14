@@ -17,6 +17,8 @@ const canonicalParameters = new URLSearchParams([
   ["hydrationGeometry", "balanced-full"],
   ["groomEnvelope", "cinematic-mass"],
   ["envelopeScale", "1.25"],
+  ["massFill", "cinematic-deep"],
+  ["massDensity", "1.25"],
   ["hydrationOptical", "artist-dual"],
   ["hydrationColor", "chestnut"],
   ["hydrationDetail", "natural-variation"],
@@ -36,7 +38,7 @@ const canonicalParameters = new URLSearchParams([
   ["mannequin", "realistic"],
   ["reel", "control"],
   ["renderReceipt", "1"],
-  ["scenario", "disney-breadth-lab"],
+  ["scenario", "disney-layered-mass-lab"],
 ]).toString();
 
 await rm(output, { recursive: true, force: true });

@@ -4,7 +4,9 @@ Issues: [#79](https://github.com/BenKnill/blender-threejs-bakes/issues/79),
 [#86](https://github.com/BenKnill/blender-threejs-bakes/issues/86),
 [#130](https://github.com/BenKnill/blender-threejs-bakes/issues/130),
 [#132](https://github.com/BenKnill/blender-threejs-bakes/issues/132),
-[#175](https://github.com/BenKnill/blender-threejs-bakes/issues/175)
+[#175](https://github.com/BenKnill/blender-threejs-bakes/issues/175),
+[#181](https://github.com/BenKnill/blender-threejs-bakes/issues/181), and
+[#183](https://github.com/BenKnill/blender-threejs-bakes/issues/183)
 
 This laboratory is the first interactive step beyond the rendered mannequin
 cut. Its editable mode runs hundreds of 3D mechanical guides in the browser.
@@ -16,6 +18,8 @@ The canonical refreshable front door is
 no query string it enters the current hands-off rod-to-hydrated-hair loop. Use
 `?lab=1` to keep the full control panel instead. The exact deployed commit is
 reported by [`/build.json`](https://hair-material-bench.pages.dev/build.json).
+The current canonical hydration uses the bounded `cinematic-mass` envelope and
+the layered `cinematic-deep` occupancy profile at 1.25x density.
 
 ```sh
 just hair-material
@@ -473,6 +477,27 @@ reported no exceptions or console errors; the final cinematic pass measured
 9.74 ms mean geometry update versus 8.64 ms in the envelope-off baseline. This
 is a screen-space diagnostic, not a physical area or production-performance
 claim. See `docs/receipts/hair_section_envelope_v1.json`.
+
+Breadth and occupancy are independently selectable. `massFill` accepts `off`,
+`air-shell`, `studio-dense`, `cinematic-deep`, or `wet-compact`, and
+`massDensity=0..2` scales it. Each active profile combines two live section
+shells with a deterministic longitudinal-card alpha texture, family-specific
+fiber widths, and a bounded minimum screen-space half-width. The latter keeps
+tips from disappearing below a pixel at preview size; it is not extra simulated
+geometry. The face aperture sets both shell opacity and the added width floor to
+zero for front sections 5 and 6, so making the outer mass denser does not turn
+the hairline into a broad face veil. `off` is neutral: no shells, opacity change,
+width scaling, or width floor.
+
+The canonical `cinematic-deep` 1.25x pass draws 12 additional shell meshes and
+keeps the same 102,144 hydrated curve primitives. In sequential 960x900 Canary
+runs, mass-off and deep both ended at physics digest `fa11b33849011648` and the
+same hydrated position-buffer digest `b7113a24`; only the width digest changed.
+The shell update measured 0.171 ms mean / 0.40 ms p99 and maximum, while total
+geometry update was 11.67 ms mean versus 11.53 ms off. Two independent final
+runs repeated all 20 PNG hashes exactly with zero browser exceptions or console
+errors. These are narrow development measurements, not production render-cost
+or realism claims. See `docs/receipts/hair_layered_mass_fill_v1.json`.
 
 An exact-time 20-frame Chrome Canary pass observed every named state plus both
 wind phases with no JavaScript exceptions or console errors. The cached rest-detail

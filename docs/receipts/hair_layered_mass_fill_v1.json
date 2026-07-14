@@ -1,0 +1,91 @@
+{
+  "schema": "hair-layered-mass-fill-receipt/1",
+  "issue": 183,
+  "field_identity": "layered_section_occupancy_v1",
+  "claim_boundary": "Renderer-only occupancy and shading study over an unchanged native Box3D guide clip. It does not add simulated strands, collision, self-contact, or a production hair BSDF.",
+  "canonical_configuration": {
+    "guide_count": 256,
+    "visible_fibers_per_guide": 21,
+    "active_draw_primitives": 102144,
+    "groom_envelope": "cinematic_mass",
+    "envelope_scale": 1.25,
+    "mass_fill": "cinematic_deep",
+    "mass_density": 1.25,
+    "mass_shells": [
+      {
+        "id": "core",
+        "envelope_radius_scale": 0.6,
+        "opacity": 0.525
+      },
+      {
+        "id": "middle",
+        "envelope_radius_scale": 0.88,
+        "opacity": 0.225
+      }
+    ],
+    "minimum_half_width_pixels": {
+      "owner": 0.5796,
+      "clump": 0.4968,
+      "microfiber": 0.3312,
+      "flyaway": 0.1012
+    },
+    "alpha_texture": "deterministic_longitudinal_card_bands_v1",
+    "front_aperture": "sections_5_and_6_have_zero_shell_opacity_and_width_floor",
+    "maximum_normalized_envelope_radius": 1
+  },
+  "profile_space": ["off", "air_shell", "studio_dense", "cinematic_deep", "wet_compact"],
+  "canary_ab": {
+    "browser": "Google Chrome Canary",
+    "viewport_pixels": [960, 900],
+    "capture_schedule": "20 exact presentation-time frames",
+    "off": {
+      "draw_calls": 15,
+      "geometry_update_ms": {
+        "measured_frames": 150,
+        "mean": 11.532,
+        "p99": 17.5,
+        "max": 37.3
+      },
+      "position_buffer_fnv1a32": "b7113a24",
+      "width_start_buffer_fnv1a32": "47578dc5"
+    },
+    "cinematic_deep_1_25": {
+      "draw_calls": 27,
+      "geometry_update_ms": {
+        "measured_frames": 149,
+        "mean": 11.666,
+        "p99": 23.2,
+        "max": 28.1
+      },
+      "mass_geometry_update_ms": {
+        "measured_frames": 96,
+        "mean": 0.171,
+        "p99": 0.4,
+        "max": 0.4
+      },
+      "position_buffer_fnv1a32": "b7113a24",
+      "width_start_buffer_fnv1a32": "cfb341c6"
+    },
+    "interpretation": "The hydrated position buffer and mechanics are unchanged; the distinct width digest and twelve extra visible shell draws are presentation changes. Single-run browser maxima remain scheduling-sensitive."
+  },
+  "mechanics_identity": {
+    "native_clip_trajectory_digest": "5aaf6c2db5806b28",
+    "calm_sample_digest": "d1dd623e0aff3b65",
+    "strong_sample_digest": "527b84a595220c1d",
+    "moderate_sample_digest": "fa11b33849011648",
+    "off_and_deep_final_digest_match": true,
+    "minimum_first_segment_target_dot": 0.929245055
+  },
+  "determinism": {
+    "independent_canary_runs": 2,
+    "exact_png_hash_matches": 20,
+    "png_hashes_sha256": {
+      "09-natural-full.png": "4a7c2b4480c0821a55cce050e488bcf0f8fc6947e11304672641215b239500ea",
+      "19-strong-wind.png": "3cd75c6035167ba5df884d25d6a0a6771a3120042af7bfea32cc7d7ba40a632b",
+      "20-moderate-wind.png": "90c3962f5f9108c585a12b91c107db621f7c90aec6dcb0379f8909e53a6355fe"
+    },
+    "javascript_exceptions": 0,
+    "console_errors": 0
+  },
+  "visual_conclusion": "The initial smooth shells exposed section-tube topology and were rejected. Textured longitudinal cards plus family-specific screen-width floors make the broad envelope read as a denser moving hair mass, while a section-aware aperture avoids amplifying the front guides into a face veil. The result is still visibly procedural and porous, not realistic production hair."
+}
