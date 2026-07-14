@@ -288,6 +288,19 @@ strand rendering; do not add another many-hair operator first.
       its quantized 15 Hz nodes, exposes a uniform 64-guide rod subset, and
       hydrates to 5,376 fibers without claiming live Box3D/WASM execution.
 - [ ] Better scalp/strand contact and a clearer calibration path.
+- [x] Add deterministic eight-section elliptical groom envelopes so hydration
+      can create genuinely broad hair masses instead of merely widening ribbon
+      pixels. Salon, cinematic, and storybook profiles share exact roots, an
+      asymmetric side-part field, a normalized radius-1 boundary, and a 0.5x to
+      2.5x breadth control. The canonical cinematic 1.25x profile reaches about
+      0.96 m outward / 0.74 m lateral maximum radius while remaining explicitly
+      renderer-only. A front aperture clears hydrated midshafts from the face
+      and reapplies the radius-1 bound. The fixed cyan crop gains 14.0% coverage
+      for cinematic and 22.2% for storybook; calm/strong/moderate physics digests
+      match the envelope-off pass. Caching unique hydrated points cut Canary
+      geometry cost from the first 18.93 ms mean to 9.74 ms versus 8.64 ms off,
+      with zero exceptions or console errors across 20 exact-time frames; all
+      20 final PNG hashes repeat exactly in a second Canary run.
 - [x] Define three receipt-distinct reel shots before packaging video variants.
 - [ ] Package short 16:9 and vertical reels from those named moving shots.
 

@@ -15,6 +15,8 @@ const canonicalParameters = new URLSearchParams([
   ["groomHydration", "1"],
   ["hydrationRecipe", "natural-balanced"],
   ["hydrationGeometry", "balanced-full"],
+  ["groomEnvelope", "cinematic-mass"],
+  ["envelopeScale", "1.25"],
   ["hydrationOptical", "artist-dual"],
   ["hydrationColor", "chestnut"],
   ["hydrationDetail", "natural-variation"],

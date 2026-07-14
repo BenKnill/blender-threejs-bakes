@@ -3,7 +3,7 @@ export const FATLINE_TIP_HALF_WIDTH_PX = 0.07;
 export const HAIR_FIBER_SHADING_ID = "artist_dual_plus_near_field_proxy_lobes_v4";
 export const HAIR_PRESENTATION_LOOP_ID = "visible_two_wind_orbits_1020_step_v3";
 export const REEL_CAMERA_FIELD_ID = "fixed_control_two_orbit_1020_step_v3";
-export const FULL_GROOM_HYDRATION_ID = "hierarchy_plus_breadth_lab_hydration_v6";
+export const FULL_GROOM_HYDRATION_ID = "hierarchy_plus_section_envelope_hydration_v7";
 export const HAIR_HYDRATION_RECIPE_ID = "independent_geometry_optics_color_detail_space_v2";
 export const HAIR_HYDRATION_BREADTH_ID = "disney_reference_5x6x6x6_composition_space_v1";
 export const PHYSICS_SKELETON_STYLE_ID = "uniform_world_space_rods_joints_v2";
@@ -134,6 +134,7 @@ export const HAIR_GEOMETRY_PROFILES = Object.freeze({
     flyawayDensity: 0,
     undercoatScale: 0,
     spreadScale: 0.82,
+    envelopeScale: 0.58,
   }),
   fine_layers: Object.freeze({
     id: "fine_layers",
@@ -146,6 +147,7 @@ export const HAIR_GEOMETRY_PROFILES = Object.freeze({
     flyawayDensity: 0.42,
     undercoatScale: 0.62,
     spreadScale: 1.08,
+    envelopeScale: 0.82,
   }),
   balanced_full: Object.freeze({
     id: "balanced_full",
@@ -158,6 +160,7 @@ export const HAIR_GEOMETRY_PROFILES = Object.freeze({
     flyawayDensity: 0.52,
     undercoatScale: 0.82,
     spreadScale: 1,
+    envelopeScale: 1,
   }),
   coarse_clusters: Object.freeze({
     id: "coarse_clusters",
@@ -170,6 +173,7 @@ export const HAIR_GEOMETRY_PROFILES = Object.freeze({
     flyawayDensity: 0.24,
     undercoatScale: 0.9,
     spreadScale: 0.8,
+    envelopeScale: 1.18,
   }),
   wet_locks: Object.freeze({
     id: "wet_locks",
@@ -182,6 +186,7 @@ export const HAIR_GEOMETRY_PROFILES = Object.freeze({
     flyawayDensity: 0.04,
     undercoatScale: 1.04,
     spreadScale: 0.42,
+    envelopeScale: 0.72,
   }),
 });
 
