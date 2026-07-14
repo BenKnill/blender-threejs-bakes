@@ -319,6 +319,17 @@ strand rendering; do not add another many-hair operator first.
       loop start. `?lab=1` remains the explicit full-control surface. Canary
       checks cover all three entry phases, cyclic Next ordering, a 520x760
       narrow preview, and the strong/moderate loop-wrap boundaries.
+- [x] Finish issue #187's compliant root and owner-transport hydration slice.
+      The accepted fixtures use 12 shorter links and a five-stage
+      stiffness/cone ramp. The 64- and 256-guide stiction digests repeat as
+      `6419d6ab3a45d6dd` and `eb53b6e105f6e58d`; the 256-guide lane contains
+      3,072 capsules and joints, stays within its 15.5 mm settled-gap bound,
+      and retains positive outward alignment. Browser children follow owner
+      displacement with an 18% donor-shape correction bounded to 55 mm, while
+      two short root transitions per guide retain positive outward lift. A
+      169-update Canary pass reports 31.36 ms mean / 65 ms p99 / 81 ms maximum
+      hydrated geometry cost with zero exceptions or console errors. The result
+      remains stylized and crown-spiky, with head collision still absent.
 - [x] Define three receipt-distinct reel shots before packaging video variants.
 - [ ] Package short 16:9 and vertical reels from those named moving shots.
 

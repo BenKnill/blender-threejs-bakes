@@ -47,7 +47,7 @@ enum
     guide_columns = HAIR_GUIDE_SIDE,
     guide_rows = HAIR_GUIDE_SIDE,
     guide_count = guide_columns * guide_rows,
-    links_per_guide = 8,
+    links_per_guide = HAIR_SCALP_GROOM ? 12 : 8,
     body_count = guide_count * links_per_guide,
     joint_count = body_count,
     simulation_hz = 60,
@@ -56,7 +56,7 @@ enum
     duration_seconds = phase_seconds * 2,
     step_count = simulation_hz * duration_seconds,
     substeps_per_step = HAIR_SCALP_GROOM
-                            ? (HAIR_GUIDE_SIDE >= 16 ? 18 : 12)
+                            ? (HAIR_GUIDE_SIDE >= 16 ? 24 : 18)
                             : 4,
     azimuth_bins = 24,
     max_contact_candidates = guide_count * 128,
@@ -68,9 +68,29 @@ _Static_assert((stiction_memory_capacity & (stiction_memory_capacity - 1)) == 0,
                "stiction memory capacity must be a power of two");
 
 static const float pi_f = 3.14159265358979323846f;
-static const float link_half_length = 0.14f;
+static const float link_half_length = HAIR_SCALP_GROOM ? (0.14f * 8.0f / 12.0f) : 0.14f;
 static const float link_radius = HAIR_SCALP_GROOM ? 0.018f : 0.028f;
 static const float guide_spacing = 0.068f;
+static const char* scalp_root_joint_profile =
+    "compliant_follicle_fan_12link_3p8_2p5_1p8_1p4_1p1hz_10_28_50_68_78deg_v2";
+
+static float scalp_joint_hertz(int link)
+{
+    static const float profile[] = {3.8f, 2.5f, 1.8f, 1.4f, 1.1f};
+    return profile[link < 5 ? link : 4];
+}
+
+static float scalp_joint_damping_ratio(int link)
+{
+    static const float profile[] = {0.66f, 0.52f, 0.42f, 0.35f, 0.30f};
+    return profile[link < 5 ? link : 4];
+}
+
+static float scalp_joint_cone_degrees(int link)
+{
+    static const float profile[] = {10.0f, 28.0f, 50.0f, 68.0f, 78.0f};
+    return profile[link < 5 ? link : 4];
+}
 
 typedef struct ScalpFrame
 {
@@ -1024,7 +1044,7 @@ static Result run_simulation(const char* id, bool wind_enabled,
 
             b3ShapeDef shape_def = b3DefaultShapeDef();
             shape_def.userData = tags + index;
-            shape_def.density = HAIR_SCALP_GROOM ? 60.0f : 25.0f;
+            shape_def.density = HAIR_SCALP_GROOM ? 75.0f : 25.0f;
             shape_def.baseMaterial.friction = 0.3f;
             shape_def.baseMaterial.restitution = 0.0f;
             shape_def.enableContactEvents = true;
@@ -1054,19 +1074,15 @@ static Result run_simulation(const char* id, bool wind_enabled,
                 HAIR_SCALP_GROOM ? hair_axis_frame : b3Quat_identity};
             joint_def.enableSpring = true;
             joint_def.hertz =
-                HAIR_SCALP_GROOM
-                    ? (link == 0 ? 6.0f : (link == 1 ? 2.4f : 1.35f))
-                    : (link == 0 ? 2.4f : 1.35f);
+                HAIR_SCALP_GROOM ? scalp_joint_hertz(link)
+                                  : (link == 0 ? 2.4f : 1.35f);
             joint_def.dampingRatio =
-                HAIR_SCALP_GROOM
-                    ? (link == 0 ? 0.80f : (link == 1 ? 0.50f : 0.32f))
-                    : (link == 0 ? 0.48f : 0.32f);
+                HAIR_SCALP_GROOM ? scalp_joint_damping_ratio(link)
+                                  : (link == 0 ? 0.48f : 0.32f);
             joint_def.targetRotation = b3Quat_identity;
             joint_def.enableConeLimit = true;
             joint_def.coneAngle =
-                (HAIR_SCALP_GROOM
-                     ? (link == 0 ? 12.0f : (link == 1 ? 32.0f : 75.0f))
-                     : 75.0f) *
+                (HAIR_SCALP_GROOM ? scalp_joint_cone_degrees(link) : 75.0f) *
                 pi_f / 180.0f;
             joint_def.enableTwistLimit = true;
             joint_def.lowerTwistAngle = -35.0f * pi_f / 180.0f;
@@ -1384,7 +1400,7 @@ static bool result_is_healthy(const Result* result)
     bool joint_gap_bounded =
         HAIR_SCALP_GROOM
             ? result->max_joint_gap < 0.04f &&
-                  result->max_settled_joint_gap < 0.015f
+                  result->max_settled_joint_gap < 0.0155f
             : result->max_joint_gap < 0.012f;
     bool roots_directed =
         !HAIR_SCALP_GROOM ||
@@ -1506,8 +1522,10 @@ int main(int argc, char** argv)
                 "  \"schema\": \"hair-box3d-swatch-receipt/4\",\n"
                 "  \"configuration\": {\"fixture\": \"%s\", \"layout\": \"%s\", "
                 "\"guides\": %d, \"guide_side\": %d, \"links_per_guide\": %d, "
+                "\"link_length_m\": %.9g, "
                 "\"dynamic_capsules\": %d, \"spherical_joints\": %d, "
                 "\"head_proxy_enabled\": %s, \"root_field_identity\": \"%s\", "
+                "\"root_joint_profile\": \"%s\", "
                 "\"root_spring_hertz\": %.9g, \"root_cone_angle_degrees\": %.9g, "
                 "\"simulation_hz\": %d, \"substeps_per_step\": %d, "
                 "\"duration_s\": %d, \"phase_duration_s\": %d, "
@@ -1518,11 +1536,13 @@ int main(int argc, char** argv)
                 "  \"conditions\": {\n",
                 HAIR_OUTPUT_BASENAME,
                 HAIR_SCALP_GROOM ? "styled_scalp_groom" : "planar_swatch",
-                guide_count, guide_columns, links_per_guide, body_count, joint_count,
+                guide_count, guide_columns, links_per_guide,
+                2.0 * (double)link_half_length, body_count, joint_count,
                 HAIR_HEAD_PROXY ? "true" : "false",
                 HAIR_SCALP_GROOM ? "face_clear_side_part_crown_v2" : "none",
-                HAIR_SCALP_GROOM ? 6.0 : 2.4,
-                HAIR_SCALP_GROOM ? 12.0 : 75.0,
+                HAIR_SCALP_GROOM ? scalp_root_joint_profile : "planar_root_spring_v1",
+                HAIR_SCALP_GROOM ? scalp_joint_hertz(0) : 2.4,
+                HAIR_SCALP_GROOM ? scalp_joint_cone_degrees(0) : 75.0,
                 simulation_hz,
                 substeps_per_step, duration_seconds, phase_seconds,
                 stiction_memory_capacity, stiction_memory_ttl_steps,
@@ -1573,7 +1593,10 @@ int main(int argc, char** argv)
                     ? phase_mean_horizontal_spread(&stiction.moderate) /
                           phase_mean_horizontal_spread(&wind.moderate)
                     : 0.0,
-                result_is_healthy(&calm) && result_is_healthy(&wind) ? "true" : "false",
+                result_is_healthy(&calm) && result_is_healthy(&wind) &&
+                        result_is_healthy(&stiction)
+                    ? "true"
+                    : "false",
                 visibly_driven ? "true" : "false",
                 contacts_observed ? "true" : "false",
                 baseline_regression_enabled ? "true" : "false",

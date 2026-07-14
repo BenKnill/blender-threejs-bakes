@@ -40,8 +40,8 @@ const nativeClipBinary = await stat(
   path.join(output, "assets/box3d_scalp_groom_256.positions.i16")
 );
 assert.equal(nativeClipMetadata.guide_count, 256);
-assert.equal(nativeClipMetadata.segments, 8);
-assert.equal(nativeClipMetadata.trajectory_digest, "5aaf6c2db5806b28");
+assert.equal(nativeClipMetadata.segments, 12);
+assert.equal(nativeClipMetadata.trajectory_digest, "eb53b6e105f6e58d");
 assert.equal(nativeClipMetadata.head_collision, false);
 assert.equal(nativeClipMetadata.binary_bytes, nativeClipBinary.size);
 
@@ -115,7 +115,7 @@ const clipMetadata = JSON.parse(
 );
 assert.equal(clipMetadata.schema, "hair-box3d-guide-clip/1");
 assert.equal(clipMetadata.guide_count, 64);
-assert.equal(clipMetadata.segments, 8);
+assert.equal(clipMetadata.segments, 12);
 assert.equal(clipMetadata.visible_fiber_target, 5376);
 assert.equal(
   (await stat(path.join(output, "assets/box3d_scalp_groom_64.positions.i16"))).size,

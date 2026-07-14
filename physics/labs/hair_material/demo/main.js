@@ -61,16 +61,19 @@ import {
   reelCameraPoseAtStep,
   REEL_CAMERA_FIELD_ID,
   resolveHairHydrationState,
+  rootCoverageFiberCopies,
   sectionPosePresentationAtStep,
   summarizeGeometryTimings,
-} from "./rendering.js?v=129";
+} from "./rendering.js?v=132";
 import {
   buildGroomInterpolationBindings,
+  groomDonorShapeTransferAt,
   groomBindingActiveSegments,
   groomInterpolationReceipt,
   groomSecondaryWeightAt,
   interpolateGroomScalar,
-} from "./groom_interpolation.js?v=117";
+  transportGroomPoint,
+} from "./groom_interpolation.js?v=118";
 import {
   GROOM_ENVELOPE_PROFILES,
   GROOM_ENVELOPE_PROFILE_ORDER,
@@ -395,6 +398,9 @@ let groomEnvelopeCenters = new Float64Array();
 let groomEnvelopeTangents = new Float64Array();
 let groomEnvelopeOutwards = new Float64Array();
 let groomEnvelopeLaterals = new Float64Array();
+let groomOwnerTangents = new Float64Array();
+let groomOwnerOutwards = new Float64Array();
+let groomOwnerLaterals = new Float64Array();
 let groomEnvelopeSamples = new Float32Array();
 let groomEnvelopeCurvePointCache = new Float64Array();
 let groomEnvelopeFrameCounts = new Uint16Array();
@@ -532,6 +538,12 @@ function ensureGroomEnvelopeStorage() {
     groomEnvelopeLaterals = new Float64Array(frameValues);
     groomEnvelopeFrameCounts = new Uint16Array(frameCount);
   }
+  const ownerFrameValues = solver.guideCount * stations * 3;
+  if (groomOwnerTangents.length !== ownerFrameValues) {
+    groomOwnerTangents = new Float64Array(ownerFrameValues);
+    groomOwnerOutwards = new Float64Array(ownerFrameValues);
+    groomOwnerLaterals = new Float64Array(ownerFrameValues);
+  }
   const sampleCount = solver.guideCount * renderFibersPerGuide * 2;
   if (groomEnvelopeSamples.length !== sampleCount) {
     groomEnvelopeSamples = new Float32Array(sampleCount);
@@ -655,6 +667,65 @@ function updateGroomEnvelopeFrames() {
       groomEnvelopeLaterals[frame + 2] = tangentX * outwardY - tangentY * outwardX;
     }
   }
+
+  for (let guide = 0; guide < solver.guideCount; guide += 1) {
+    const normal = guide * 3;
+    const referenceX = solver.rootNormals[normal];
+    const referenceY = solver.rootNormals[normal + 1];
+    const referenceZ = solver.rootNormals[normal + 2];
+    const activeSegments = solver.activeSegments[guide];
+    let priorOutwardX = 0;
+    let priorOutwardY = 0;
+    let priorOutwardZ = 0;
+    for (let particle = 0; particle < stations; particle += 1) {
+      const clamped = Math.min(activeSegments, particle);
+      const prior = solver.index(guide, Math.max(0, clamped - 1));
+      const next = solver.index(guide, Math.min(activeSegments, clamped + 1));
+      const frame = (guide * stations + particle) * 3;
+      let tangentX = solver.positions[next] - solver.positions[prior];
+      let tangentY = solver.positions[next + 1] - solver.positions[prior + 1];
+      let tangentZ = solver.positions[next + 2] - solver.positions[prior + 2];
+      const tangentLength = Math.hypot(tangentX, tangentY, tangentZ) || 1;
+      tangentX /= tangentLength;
+      tangentY /= tangentLength;
+      tangentZ /= tangentLength;
+      const tangentProjection =
+        referenceX * tangentX + referenceY * tangentY + referenceZ * tangentZ;
+      let outwardX = referenceX - tangentX * tangentProjection;
+      let outwardY = referenceY - tangentY * tangentProjection;
+      let outwardZ = referenceZ - tangentZ * tangentProjection;
+      let outwardLength = Math.hypot(outwardX, outwardY, outwardZ);
+      if (outwardLength < 1e-6) {
+        outwardX = Math.abs(tangentY) > 0.9 ? 1 : 0;
+        outwardY = Math.abs(tangentY) > 0.9 ? 0 : 1;
+        outwardZ = 0;
+        outwardLength = 1;
+      }
+      outwardX /= outwardLength;
+      outwardY /= outwardLength;
+      outwardZ /= outwardLength;
+      if (
+        particle > 0 &&
+        outwardX * priorOutwardX + outwardY * priorOutwardY + outwardZ * priorOutwardZ < 0
+      ) {
+        outwardX *= -1;
+        outwardY *= -1;
+        outwardZ *= -1;
+      }
+      priorOutwardX = outwardX;
+      priorOutwardY = outwardY;
+      priorOutwardZ = outwardZ;
+      groomOwnerTangents[frame] = tangentX;
+      groomOwnerTangents[frame + 1] = tangentY;
+      groomOwnerTangents[frame + 2] = tangentZ;
+      groomOwnerOutwards[frame] = outwardX;
+      groomOwnerOutwards[frame + 1] = outwardY;
+      groomOwnerOutwards[frame + 2] = outwardZ;
+      groomOwnerLaterals[frame] = tangentY * outwardZ - tangentZ * outwardY;
+      groomOwnerLaterals[frame + 1] = tangentZ * outwardX - tangentX * outwardZ;
+      groomOwnerLaterals[frame + 2] = tangentX * outwardY - tangentY * outwardX;
+    }
+  }
   groomEnvelopeClampedPoints = 0;
   groomEnvelopeProjectedPoints = 0;
   groomEnvelopeMaximumOutputRadius = 0;
@@ -713,43 +784,18 @@ function applyGroomEnvelopeToPoint(target, targetOffset, owner, copy, particle, 
   );
   if (radii.outward < 1e-8 || radii.lateral < 1e-8) return;
 
-  const dx = target[targetOffset] - groomEnvelopeCenters[frame];
-  const dy = target[targetOffset + 1] - groomEnvelopeCenters[frame + 1];
-  const dz = target[targetOffset + 2] - groomEnvelopeCenters[frame + 2];
-  const along =
-    dx * groomEnvelopeTangents[frame] +
-    dy * groomEnvelopeTangents[frame + 1] +
-    dz * groomEnvelopeTangents[frame + 2];
-  const baseOutward =
-    (dx * groomEnvelopeOutwards[frame] +
-      dy * groomEnvelopeOutwards[frame + 1] +
-      dz * groomEnvelopeOutwards[frame + 2]) /
-    radii.outward;
-  const baseLateral =
-    (dx * groomEnvelopeLaterals[frame] +
-      dy * groomEnvelopeLaterals[frame + 1] +
-      dz * groomEnvelopeLaterals[frame + 2]) /
-    radii.lateral;
+  const ownerFrame = (owner * stations + Math.min(solver.segments, clampedParticle)) * 3;
   const sample = (owner * renderFibersPerGuide + copy) * 2;
-  let normalizedOutward = baseOutward + groomEnvelopeSamples[sample] * profile.fillStrength;
-  let normalizedLateral = baseLateral + groomEnvelopeSamples[sample + 1] * profile.fillStrength;
-  let outward = normalizedOutward * radii.outward;
-  let lateral = normalizedLateral * radii.lateral;
-  target[targetOffset] =
-    groomEnvelopeCenters[frame] +
-    groomEnvelopeTangents[frame] * along +
-    groomEnvelopeOutwards[frame] * outward +
-    groomEnvelopeLaterals[frame] * lateral;
-  target[targetOffset + 1] =
-    groomEnvelopeCenters[frame + 1] +
-    groomEnvelopeTangents[frame + 1] * along +
-    groomEnvelopeOutwards[frame + 1] * outward +
-    groomEnvelopeLaterals[frame + 1] * lateral;
-  target[targetOffset + 2] =
-    groomEnvelopeCenters[frame + 2] +
-    groomEnvelopeTangents[frame + 2] * along +
-    groomEnvelopeOutwards[frame + 2] * outward +
-    groomEnvelopeLaterals[frame + 2] * lateral;
+  const sampleOutward = groomEnvelopeSamples[sample] * profile.fillStrength * radii.outward;
+  const sampleLateral = groomEnvelopeSamples[sample + 1] * profile.fillStrength * radii.lateral;
+  target[targetOffset] +=
+    groomOwnerOutwards[ownerFrame] * sampleOutward + groomOwnerLaterals[ownerFrame] * sampleLateral;
+  target[targetOffset + 1] +=
+    groomOwnerOutwards[ownerFrame + 1] * sampleOutward +
+    groomOwnerLaterals[ownerFrame + 1] * sampleLateral;
+  target[targetOffset + 2] +=
+    groomOwnerOutwards[ownerFrame + 2] * sampleOutward +
+    groomOwnerLaterals[ownerFrame + 2] * sampleLateral;
   applyGroomEnvelopeFaceClear(
     target,
     targetOffset,
@@ -763,12 +809,12 @@ function applyGroomEnvelopeToPoint(target, targetOffset, owner, copy, particle, 
     projectedDx * groomEnvelopeTangents[frame] +
     projectedDy * groomEnvelopeTangents[frame + 1] +
     projectedDz * groomEnvelopeTangents[frame + 2];
-  normalizedOutward =
+  let normalizedOutward =
     (projectedDx * groomEnvelopeOutwards[frame] +
       projectedDy * groomEnvelopeOutwards[frame + 1] +
       projectedDz * groomEnvelopeOutwards[frame + 2]) /
     radii.outward;
-  normalizedLateral =
+  let normalizedLateral =
     (projectedDx * groomEnvelopeLaterals[frame] +
       projectedDy * groomEnvelopeLaterals[frame + 1] +
       projectedDz * groomEnvelopeLaterals[frame + 2]) /
@@ -777,8 +823,8 @@ function applyGroomEnvelopeToPoint(target, targetOffset, owner, copy, particle, 
   if (inputRadius > 1) {
     normalizedOutward /= inputRadius;
     normalizedLateral /= inputRadius;
-    outward = normalizedOutward * radii.outward;
-    lateral = normalizedLateral * radii.lateral;
+    const outward = normalizedOutward * radii.outward;
+    const lateral = normalizedLateral * radii.lateral;
     target[targetOffset] =
       groomEnvelopeCenters[frame] +
       groomEnvelopeTangents[frame] * projectedAlong +
@@ -1909,7 +1955,7 @@ function rebuildSolver() {
   const preset = document.querySelector("#preset").value;
   solver = new HairSolver({
     guideCount,
-    segments: nativeClipPlayback.enabled ? 8 : 12,
+    segments: 12,
     iterations,
     preset,
     renderFibersPerGuide,
@@ -2150,15 +2196,20 @@ function writeBlendedGroomCurvePointUncached(
   const ownerPoint = solver.index(owner, clampedParticle);
   const neighborPoint = solver.index(neighbor, clampedParticle);
   const secondaryPoint = solver.index(secondaryNeighbor, clampedParticle);
-  for (let axis = 0; axis < 3; axis += 1) {
-    target[targetOffset + axis] = interpolateGroomScalar(
-      solver.positions[ownerPoint + axis],
-      solver.positions[neighborPoint + axis],
-      neighborWeight,
-      solver.positions[secondaryPoint + axis],
-      secondaryWeight
-    );
-  }
+  transportGroomPoint(
+    target,
+    targetOffset,
+    solver.positions,
+    solver.index(owner, 0),
+    ownerPoint,
+    solver.index(neighbor, 0),
+    neighborPoint,
+    neighborWeight,
+    solver.index(secondaryNeighbor, 0),
+    secondaryPoint,
+    secondaryWeight,
+    groomDonorShapeTransferAt(clampedParticle / Math.max(1, activeSegments))
+  );
   if (clampedParticle === 0) {
     projectPointToScalpShell(
       target[targetOffset],
@@ -2246,6 +2297,7 @@ function updateSectionInterpolatedFatlineGeometry() {
   const secondaryNeighbors = groomBindings.secondaryNeighbors;
   const weights = groomBindings.neighborWeights;
   const secondaryWeights = groomBindings.secondaryNeighborWeights;
+  const rootCoverageCopies = rootCoverageFiberCopies(renderFibersPerGuide);
   rebuildGroomCurvePointCache();
   let instance = 0;
   for (let binding = 0; binding < groomBindings.bindingCount; binding += 1) {
@@ -2335,60 +2387,62 @@ function updateSectionInterpolatedFatlineGeometry() {
       LOCK_AWARE_ROOT_COVER_LIVE_WEIGHT,
       lockRootCoverageFlow
     );
-    buildRootCoverageCurve(
-      lockCurvePoints[0],
-      lockCurvePoints[1],
-      lockCurvePoints[2],
-      normalX,
-      normalY,
-      normalZ,
-      lockRootCoverageFlow[0],
-      lockRootCoverageFlow[1],
-      lockRootCoverageFlow[2],
-      owner,
-      copy,
-      LOCK_AWARE_ROOT_COVER_LENGTH_METERS,
-      lockRootCoveragePoints
-    );
     let cursor;
-    for (let coverSegment = 0; coverSegment < LOCK_AWARE_ROOT_COVER_SEGMENTS; coverSegment += 1) {
-      cursor = instance * 3;
-      const coverStart = coverSegment * 3;
-      const coverEnd = coverStart + 3;
-      for (let axis = 0; axis < 3; axis += 1) {
-        starts[cursor + axis] = lockRootCoveragePoints[coverStart + axis];
-        ends[cursor + axis] = lockRootCoveragePoints[coverEnd + axis];
-      }
-      writeHydratedFiberStyle(
-        colors,
-        widthsStart,
-        widthsEnd,
-        instance,
-        cursor,
+    if (copy < rootCoverageCopies) {
+      buildRootCoverageCurve(
+        lockCurvePoints[0],
+        lockCurvePoints[1],
+        lockCurvePoints[2],
+        normalX,
+        normalY,
+        normalZ,
+        lockRootCoverageFlow[0],
+        lockRootCoverageFlow[1],
+        lockRootCoverageFlow[2],
         owner,
         copy,
-        0.45 + coverSegment * 0.38,
-        0.83 + coverSegment * 0.38,
-        activeSegments
+        LOCK_AWARE_ROOT_COVER_LENGTH_METERS,
+        lockRootCoveragePoints
       );
-      const familyScale = hydrationFamilyScales[copy];
-      const hydration = fullGroomHydrationEnabled
-        ? fullGroomPresentation.widthScale
-        : 0.12 + 0.88 * sectionHydrationForGuide(owner);
-      const rootRecipeScale = hydrationRecipeWidthScaleAt(activeHydrationState, 0);
-      widthsStart[instance] =
-        FATLINE_ROOT_HALF_WIDTH_PX *
-        LOCK_ROOT_COVER_WIDTH_PROFILE[coverSegment] *
-        hydration *
-        familyScale *
-        rootRecipeScale;
-      widthsEnd[instance] =
-        FATLINE_ROOT_HALF_WIDTH_PX *
-        LOCK_ROOT_COVER_WIDTH_PROFILE[coverSegment + 1] *
-        hydration *
-        familyScale *
-        rootRecipeScale;
-      instance += 1;
+      for (let coverSegment = 0; coverSegment < LOCK_AWARE_ROOT_COVER_SEGMENTS; coverSegment += 1) {
+        cursor = instance * 3;
+        const coverStart = coverSegment * 3;
+        const coverEnd = coverStart + 3;
+        for (let axis = 0; axis < 3; axis += 1) {
+          starts[cursor + axis] = lockRootCoveragePoints[coverStart + axis];
+          ends[cursor + axis] = lockRootCoveragePoints[coverEnd + axis];
+        }
+        writeHydratedFiberStyle(
+          colors,
+          widthsStart,
+          widthsEnd,
+          instance,
+          cursor,
+          owner,
+          copy,
+          0.45 + coverSegment * 0.38,
+          0.83 + coverSegment * 0.38,
+          activeSegments
+        );
+        const familyScale = hydrationFamilyScales[copy];
+        const hydration = fullGroomHydrationEnabled
+          ? fullGroomPresentation.widthScale
+          : 0.12 + 0.88 * sectionHydrationForGuide(owner);
+        const rootRecipeScale = hydrationRecipeWidthScaleAt(activeHydrationState, 0);
+        widthsStart[instance] =
+          FATLINE_ROOT_HALF_WIDTH_PX *
+          LOCK_ROOT_COVER_WIDTH_PROFILE[coverSegment] *
+          hydration *
+          familyScale *
+          rootRecipeScale;
+        widthsEnd[instance] =
+          FATLINE_ROOT_HALF_WIDTH_PX *
+          LOCK_ROOT_COVER_WIDTH_PROFILE[coverSegment + 1] *
+          hydration *
+          familyScale *
+          rootRecipeScale;
+        instance += 1;
+      }
     }
     for (let segment = 0; segment < activeSegments; segment += 1) {
       for (let controlPoint = 0; controlPoint < 4; controlPoint += 1) {
@@ -3382,6 +3436,8 @@ window.hairMaterialReplay = {
 
 function createRenderReceipt() {
   const lockCoverageEnabled = hairRenderMode === "fatline" && Boolean(groomBindings);
+  const rootCoverageCopies = rootCoverageFiberCopies(renderFibersPerGuide);
+  const rootCoverageStrands = lockCoverageEnabled ? solver.guideCount * rootCoverageCopies : 0;
   const selectedHydrationRecipe = hydrationRecipe(hydrationRecipeId);
   const selectedHydrationState = resolveHairHydrationState({
     geometryId: hydrationGeometryId,
@@ -3505,7 +3561,7 @@ function createRenderReceipt() {
       absorption_tint: activeHydrationState.absorptionTint,
       color_variation: "deterministic_fiber_plus_root_tip_v1",
       root_emergence: groomBindings
-        ? "distributed_parent_roots_plus_short_styled_coverage_locks"
+        ? "distributed_parent_roots_plus_owner_clump_root_transitions"
         : "one tapered owner plus deterministic child fade over first 4-27pct",
       cross_section_coverage: "soft analytic alpha across each screen-space fiber",
       joint_coverage: groomBindings
@@ -3526,9 +3582,9 @@ function createRenderReceipt() {
       distributed_root_emergence: groomBindings
         ? "distributed_8_to_16pct_root_width_then_full_width_within_first_half_link"
         : "none",
-      root_coverage_strands: lockCoverageEnabled ? groomBindings.bindingCount : 0,
-      root_coverage_span_primitives:
-        (lockCoverageEnabled ? groomBindings.bindingCount : 0) * LOCK_AWARE_ROOT_COVER_SEGMENTS,
+      root_coverage_fiber_copies_per_guide: lockCoverageEnabled ? rootCoverageCopies : 0,
+      root_coverage_strands: rootCoverageStrands,
+      root_coverage_span_primitives: rootCoverageStrands * LOCK_AWARE_ROOT_COVER_SEGMENTS,
       root_coverage_segments_per_strand: lockCoverageEnabled ? LOCK_AWARE_ROOT_COVER_SEGMENTS : 0,
       root_coverage_nominal_length_meters: lockCoverageEnabled
         ? LOCK_AWARE_ROOT_COVER_LENGTH_METERS

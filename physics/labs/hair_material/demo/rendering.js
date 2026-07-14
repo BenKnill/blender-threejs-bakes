@@ -1,19 +1,20 @@
-export const FATLINE_ROOT_HALF_WIDTH_PX = 0.84;
-export const FATLINE_TIP_HALF_WIDTH_PX = 0.07;
+export const FATLINE_ROOT_HALF_WIDTH_PX = 1.18;
+export const FATLINE_TIP_HALF_WIDTH_PX = 0.16;
 export const HAIR_FIBER_SHADING_ID = "artist_dual_plus_near_field_proxy_lobes_v4";
 export const HAIR_PRESENTATION_LOOP_ID = "visible_two_wind_orbits_1020_step_v3";
 export const REEL_CAMERA_FIELD_ID = "fixed_control_two_orbit_1020_step_v3";
-export const FULL_GROOM_HYDRATION_ID = "hierarchy_plus_section_envelope_hydration_v7";
+export const FULL_GROOM_HYDRATION_ID = "hierarchy_plus_owner_frame_hydration_v9";
 export const HAIR_HYDRATION_RECIPE_ID = "independent_geometry_optics_color_detail_space_v2";
 export const HAIR_HYDRATION_BREADTH_ID = "disney_reference_5x6x6x6_composition_space_v1";
 export const PHYSICS_SKELETON_STYLE_ID = "uniform_world_space_rods_joints_v2";
-export const LOCK_AWARE_COVERAGE_ID = "live_root_cover_locks_catmull_rom_v3";
+export const LOCK_AWARE_COVERAGE_ID = "owner_clump_root_transitions_v5";
 export const LOCK_AWARE_RENDER_SUBDIVISIONS = 2;
 export const LOCK_AWARE_ROOT_COVER_SEGMENTS = 3;
-export const LOCK_AWARE_ROOT_COVER_LENGTH_METERS = 0.24;
+export const LOCK_AWARE_ROOT_COVER_LENGTH_METERS = 0.14;
 export const LOCK_AWARE_ROOT_COVER_PROBE_PARTICLE = 7;
 export const LOCK_AWARE_ROOT_COVER_LIVE_WEIGHT = 0.86;
 export const LOCK_AWARE_ROOT_COVER_MIN_AUTHORED_DOT = 0.34;
+export const ROOT_COVERAGE_FAMILY_FRACTION = 0.08;
 export const PHYSICS_SKELETON_STYLE = Object.freeze({
   guideLimit: 64,
   rodRadiusMeters: 0.011,
@@ -21,6 +22,13 @@ export const PHYSICS_SKELETON_STYLE = Object.freeze({
   rootJointScale: 1,
   depthWriteMinimumOpacity: 0.5,
 });
+
+export function rootCoverageFiberCopies(fiberCopies) {
+  if (!Number.isInteger(fiberCopies) || fiberCopies < 1) {
+    throw new Error("root coverage fiber count must be a positive integer");
+  }
+  return Math.max(1, Math.ceil(fiberCopies * ROOT_COVERAGE_FAMILY_FRACTION));
+}
 
 export const HAIR_HYDRATION_RECIPES = Object.freeze({
   fine_silk: Object.freeze({
@@ -628,6 +636,10 @@ export function buildRootCoverageCurve(
   const nx = normalX / normalLength;
   const ny = normalY / normalLength;
   const nz = normalZ / normalLength;
+  const targetLength = Math.hypot(targetX, targetY, targetZ) || 1;
+  targetX /= targetLength;
+  targetY /= targetLength;
+  targetZ /= targetLength;
   const outward = targetX * nx + targetY * ny + targetZ * nz;
   let tx = targetX - outward * nx;
   let ty = targetY - outward * ny;
@@ -653,12 +665,14 @@ export function buildRootCoverageCurve(
   let hash = Math.imul(strand + 1, 0x45d9f3b) ^ Math.imul(copy + 1, 0x27d4eb2d);
   hash ^= hash >>> 16;
   const unsigned = hash >>> 0;
-  const spreadAngle = (((unsigned & 0x3ff) / 1023) * 2 - 1) * 0.42;
+  const spreadAngle = (((unsigned & 0x3ff) / 1023) * 2 - 1) * 0.26;
   const spreadCos = Math.cos(spreadAngle);
   const spreadSin = Math.sin(spreadAngle);
-  const directionX = tx * spreadCos + bx * spreadSin;
-  const directionY = ty * spreadCos + by * spreadSin;
-  const directionZ = tz * spreadCos + bz * spreadSin;
+  const positiveOutward = Math.max(0.32, Math.min(0.82, outward));
+  const tangentScale = Math.sqrt(Math.max(0, 1 - positiveOutward * positiveOutward));
+  const directionX = nx * positiveOutward + (tx * spreadCos + bx * spreadSin) * tangentScale;
+  const directionY = ny * positiveOutward + (ty * spreadCos + by * spreadSin) * tangentScale;
+  const directionZ = nz * positiveOutward + (tz * spreadCos + bz * spreadSin) * tangentScale;
   const span = Math.max(0, length) * (0.84 + (((unsigned >>> 10) & 0xff) / 255) * 0.32);
   const sideWave = ((((unsigned >>> 18) & 0xff) / 255) * 2 - 1) * span * 0.035;
   for (let point = 0; point < 4; point += 1) {

@@ -127,21 +127,21 @@ for the C implementation.
 
 ## Scalp-scale result and browser playback
 
-The accepted 256-guide target contains 2,048 dynamic capsules and 2,048
-spherical joints. Its fixed replay repeats at digest `5aaf6c2db5806b28`.
-The strong and moderate phases visit 22/24 and 24/24 azimuth bins. Persistent
-stiction records 39,314 captures and 31,658 releases while reducing mean
-predicted contact-plane relative speed from 0.07835 m/s to 0.02661 m/s.
+The accepted 256-guide target contains 3,072 dynamic capsules and 3,072
+spherical joints. Its fixed replay repeats at digest `eb53b6e105f6e58d`.
+The strong and moderate phases visit 23/24 and 24/24 azimuth bins. Persistent
+stiction records 68,050 captures and 58,460 releases while reducing mean
+predicted contact-plane relative speed from 0.14576 m/s to 0.05251 m/s.
 
 Root direction is now a gate rather than an initial-condition claim. Across
-the settled two-orbit window, minimum first-link target alignment is 0.929 and
-minimum outward alignment is 0.231. Maximum settled joint separation is
-11.31 mm. The smaller accepted 64-guide target remains available for faster
-diagnostics and repeats at digest `5baa317af18e23f6`.
+the settled two-orbit window, minimum first-link target alignment is 0.900 and
+minimum outward alignment is 0.211. Maximum settled joint separation is
+14.17 mm against a 15.5 mm bound. The smaller accepted 64-guide target remains
+available for faster diagnostics and repeats at digest `6419d6ab3a45d6dd`.
 
-The demo assets store 15 Hz quantized guide nodes: 0.60 MiB for 64 guides and
-2.39 MiB for 256. The canonical page plays the 256-guide clip, exposes 64 of
-those guides as 512 uniform rods and 576 uniform joints, then hydrates the
+The demo assets store 15 Hz quantized guide nodes: 0.86 MiB for 64 guides and
+3.45 MiB for 256. The canonical page plays the 256-guide clip, exposes 64 of
+those guides as 768 uniform rods and 832 uniform joints, then hydrates the
 recorded motion into 5,376 render fibers. Browser code only interpolates and
 renders the recorded nodes; it does not run Box3D or alter the native motion.
 

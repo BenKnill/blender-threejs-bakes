@@ -28,7 +28,7 @@ target_compile_definitions(
   HAIR_GUIDE_SIDE=8
   HAIR_SCALP_GROOM=1
   HAIR_HEAD_PROXY=0
-  HAIR_EXPECTED_BASELINE_DIGEST=0xf39da2ed951744cdULL
+  HAIR_EXPECTED_BASELINE_DIGEST=0x20f33acee3034e97ULL
   HAIR_OUTPUT_BASENAME="hair_box3d_scalp_groom_64"
   HAIR_MOTION_PATH="outputs/hair_box3d_scalp_groom_64_motion.csv"
   HAIR_RECEIPT_PATH="outputs/hair_box3d_scalp_groom_64_receipt.json"
@@ -41,7 +41,7 @@ target_compile_definitions(
   HAIR_GUIDE_SIDE=16
   HAIR_SCALP_GROOM=1
   HAIR_HEAD_PROXY=0
-  HAIR_EXPECTED_BASELINE_DIGEST=0x714d6369e014bb36ULL
+  HAIR_EXPECTED_BASELINE_DIGEST=0xe513903a4039c43cULL
   HAIR_OUTPUT_BASENAME="hair_box3d_scalp_groom_256"
   HAIR_MOTION_PATH="outputs/hair_box3d_scalp_groom_256_motion.csv"
   HAIR_RECEIPT_PATH="outputs/hair_box3d_scalp_groom_256_receipt.json"

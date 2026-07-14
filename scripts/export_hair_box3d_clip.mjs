@@ -14,7 +14,7 @@ const receipt = JSON.parse(await readFile(receiptPath, "utf8"));
 const guideCount = receipt.configuration.guides;
 const segments = receipt.configuration.links_per_guide;
 const particlesPerGuide = segments + 1;
-const halfLength = 0.14;
+const halfLength = (receipt.configuration.link_length_m ?? 0.28) * 0.5;
 const quantizationMeters = 0.000125;
 const sampleHz = 15;
 
@@ -122,7 +122,7 @@ const metadata = {
     mean_predicted_speed_after_m_s: acceptedCondition.stiction.mean_predicted_speed_after_m_s,
   },
   visible_fiber_target: 5376,
-  root_mechanics: "styled_spherical_joint_frames_plus_12_degree_root_cone",
+  root_mechanics: receipt.configuration.root_joint_profile,
   head_collision: false,
   physics_authority: "native_box3d_precomputed_capsule_transforms",
   display_boundary:

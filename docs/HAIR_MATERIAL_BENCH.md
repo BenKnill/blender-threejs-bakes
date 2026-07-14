@@ -353,7 +353,7 @@ shading model: all dense children shared each mechanical guide root, and every
 strand was twelve separately overlapping quads. Fifteen opaque children made
 the crown read as rectangular ladders rather than hair. The v2 fiber path keeps
 one tapered owner, deterministically fades the other children in over the first
-4-27% of strand length, narrows half-width from 0.84 px at the root to 0.07 px
+4-27% of strand length, narrows half-width from 1.18 px at the root to 0.16 px
 at the tip, softens the analytic cross-section, and balances adjacent segment
 endpoints at half coverage. Screenshot review subsequently found that the
 replacement hairline cap had inward triangle winding and sat inside the
@@ -414,24 +414,26 @@ guide tips approximately 326-402 mm RMS per settled strong quarter-orbit versus
 ## Native Box3D canonical playback
 
 The no-query canonical page now selects `physicsClip=box3d-scalp-256`. The
-source fixture contains 256 scalp-rooted guides, 2,048 dynamic capsules, and
-2,048 spherical target-spring joints. Its anisotropic persistent-contact
+source fixture contains 256 scalp-rooted guides, 3,072 dynamic capsules, and
+3,072 spherical target-spring joints. Its anisotropic persistent-contact
 operator runs natively during capture; the resulting twelve seconds contain
 one full 6.0 m/s orbit followed by one full 3.25 m/s orbit. Fixed replay repeats
-at digest `5aaf6c2db5806b28`.
+at digest `eb53b6e105f6e58d`.
 
-The first spherical joint now aligns its cone frame with the capsule long axis,
-uses a 6 Hz target spring, and limits root swing to 12 degrees. Across the
-settled clip, minimum target alignment is 0.929 and minimum scalp-outward
-alignment is 0.231. The maximum settled joint gap is 11.31 mm. The browser
-receipt reports those native measurements instead of stale metrics from its
-inactive Verlet solver.
+The scalp fixture now divides the same total guide length into twelve uniform
+187 mm links instead of eight 280 mm levers. Its five-stage root ramp uses
+3.8 / 2.5 / 1.8 / 1.4 / 1.1 Hz springs and 10 / 28 / 50 / 68 / 78 degree cone
+limits. Across the settled stiction clip, minimum / mean target alignment is
+0.900 / 0.961 and minimum / mean scalp-outward alignment is 0.211 / 0.473. The
+maximum settled joint gap is 14.17 mm against the explicit 15.5 mm bound. The
+browser receipt reports those native measurements instead of stale metrics
+from its inactive Verlet solver.
 
 For the diagnostic phase, the reel exposes 64 evenly sampled native guides as
-512 uniform rods and 576 uniform joints. It then hydrates all 256 guide paths
-into 5,376 display fibers. The 181-frame int16 clip is 2,502,144 bytes and is
+768 uniform rods and 832 uniform joints. It then hydrates all 256 guide paths
+into 5,376 display fibers. The 181-frame int16 clip is 3,614,208 bytes and is
 sampled at 15 Hz; the browser linearly interpolates positions for display. One
-local Chrome observation measured the dense 102,144-primitives geometry update
+previous local Chrome observation measured the older 102,144-primitives geometry update
 at 23.49 ms mean / 34.90 ms p99 / 44.30 ms maximum, while the instanced rod
 subset measured 0.22 ms mean / 0.70 ms p99.
 
