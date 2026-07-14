@@ -93,6 +93,8 @@ assert.ok(index.includes("disney-breadth-lab"));
 assert.ok(index.includes("physicsClip=box3d-scalp-256"));
 assert.ok(index.includes("hydrationRecipe=natural-balanced"));
 assert.ok(index.includes("hydrationGeometry=balanced-full"));
+assert.ok(index.includes("groomEnvelope=cinematic-mass"));
+assert.ok(index.includes("envelopeScale=1.25"));
 assert.ok(index.includes("hydrationOptical=artist-dual"));
 assert.ok(index.includes("hydrationColor=chestnut"));
 assert.ok(index.includes("hydrationDetail=natural-variation"));

@@ -451,6 +451,29 @@ twelve-state substitution while retaining the structural hierarchy. Receipts
 store both the selected and active compositions under
 `full_groom_hydration.breadth_lab`.
 
+The wide-silhouette follow-up adds an independent, renderer-only section
+envelope. `groomEnvelope=off|salon-full|cinematic-mass|storybook-volume` selects
+an asymmetric eight-section elliptical boundary, and `envelopeScale=0.5..2.5`
+scales its world-space radii. Hydrated child fibers receive deterministic
+low-discrepancy disk coordinates inside the live section frame; the final
+cross-section is projected to normalized radius 1.0. Roots stay exact and the
+envelope grows only after the first 3.5% of each guide, preserving the authored
+part and hairline. `cinematic-mass` at the canonical 1.25 scale reaches about
+0.96 m outward and 0.74 m lateral at its broadest section. This deliberately
+changes silhouette volume without writing guide positions or adding a physics
+collision boundary.
+
+A second renderer-only projection cuts a front-center aperture through that
+volume. Between 10% and 84% of affected front guides, hydrated children are
+routed to the nearest side of the part and behind a bounded face plane, then
+projected back into the radius-1 section envelope. In the fixed cyan diagnostic
+crop, cinematic and storybook profiles add 14.0% and 22.2% mask coverage over
+the guide-only baseline after this face clearing. A 20-frame Chrome Canary pass
+reported no exceptions or console errors; the final cinematic pass measured
+9.74 ms mean geometry update versus 8.64 ms in the envelope-off baseline. This
+is a screen-space diagnostic, not a physical area or production-performance
+claim. See `docs/receipts/hair_section_envelope_v1.json`.
+
 An exact-time 20-frame Chrome Canary pass observed every named state plus both
 wind phases with no JavaScript exceptions or console errors. The cached rest-detail
 field measured 8.04 ms mean / 14.50 ms p99 / 20.40 ms maximum over 144 browser

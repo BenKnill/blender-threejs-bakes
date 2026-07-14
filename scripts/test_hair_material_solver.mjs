@@ -79,6 +79,15 @@ import {
   interpolateGroomScalar,
 } from "../physics/labs/hair_material/demo/groom_interpolation.js";
 import {
+  boundGroomEnvelopeCoordinates,
+  GROOM_ENVELOPE_FIELD_ID,
+  GROOM_ENVELOPE_PROFILES,
+  GROOM_ENVELOPE_PROFILE_ORDER,
+  groomEnvelopeDiskSample,
+  groomEnvelopeRadiiAt,
+  summarizeGroomEnvelope,
+} from "../physics/labs/hair_material/demo/groom_envelope.js";
+import {
   bakeRootDirectorTarget,
   projectRootDirectorPoint,
 } from "../physics/labs/hair_material/demo/root_director.js";
@@ -175,7 +184,7 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     moderateMagnitude: 0.9,
     legacyScaleMigrated: false,
   });
-  assert.equal(FULL_GROOM_HYDRATION_ID, "hierarchy_plus_breadth_lab_hydration_v6");
+  assert.equal(FULL_GROOM_HYDRATION_ID, "hierarchy_plus_section_envelope_hydration_v7");
   assert.equal(HAIR_HYDRATION_RECIPE_ID, "independent_geometry_optics_color_detail_space_v2");
   assert.equal(HAIR_HYDRATION_BREADTH_ID, "disney_reference_5x6x6x6_composition_space_v1");
   assert.deepEqual(HAIR_HYDRATION_RECIPE_ORDER, [
@@ -189,6 +198,41 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.equal(HAIR_HYDRATION_COMPOSITION_COUNT, 1080);
   assert.equal(HAIR_BREADTH_TOUR.length, 12);
   assert.equal(Object.keys(HAIR_GEOMETRY_PROFILES).length, 5);
+  assert.deepEqual(GROOM_ENVELOPE_PROFILE_ORDER, [
+    "off",
+    "salon_full",
+    "cinematic_mass",
+    "storybook_volume",
+  ]);
+  assert.equal(GROOM_ENVELOPE_FIELD_ID, "live_section_ellipse_boundary_v1");
+  assert.equal(Object.keys(GROOM_ENVELOPE_PROFILES).length, 4);
+  const salonEnvelope = groomEnvelopeRadiiAt("salon_full", 0, 0.5, 1.25);
+  const cinematicEnvelope = groomEnvelopeRadiiAt("cinematic_mass", 0, 0.5, 1.25);
+  const storybookEnvelope = groomEnvelopeRadiiAt("storybook_volume", 0, 0.5, 1.25);
+  assert.ok(cinematicEnvelope.outward > salonEnvelope.outward);
+  assert.ok(storybookEnvelope.outward > cinematicEnvelope.outward);
+  assert.ok(cinematicEnvelope.lateral > salonEnvelope.lateral);
+  assert.ok(
+    groomEnvelopeRadiiAt("cinematic_mass", 7, 0.5, 1.25).outward > cinematicEnvelope.outward
+  );
+  assert.ok(
+    groomEnvelopeRadiiAt("cinematic_mass", 0, 1, 1.25).outward > 0.5 * cinematicEnvelope.outward
+  );
+  assert.deepEqual(groomEnvelopeDiskSample(12, 0, 21, 4), [0, 0]);
+  const envelopeSample = groomEnvelopeDiskSample(12, 7, 21, 4);
+  assert.ok(Math.hypot(...envelopeSample) < 1);
+  assert.deepEqual(envelopeSample, groomEnvelopeDiskSample(12, 7, 21, 4));
+  const boundedEnvelope = boundGroomEnvelopeCoordinates(0.92, 0.4, 0.8, -0.3, 0.9);
+  assert.equal(boundedEnvelope.clamped, true);
+  nearlyEqual(boundedEnvelope.outputRadius, 1);
+  assert.ok(Math.hypot(...boundedEnvelope.coordinates) <= 1 + 1e-12);
+  const envelopeSummary = summarizeGroomEnvelope("cinematic_mass", 1.25);
+  assert.equal(envelopeSummary.field_identity, GROOM_ENVELOPE_FIELD_ID);
+  assert.equal(envelopeSummary.section_count, 8);
+  assert.equal(envelopeSummary.normalized_boundary_radius, 1);
+  assert.ok(envelopeSummary.outward_radius_meters.max > 0.7);
+  assert.ok(envelopeSummary.lateral_radius_meters.max > 0.5);
+  assert.equal(envelopeSummary.physics_authority, "none_renderer_hydration_only");
   assert.equal(Object.keys(HAIR_OPTICAL_MODELS).length, 6);
   assert.equal(Object.keys(HAIR_COLOR_PROFILES).length, 6);
   assert.equal(Object.keys(HAIR_DETAIL_PROFILES).length, 6);

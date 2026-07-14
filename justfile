@@ -132,7 +132,7 @@ hair-control-tube-showcase:
 # Start the globally separated physics-cage-to-dense-hair hydration showcase.
 hair-groom-hydration-showcase:
     PORT=8199 ./scripts/serve.sh start
-    @echo "http://127.0.0.1:8199/physics/labs/hair_material/demo/?physicsClip=box3d-scalp-256&showcase=1&groomHydration=1&hydrationRecipe=natural-balanced&hydrationTour=1&guides=256&iterations=6&preset=wavy&wetness=0.35&product=0.45&hairRender=fatline&hairShade=fiber&fibers=21&groomVolume=1&rootField=styled-side-part&rootStrength=0.22&faceClear=1&mannequin=realistic&reel=control&renderReceipt=1&scenario=disney-breadth-lab"
+    @echo "http://127.0.0.1:8199/physics/labs/hair_material/demo/?physicsClip=box3d-scalp-256&showcase=1&groomHydration=1&hydrationRecipe=natural-balanced&groomEnvelope=cinematic-mass&envelopeScale=1.25&hydrationTour=1&guides=256&iterations=6&preset=wavy&wetness=0.35&product=0.45&hairRender=fatline&hairShade=fiber&fibers=21&groomVolume=1&rootField=styled-side-part&rootStrength=0.22&faceClear=1&mannequin=realistic&reel=control&renderReceipt=1&scenario=section-envelope-wide"
 
 # Start the uninterrupted realistic-head beauty orbit for capture or live preview.
 hair-reel-beauty:

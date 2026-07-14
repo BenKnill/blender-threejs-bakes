@@ -1,0 +1,97 @@
+{
+  "schema": "hair-section-envelope-ab/1",
+  "issue": 181,
+  "field_identity": "live_section_ellipse_boundary_v1",
+  "face_clear_identity": "front_aperture_display_projection_v1",
+  "fixture": {
+    "mechanics": "box3d-scalp-256",
+    "guides": 256,
+    "segments_per_guide": 8,
+    "render_fibers_per_guide": 21,
+    "root_field": "styled_side_part",
+    "root_strength": 0.22,
+    "face_clear": true,
+    "browser": "Google Chrome Canary",
+    "viewport_pixels": [960, 900],
+    "exact_time_capture_count": 20
+  },
+  "profiles": {
+    "off": {
+      "breadth_scale": 1.25,
+      "outward_radius_max_meters": 0,
+      "lateral_radius_max_meters": 0
+    },
+    "cinematic_mass": {
+      "breadth_scale": 1.25,
+      "outward_radius_max_meters": 0.9578571994481153,
+      "lateral_radius_max_meters": 0.7390126728233448,
+      "maximum_normalized_output_radius": 1,
+      "clamped_fraction": 0.353515625
+    },
+    "storybook_volume": {
+      "breadth_scale": 1.25,
+      "outward_radius_max_meters": 1.3999451376549374,
+      "lateral_radius_max_meters": 1.0557323897476354,
+      "maximum_normalized_output_radius": 1,
+      "clamped_fraction": 0.2629278273809524
+    }
+  },
+  "screen_space_diagnostic": {
+    "capture": "07-flat-blueprint",
+    "crop": "560x470+200+180",
+    "mask_expression": "b>0.22 && g>0.18 && b>1.15*r && g>1.04*r",
+    "mask_pixels": {
+      "off": 50767,
+      "cinematic_mass": 57866,
+      "storybook_volume": 62038
+    },
+    "coverage_ratio_vs_off": {
+      "cinematic_mass": 1.1398349321409578,
+      "storybook_volume": 1.222014300628361
+    },
+    "boundary": "fixed screenshot color-mask proxy; not physical silhouette area"
+  },
+  "geometry_update_milliseconds": {
+    "off": {
+      "measured_frames": 145,
+      "mean": 8.642068965681668,
+      "p99": 14.900000005960464,
+      "max": 21.200000017881393
+    },
+    "cinematic_mass_with_face_clear": {
+      "measured_frames": 144,
+      "mean": 9.740972220690715,
+      "p99": 21.5,
+      "max": 33.5
+    },
+    "storybook_volume_with_face_clear": {
+      "measured_frames": 145,
+      "mean": 9.739310345567507,
+      "p99": 14.5,
+      "max": 36.099999994039536
+    },
+    "first_uncached_cinematic_mean": 18.930434783608277
+  },
+  "physics_state_digests_shared_across_profiles": {
+    "calm": "d1dd623e0aff3b65",
+    "strong_wind_sample": "527b84a595220c1d",
+    "moderate_wind_sample": "fa11b33849011648"
+  },
+  "canary": {
+    "exceptions": 0,
+    "console_errors": 0,
+    "repeat_exact_png_hash_count": 20,
+    "strong_wind_capture": "6.00 m/s at 48 degrees",
+    "moderate_wind_capture": "3.25 m/s at 48 degrees"
+  },
+  "claim_boundary": {
+    "physics_authority": "none_renderer_hydration_only",
+    "mechanical_guides_changed": false,
+    "collision_volume": false,
+    "remaining_visual_limits": [
+      "fiber fill is still porous and uniformly fuzzy",
+      "front aperture is an analytic display projection rather than head collision",
+      "current shading is a real-time lobe proxy rather than production hair transport"
+    ]
+  }
+}

@@ -92,6 +92,21 @@
       </label>
 
       <label>
+        Groom envelope
+        <select id="groom-envelope">
+          <option value="off">Guide curves only / no envelope</option>
+          <option value="salon_full">Salon full / bounded</option>
+          <option value="cinematic_mass" selected>Cinematic mass / wide</option>
+          <option value="storybook_volume">Storybook volume / extra wide</option>
+        </select>
+      </label>
+
+      <label>
+        Envelope breadth <output id="envelope-breadth-output">1.25×</output>
+        <input id="envelope-breadth" type="range" min="0.5" max="2.5" step="0.05" value="1.25" />
+      </label>
+
+      <label>
         Optical model
         <select id="hydration-optical">
           <option value="diagnostic_flat">Flat diagnostic</option>
@@ -422,6 +437,6 @@
       <div id="status" role="status">Running deterministic wavy preset.</div>
     </aside>
     <div id="cut-cursor" aria-hidden="true"></div>
-    <script type="module" src="./main.js?v=156"></script>
+    <script type="module" src="./main.js?v=157"></script>
   </body>
 </html>
