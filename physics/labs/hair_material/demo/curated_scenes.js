@@ -1,4 +1,4 @@
-export const CURATED_HAIR_SCENE_FIELD_ID = "three_authored_hair_scenes_v1";
+export const CURATED_HAIR_SCENE_FIELD_ID = "three_authored_hair_scenes_v2";
 
 const COMMON_PARAMETERS = Object.freeze({
   physicsClip: "box3d-scalp-256",
@@ -17,6 +17,8 @@ const COMMON_PARAMETERS = Object.freeze({
   faceClear: "1",
   mannequin: "realistic",
   renderReceipt: "1",
+  lockTopology: "cage",
+  displayFollicles: "independent",
 });
 
 function scene(id, title, description, cue, parameters) {
