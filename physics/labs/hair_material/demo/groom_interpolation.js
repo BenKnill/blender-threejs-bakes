@@ -8,6 +8,14 @@ const VOLUME_ENVELOPE_END_FRACTION = 0.9;
 const SECONDARY_CUT_FADE_SEGMENTS = 2;
 export const GROOM_DONOR_SHAPE_TRANSFER = 0.18;
 export const GROOM_DONOR_SHAPE_LIMIT_METERS = 0.055;
+export const PATCH_LOCK_SECTION_COUNT = 8;
+export const PATCH_LOCK_RING_COUNT = 4;
+export const PATCH_LOCK_COUNT = PATCH_LOCK_SECTION_COUNT * PATCH_LOCK_RING_COUNT;
+export const PATCH_LOCK_CONVERGENCE_START = 0.15;
+export const PATCH_LOCK_CONVERGENCE_END = 0.4;
+export const PATCH_LOCK_OUTWARD_RADIUS_METERS = 0.032;
+export const PATCH_LOCK_LATERAL_RADIUS_METERS = 0.018;
+export const PATCH_LOCK_FIELD_ID = "scalp_patch_to_transport_lock_v1";
 
 export function groomSectionId(x, z, sectionCount = DEFAULT_GROOM_SECTION_COUNT) {
   if (!Number.isInteger(sectionCount) || sectionCount < 1) {
@@ -41,6 +49,27 @@ function nearestSectionNeighbors(roots, owner, sections, sectionCount, neighborC
   return candidates.slice(0, neighborCount).map((candidate) => candidate.guide);
 }
 
+function buildPatchAssignments(roots, guideCount) {
+  const heightOrder = Array.from({ length: guideCount }, (_, guide) => guide).sort(
+    (left, right) => roots[right * 3 + 1] - roots[left * 3 + 1] || left - right
+  );
+  const rings = new Uint8Array(guideCount);
+  for (let rank = 0; rank < heightOrder.length; rank += 1) {
+    rings[heightOrder[rank]] = Math.min(
+      PATCH_LOCK_RING_COUNT - 1,
+      Math.floor((rank * PATCH_LOCK_RING_COUNT) / guideCount)
+    );
+  }
+  const guidePatchIds = new Uint8Array(guideCount);
+  for (let guide = 0; guide < guideCount; guide += 1) {
+    const root = guide * 3;
+    guidePatchIds[guide] =
+      rings[guide] * PATCH_LOCK_SECTION_COUNT +
+      groomSectionId(roots[root], roots[root + 2], PATCH_LOCK_SECTION_COUNT);
+  }
+  return guidePatchIds;
+}
+
 export function buildGroomInterpolationBindings(
   roots,
   guideCount,
@@ -49,6 +78,7 @@ export function buildGroomInterpolationBindings(
     sectionCount = DEFAULT_GROOM_SECTION_COUNT,
     neighborCount = DEFAULT_GROOM_NEIGHBOR_COUNT,
     parentCount = 2,
+    patchLockEnabled = false,
   } = {}
 ) {
   if (roots.length !== guideCount * 3) throw new Error("groom roots do not match guide count");
@@ -63,6 +93,9 @@ export function buildGroomInterpolationBindings(
   const neighborWeights = new Float32Array(bindingCount);
   const secondaryNeighborWeights = new Float32Array(bindingCount);
   const sections = new Uint8Array(guideCount);
+  const guidePatchIds = patchLockEnabled
+    ? buildPatchAssignments(roots, guideCount)
+    : new Uint8Array();
   for (let guide = 0; guide < guideCount; guide += 1) {
     sections[guide] = groomSectionId(roots[guide * 3], roots[guide * 3 + 2], sectionCount);
   }
@@ -116,6 +149,9 @@ export function buildGroomInterpolationBindings(
     neighborWeights,
     secondaryNeighborWeights,
     sections,
+    patchLockEnabled,
+    patchCount: patchLockEnabled ? PATCH_LOCK_COUNT : 0,
+    guidePatchIds,
   };
   return { ...bindings, bindingDigest: groomBindingDigest(bindings) };
 }
@@ -250,6 +286,12 @@ export function groomBindingDigest(bindings) {
   if (bindings.parentCount === 3) {
     arrays.push(bindings.secondaryNeighbors, bindings.secondaryNeighborWeights);
   }
+  if (bindings.patchLockEnabled) {
+    arrays.push(new Uint16Array([bindings.patchCount]), bindings.guidePatchIds);
+  }
+  if (bindings.independentDisplayFollicles) {
+    arrays.push(new Uint8Array([1]), bindings.displayRoots, bindings.displayNormals);
+  }
   for (const values of arrays) {
     const bytes = new Uint8Array(values.buffer, values.byteOffset, values.byteLength);
     for (const byte of bytes) hash = hashByte(hash, byte);
@@ -277,5 +319,29 @@ export function groomInterpolationReceipt(bindings, buildCount) {
     curve_transport: "owner_displacement_plus_bounded_donor_shape",
     donor_shape_transfer: GROOM_DONOR_SHAPE_TRANSFER,
     donor_shape_limit_m: GROOM_DONOR_SHAPE_LIMIT_METERS,
+    ...(bindings.independentDisplayFollicles
+      ? {
+          independent_display_follicles: {
+            enabled: true,
+            layout_identity: bindings.displayFollicleLayoutId,
+            unique_root_count: bindings.bindingCount,
+          },
+        }
+      : {}),
+    patch_lock: bindings.patchLockEnabled
+      ? {
+          field_identity: PATCH_LOCK_FIELD_ID,
+          patch_count: bindings.patchCount,
+          ring_count: PATCH_LOCK_RING_COUNT,
+          section_count: PATCH_LOCK_SECTION_COUNT,
+          convergence_fraction: [PATCH_LOCK_CONVERGENCE_START, PATCH_LOCK_CONVERGENCE_END],
+          cross_section_radii_m: [
+            PATCH_LOCK_OUTWARD_RADIUS_METERS,
+            PATCH_LOCK_LATERAL_RADIUS_METERS,
+          ],
+          motion_source: "live_mean_mechanical_guide_trajectory_per_patch",
+          physics_authority: "none_renderer_only",
+        }
+      : null,
   };
 }

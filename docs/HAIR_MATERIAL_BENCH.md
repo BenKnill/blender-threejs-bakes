@@ -49,6 +49,9 @@ direct upload rather than an automatic deployment workflow.
 
 The canonical sequence is deliberately small and authored:
 
+All three scenes use the accepted 20-lock cage and independent 5,376-follicle
+display baseline. The later width and layered-cut studies remain opt-in.
+
 1. **Rig Becomes Hair** starts at the uniform 64-guide / 512-link Box3D cage,
    then builds groom volumes, locks, and a bounded chestnut mass.
 2. **Copper Gale** starts fully hydrated with the wide storybook envelope,
@@ -569,6 +572,45 @@ They intentionally print looping browser URLs rather than frame directories.
 The existing deterministic-frame packaging scripts remain available for final
 encoding, but named moving shots are now the source-of-truth compositions for
 the upcoming reels.
+
+## Independent display follicles and adversarial hydration
+
+The sparse-groom study separates three responsibilities that earlier variants
+had conflated. Twenty authored hero curves define the haircut-scale rest cage;
+256 Box3D guides remain the motion authority; and 5,376 deterministic display
+follicles have their own unique projected scalp roots. Each display follicle
+reads weighted deformation from three nearby guides and applies it to its
+rest-baked curve. It never writes solver state. This removes the repeated
+guide-copy comb teeth without pretending that thousands of rendered fibers are
+independently simulated.
+
+The study is enabled with
+`lockTopology=cage&displayFollicles=independent`. Its root-layout receipt reports
+5,376 unique roots, zero duplicates, 20.47/25.05/26.96 mm nearest-neighbor
+p10/p50/p90, and exact analytic-shell projection. The fixed native-clip fixture
+retains physics digest `b773984593f87d43`; its accepted display position digest
+is `a8ce721f`.
+
+Four deliberately bounded follow-ups are retained for comparison rather than
+promoted by default:
+
+- `restHierarchy=correlated` adds coherent three-phase rest residuals.
+- `occupancyRemap=three-core` separates cross-sectional occupancy and exposes
+  valleys, but reads as thick ropes at ordinary preview size.
+- `widthHierarchy=core` applies a continuous 0.35x to 3.5x width field. Its
+  1.647x mean body width changes no positions or physics, yet mostly reads as
+  darker slabs in the beauty shader.
+- `lengthField=layered` reparameterizes each retained rest curve into continuous
+  crown, front, side, and back layers with a final 12% taper. No follicle falls
+  below 70% length; the hem improves, but the large silhouette remains too
+  curtain-like to replace the independent-root baseline.
+
+The paired evidence came from a ten-round critic loop: one isolated hypothesis,
+matched natural/diagnostic/wind frames, a numerical receipt, and an explicit
+keep/revert decision per round. The game moved the selected result from 8.5/35
+to 21.75/35 at Round 6. The negative studies bound the next architectural step:
+believable hydration needs authored overlapping lock surfaces and distinct
+interior/edge fiber roles together, not another global thickness guess.
 
 ## Claim boundary
 

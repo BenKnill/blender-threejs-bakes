@@ -69,9 +69,15 @@ import {
   buildGroomInterpolationBindings,
   groomDonorShapeTransferAt,
   groomBindingActiveSegments,
+  groomBindingDigest,
   groomInterpolationReceipt,
   groomSecondaryWeightAt,
   interpolateGroomScalar,
+  PATCH_LOCK_CONVERGENCE_END,
+  PATCH_LOCK_CONVERGENCE_START,
+  PATCH_LOCK_FIELD_ID,
+  PATCH_LOCK_LATERAL_RADIUS_METERS,
+  PATCH_LOCK_OUTWARD_RADIUS_METERS,
   transportGroomPoint,
 } from "./groom_interpolation.js?v=118";
 import {
@@ -98,7 +104,54 @@ import {
   curatedHairSceneParameters,
   nextCuratedHairSceneId,
   resolveCuratedHairScene,
-} from "./curated_scenes.js?v=1";
+} from "./curated_scenes.js?v=2";
+import {
+  AUTHORED_GROOM_FIELD_ID,
+  AUTHORED_GROOM_LATERAL_RADIUS_METERS,
+  AUTHORED_GROOM_OUTWARD_RADIUS_METERS,
+  AUTHORED_ROOT_EMERGENCE_RANGE_METERS,
+  AUTHORED_ROOT_HANDOFF_FRACTION,
+  AUTHORED_ROOT_HANDOFF_STATION_FRACTION,
+  AUTHORED_ROOT_LAYDOWN_FIELD_ID,
+  AUTHORED_ROOT_LAYDOWN_RANGE_METERS,
+  authoredGroomCrossSectionScaleAt,
+  authoredGroomDisplacementTransferAt,
+  authoredGroomLaydownDisplacementTransferAt,
+  authoredGroomLaydownRestPoint,
+  authoredGroomLaydownSampleFractionAt,
+  authoredGroomRestPoint,
+} from "./authored_groom.js?v=1";
+import {
+  HAIRLINE_FLOW_FIELD_ID,
+  HAIRLINE_FLOW_SURFACE_FRACTION,
+  HAIRLINE_FLOW_SURFACE_LENGTH_METERS,
+  authoredHairlineFlowRestPoint,
+} from "./hairline_flow.js?v=1";
+import {
+  SPARSE_GROOM_CAGE_ID,
+  SPARSE_GROOM_CORRELATED_HIERARCHY_ID,
+  SPARSE_GROOM_OCCUPANCY_REMAP_ID,
+  SPARSE_GROOM_CORE_WIDTH_FIELD_ID,
+  SPARSE_GROOM_HEROES,
+  sparseGroomCorrelatedResidual,
+  sparseGroomCoreBodyWidthMultiplier,
+  sparseGroomHeroForRoot,
+  sparseGroomOffsetRetentionAt,
+  sparseGroomOccupancyRemap,
+  sparseGroomRestPoint,
+  sparseGroomSublockPhase,
+  sparseGroomWidthMultiplierAt,
+} from "./sparse_groom_cage.js?v=1";
+import {
+  buildIndependentDisplayFollicles,
+  DISPLAY_FOLLICLE_LAYOUT_ID,
+} from "./display_follicles.js?v=1";
+import {
+  LAYERED_HAIRCUT_FIELD_ID,
+  LAYERED_HAIRCUT_ZONE_NAMES,
+  layeredHaircutSample,
+  layeredHaircutTipWidthScaleAt,
+} from "./layered_haircut.js?v=1";
 import {
   projectPointToScalpShell,
   scalpPolarLimit,
@@ -114,6 +167,31 @@ let hairRenderMode = "lines";
 let groomMode = "radial_xz";
 let groomBindings = null;
 let groomBindingBuildCount = 0;
+let patchLockEnabled = false;
+let patchDebugColors = false;
+let authoredRestGroomEnabled = false;
+let authoredDebugColors = false;
+let authoredLaydownEnabled = false;
+let authoredRootZoneColors = false;
+let hairlineFlowEnabled = false;
+let sparseGroomCageEnabled = false;
+let sparseGroomCageColors = false;
+let sparseGroomHeroByGuide = new Uint8Array(0);
+let independentDisplayFolliclesEnabled = false;
+let displayFollicleGuideColors = false;
+let displayFollicleRootDiagnostic = false;
+let correlatedRestHierarchyEnabled = false;
+let sublockPhaseColors = false;
+const correlatedResidualScratch = new Float64Array(3);
+let maximumCorrelatedResidual = 0;
+let occupancyRemapEnabled = false;
+const occupancyRemapScratch = new Float64Array(3);
+let maximumOccupancyRemap = 0;
+let occupancyCoreTelemetryCache = null;
+let coreWidthHierarchyEnabled = false;
+let coreWidthDiagnostic = false;
+let layeredHaircutEnabled = false;
+let layeredHaircutDiagnostic = false;
 let rootDirectorMode = "free";
 let rootDirectorStrength = 0.22;
 let faceClearGroomEnabled = true;
@@ -401,6 +479,21 @@ let groomEnvelopeLaterals = new Float64Array();
 let groomOwnerTangents = new Float64Array();
 let groomOwnerOutwards = new Float64Array();
 let groomOwnerLaterals = new Float64Array();
+let groomPatchCenters = new Float64Array();
+let groomPatchTangents = new Float64Array();
+let groomPatchOutwards = new Float64Array();
+let groomPatchLaterals = new Float64Array();
+let groomPatchFrameCounts = new Uint16Array();
+let patchLockTelemetry = null;
+let authoredRestCenters = new Float64Array();
+let authoredLiveCenters = new Float64Array();
+let authoredMechanicalReference = new Float64Array();
+let authoredTangents = new Float64Array();
+let authoredOutwards = new Float64Array();
+let authoredLaterals = new Float64Array();
+let displayFollicleRestCenters = new Float64Array();
+let authoredReferenceReady = false;
+let authoredTopologyDigest = null;
 let groomEnvelopeSamples = new Float32Array();
 let groomEnvelopeCurvePointCache = new Float64Array();
 let groomEnvelopeFrameCounts = new Uint16Array();
@@ -543,6 +636,15 @@ function ensureGroomEnvelopeStorage() {
     groomOwnerTangents = new Float64Array(ownerFrameValues);
     groomOwnerOutwards = new Float64Array(ownerFrameValues);
     groomOwnerLaterals = new Float64Array(ownerFrameValues);
+  }
+  const patchFrameValues = (groomBindings?.patchCount ?? 0) * stations * 3;
+  const patchFrameCount = (groomBindings?.patchCount ?? 0) * stations;
+  if (groomPatchCenters.length !== patchFrameValues) {
+    groomPatchCenters = new Float64Array(patchFrameValues);
+    groomPatchTangents = new Float64Array(patchFrameValues);
+    groomPatchOutwards = new Float64Array(patchFrameValues);
+    groomPatchLaterals = new Float64Array(patchFrameValues);
+    groomPatchFrameCounts = new Uint16Array(patchFrameCount);
   }
   const sampleCount = solver.guideCount * renderFibersPerGuide * 2;
   if (groomEnvelopeSamples.length !== sampleCount) {
@@ -726,11 +828,311 @@ function updateGroomEnvelopeFrames() {
       groomOwnerLaterals[frame + 2] = tangentX * outwardY - tangentY * outwardX;
     }
   }
+  updatePatchLockFrames();
+  updateAuthoredGroomFrames();
   groomEnvelopeClampedPoints = 0;
   groomEnvelopeProjectedPoints = 0;
   groomEnvelopeMaximumOutputRadius = 0;
   groomEnvelopeFaceClearCorrections = 0;
   groomEnvelopeFaceClearMaximumDistance = 0;
+}
+
+function updatePatchLockFrames() {
+  if (!groomBindings?.patchLockEnabled) return;
+  const stations = solver.segments + 1;
+  groomPatchCenters.fill(0);
+  groomPatchFrameCounts.fill(0);
+  for (let guide = 0; guide < solver.guideCount; guide += 1) {
+    const patch = groomBindings.guidePatchIds[guide];
+    for (let particle = 0; particle <= solver.activeSegments[guide]; particle += 1) {
+      const source = solver.index(guide, particle);
+      const frame = (patch * stations + particle) * 3;
+      const count = patch * stations + particle;
+      groomPatchCenters[frame] += solver.positions[source];
+      groomPatchCenters[frame + 1] += solver.positions[source + 1];
+      groomPatchCenters[frame + 2] += solver.positions[source + 2];
+      groomPatchFrameCounts[count] += 1;
+    }
+  }
+  for (let patch = 0; patch < groomBindings.patchCount; patch += 1) {
+    let referenceX = 0;
+    let referenceY = 0;
+    let referenceZ = 0;
+    for (let guide = 0; guide < solver.guideCount; guide += 1) {
+      if (groomBindings.guidePatchIds[guide] !== patch) continue;
+      const normal = guide * 3;
+      referenceX += solver.rootNormals[normal];
+      referenceY += solver.rootNormals[normal + 1];
+      referenceZ += solver.rootNormals[normal + 2];
+    }
+    const referenceLength = Math.hypot(referenceX, referenceY, referenceZ) || 1;
+    referenceX /= referenceLength;
+    referenceY /= referenceLength;
+    referenceZ /= referenceLength;
+    for (let particle = 0; particle < stations; particle += 1) {
+      const frame = (patch * stations + particle) * 3;
+      const count = groomPatchFrameCounts[patch * stations + particle];
+      if (count > 0) {
+        groomPatchCenters[frame] /= count;
+        groomPatchCenters[frame + 1] /= count;
+        groomPatchCenters[frame + 2] /= count;
+      } else if (particle > 0) {
+        groomPatchCenters[frame] = groomPatchCenters[frame - 3];
+        groomPatchCenters[frame + 1] = groomPatchCenters[frame - 2];
+        groomPatchCenters[frame + 2] = groomPatchCenters[frame - 1];
+      }
+    }
+    let priorOutwardX = referenceX;
+    let priorOutwardY = referenceY;
+    let priorOutwardZ = referenceZ;
+    for (let particle = 0; particle < stations; particle += 1) {
+      const frame = (patch * stations + particle) * 3;
+      const prior = (patch * stations + Math.max(0, particle - 1)) * 3;
+      const next = (patch * stations + Math.min(stations - 1, particle + 1)) * 3;
+      let tangentX = groomPatchCenters[next] - groomPatchCenters[prior];
+      let tangentY = groomPatchCenters[next + 1] - groomPatchCenters[prior + 1];
+      let tangentZ = groomPatchCenters[next + 2] - groomPatchCenters[prior + 2];
+      const tangentLength = Math.hypot(tangentX, tangentY, tangentZ) || 1;
+      tangentX /= tangentLength;
+      tangentY /= tangentLength;
+      tangentZ /= tangentLength;
+      groomPatchTangents[frame] = tangentX;
+      groomPatchTangents[frame + 1] = tangentY;
+      groomPatchTangents[frame + 2] = tangentZ;
+      const projection = referenceX * tangentX + referenceY * tangentY + referenceZ * tangentZ;
+      let outwardX = referenceX - tangentX * projection;
+      let outwardY = referenceY - tangentY * projection;
+      let outwardZ = referenceZ - tangentZ * projection;
+      let outwardLength = Math.hypot(outwardX, outwardY, outwardZ);
+      if (outwardLength < 1e-6) {
+        outwardX = priorOutwardX;
+        outwardY = priorOutwardY;
+        outwardZ = priorOutwardZ;
+        outwardLength = Math.hypot(outwardX, outwardY, outwardZ) || 1;
+      }
+      outwardX /= outwardLength;
+      outwardY /= outwardLength;
+      outwardZ /= outwardLength;
+      if (
+        particle > 0 &&
+        outwardX * priorOutwardX + outwardY * priorOutwardY + outwardZ * priorOutwardZ < 0
+      ) {
+        outwardX *= -1;
+        outwardY *= -1;
+        outwardZ *= -1;
+      }
+      priorOutwardX = outwardX;
+      priorOutwardY = outwardY;
+      priorOutwardZ = outwardZ;
+      groomPatchOutwards[frame] = outwardX;
+      groomPatchOutwards[frame + 1] = outwardY;
+      groomPatchOutwards[frame + 2] = outwardZ;
+      groomPatchLaterals[frame] = tangentY * outwardZ - tangentZ * outwardY;
+      groomPatchLaterals[frame + 1] = tangentZ * outwardX - tangentX * outwardZ;
+      groomPatchLaterals[frame + 2] = tangentX * outwardY - tangentY * outwardX;
+    }
+  }
+}
+
+function ensureAuthoredGroomReference() {
+  if (!groomBindings || !authoredRestGroomEnabled) return false;
+  if (nativeClipPlayback.enabled && !nativeClipPlayback.clip) return false;
+  const stations = solver.segments + 1;
+  const values = solver.guideCount * stations * 3;
+  if (authoredRestCenters.length !== values) {
+    authoredRestCenters = new Float64Array(values);
+    authoredLiveCenters = new Float64Array(values);
+    authoredMechanicalReference = new Float64Array(values);
+    authoredTangents = new Float64Array(values);
+    authoredOutwards = new Float64Array(values);
+    authoredLaterals = new Float64Array(values);
+    authoredReferenceReady = false;
+  }
+  if (authoredReferenceReady) return true;
+  for (let guide = 0; guide < solver.guideCount; guide += 1) {
+    const rootOffset = guide * 3;
+    const targetOffset = guide * solver.rootDirector.zoneSegments * 3;
+    const root = solver.roots.subarray(rootOffset, rootOffset + 3);
+    const normal = solver.rootNormals.subarray(rootOffset, rootOffset + 3);
+    const direction = solver.rootDirectorTargets.subarray(targetOffset, targetOffset + 3);
+    let guideLength = 0;
+    for (let segment = 0; segment < solver.segments; segment += 1) {
+      guideLength += solver.restLengths[guide * solver.segments + segment];
+    }
+    for (let particle = 0; particle < stations; particle += 1) {
+      const writeRestPoint = authoredLaydownEnabled
+        ? authoredGroomLaydownRestPoint
+        : authoredGroomRestPoint;
+      const stationFraction = particle / solver.segments;
+      const groomFraction = authoredLaydownEnabled
+        ? authoredGroomLaydownSampleFractionAt(stationFraction)
+        : stationFraction;
+      if (sparseGroomCageEnabled) {
+        sparseGroomRestPoint(
+          root,
+          groomFraction,
+          authoredRestCenters,
+          (guide * stations + particle) * 3
+        );
+      } else if (hairlineFlowEnabled) {
+        authoredHairlineFlowRestPoint(
+          root,
+          normal,
+          groomFraction,
+          guideLength,
+          authoredRestCenters,
+          (guide * stations + particle) * 3
+        );
+      } else {
+        writeRestPoint(
+          root,
+          normal,
+          direction,
+          groomFraction,
+          guideLength,
+          authoredRestCenters,
+          (guide * stations + particle) * 3
+        );
+      }
+    }
+  }
+  authoredMechanicalReference.set(solver.positions);
+  if (independentDisplayFolliclesEnabled && groomBindings?.independentDisplayFollicles) {
+    maximumCorrelatedResidual = 0;
+    maximumOccupancyRemap = 0;
+    const displayValues = groomBindings.bindingCount * stations * 3;
+    if (displayFollicleRestCenters.length !== displayValues) {
+      displayFollicleRestCenters = new Float64Array(displayValues);
+    }
+    for (let binding = 0; binding < groomBindings.bindingCount; binding += 1) {
+      const rootOffset = binding * 3;
+      const root = groomBindings.displayRoots.subarray(rootOffset, rootOffset + 3);
+      for (let particle = 0; particle < stations; particle += 1) {
+        sparseGroomRestPoint(
+          root,
+          particle / solver.segments,
+          displayFollicleRestCenters,
+          (binding * stations + particle) * 3
+        );
+        const point = (binding * stations + particle) * 3;
+        if (occupancyRemapEnabled) {
+          sparseGroomOccupancyRemap(
+            root,
+            groomBindings.displayHeroIds[binding],
+            particle / solver.segments,
+            displayFollicleRestCenters.subarray(point, point + 3),
+            occupancyRemapScratch
+          );
+          maximumOccupancyRemap = Math.max(
+            maximumOccupancyRemap,
+            Math.hypot(...occupancyRemapScratch)
+          );
+          displayFollicleRestCenters[point] += occupancyRemapScratch[0];
+          displayFollicleRestCenters[point + 1] += occupancyRemapScratch[1];
+          displayFollicleRestCenters[point + 2] += occupancyRemapScratch[2];
+        }
+        if (correlatedRestHierarchyEnabled) {
+          const fraction = particle / solver.segments;
+          sparseGroomCorrelatedResidual(
+            root,
+            groomBindings.displayHeroIds[binding],
+            fraction,
+            correlatedResidualScratch
+          );
+          maximumCorrelatedResidual = Math.max(
+            maximumCorrelatedResidual,
+            Math.hypot(...correlatedResidualScratch)
+          );
+          displayFollicleRestCenters[point] += correlatedResidualScratch[0];
+          displayFollicleRestCenters[point + 1] += correlatedResidualScratch[1];
+          displayFollicleRestCenters[point + 2] += correlatedResidualScratch[2];
+        }
+      }
+    }
+  } else {
+    displayFollicleRestCenters = new Float64Array();
+    maximumCorrelatedResidual = 0;
+    maximumOccupancyRemap = 0;
+  }
+  occupancyCoreTelemetryCache = occupancyRemapEnabled ? summarizeOccupancyCores() : null;
+  authoredTopologyDigest = float32BufferDigest(Float32Array.from(authoredRestCenters));
+  authoredReferenceReady = true;
+  return true;
+}
+
+function updateAuthoredGroomFrames() {
+  if (!ensureAuthoredGroomReference()) return;
+  const stations = solver.segments + 1;
+  for (let guide = 0; guide < solver.guideCount; guide += 1) {
+    for (let particle = 0; particle < stations; particle += 1) {
+      const frame = (guide * stations + particle) * 3;
+      const stationFraction = particle / solver.segments;
+      const fraction = authoredLaydownEnabled
+        ? authoredGroomLaydownSampleFractionAt(stationFraction)
+        : stationFraction;
+      const transfer = authoredLaydownEnabled
+        ? authoredGroomLaydownDisplacementTransferAt(fraction)
+        : authoredGroomDisplacementTransferAt(fraction);
+      for (let axis = 0; axis < 3; axis += 1) {
+        authoredLiveCenters[frame + axis] =
+          authoredRestCenters[frame + axis] +
+          (solver.positions[frame + axis] - authoredMechanicalReference[frame + axis]) * transfer;
+      }
+    }
+    const normal = guide * 3;
+    const referenceX = solver.rootNormals[normal];
+    const referenceY = solver.rootNormals[normal + 1];
+    const referenceZ = solver.rootNormals[normal + 2];
+    let priorOutwardX = referenceX;
+    let priorOutwardY = referenceY;
+    let priorOutwardZ = referenceZ;
+    for (let particle = 0; particle < stations; particle += 1) {
+      const frame = (guide * stations + particle) * 3;
+      const prior = (guide * stations + Math.max(0, particle - 1)) * 3;
+      const next = (guide * stations + Math.min(stations - 1, particle + 1)) * 3;
+      let tangentX = authoredLiveCenters[next] - authoredLiveCenters[prior];
+      let tangentY = authoredLiveCenters[next + 1] - authoredLiveCenters[prior + 1];
+      let tangentZ = authoredLiveCenters[next + 2] - authoredLiveCenters[prior + 2];
+      const tangentLength = Math.hypot(tangentX, tangentY, tangentZ) || 1;
+      tangentX /= tangentLength;
+      tangentY /= tangentLength;
+      tangentZ /= tangentLength;
+      authoredTangents[frame] = tangentX;
+      authoredTangents[frame + 1] = tangentY;
+      authoredTangents[frame + 2] = tangentZ;
+      const projection = referenceX * tangentX + referenceY * tangentY + referenceZ * tangentZ;
+      let outwardX = referenceX - tangentX * projection;
+      let outwardY = referenceY - tangentY * projection;
+      let outwardZ = referenceZ - tangentZ * projection;
+      let outwardLength = Math.hypot(outwardX, outwardY, outwardZ);
+      if (outwardLength < 1e-6) {
+        outwardX = priorOutwardX;
+        outwardY = priorOutwardY;
+        outwardZ = priorOutwardZ;
+        outwardLength = Math.hypot(outwardX, outwardY, outwardZ) || 1;
+      }
+      outwardX /= outwardLength;
+      outwardY /= outwardLength;
+      outwardZ /= outwardLength;
+      if (
+        particle > 0 &&
+        outwardX * priorOutwardX + outwardY * priorOutwardY + outwardZ * priorOutwardZ < 0
+      ) {
+        outwardX *= -1;
+        outwardY *= -1;
+        outwardZ *= -1;
+      }
+      priorOutwardX = outwardX;
+      priorOutwardY = outwardY;
+      priorOutwardZ = outwardZ;
+      authoredOutwards[frame] = outwardX;
+      authoredOutwards[frame + 1] = outwardY;
+      authoredOutwards[frame + 2] = outwardZ;
+      authoredLaterals[frame] = tangentY * outwardZ - tangentZ * outwardY;
+      authoredLaterals[frame + 1] = tangentZ * outwardX - tangentX * outwardZ;
+      authoredLaterals[frame + 2] = tangentX * outwardY - tangentY * outwardX;
+    }
+  }
 }
 
 function envelopeSmoothStep(value) {
@@ -848,6 +1250,38 @@ function applyGroomEnvelopeToPoint(target, targetOffset, owner, copy, particle, 
     Math.min(1, inputRadius)
   );
 }
+
+function applyPatchLockToPoint(target, targetOffset, owner, copy, particle, activeSegments) {
+  if (!groomBindings?.patchLockEnabled || particle <= 0 || activeSegments <= 0) return;
+  const fraction = particle / Math.max(1, activeSegments);
+  const convergence = envelopeSmoothStep(
+    (fraction - PATCH_LOCK_CONVERGENCE_START) /
+      (PATCH_LOCK_CONVERGENCE_END - PATCH_LOCK_CONVERGENCE_START)
+  );
+  if (convergence <= 1e-8) return;
+  const patch = groomBindings.guidePatchIds[owner];
+  const stations = solver.segments + 1;
+  const clampedParticle = Math.min(solver.segments, particle);
+  const frame = (patch * stations + clampedParticle) * 3;
+  const sample = (owner * renderFibersPerGuide + copy) * 2;
+  const targetOutward = groomEnvelopeSamples[sample] * PATCH_LOCK_OUTWARD_RADIUS_METERS;
+  const targetLateral = groomEnvelopeSamples[sample + 1] * PATCH_LOCK_LATERAL_RADIUS_METERS;
+  const lockX =
+    groomPatchCenters[frame] +
+    groomPatchOutwards[frame] * targetOutward +
+    groomPatchLaterals[frame] * targetLateral;
+  const lockY =
+    groomPatchCenters[frame + 1] +
+    groomPatchOutwards[frame + 1] * targetOutward +
+    groomPatchLaterals[frame + 1] * targetLateral;
+  const lockZ =
+    groomPatchCenters[frame + 2] +
+    groomPatchOutwards[frame + 2] * targetOutward +
+    groomPatchLaterals[frame + 2] * targetLateral;
+  target[targetOffset] += (lockX - target[targetOffset]) * convergence;
+  target[targetOffset + 1] += (lockY - target[targetOffset + 1]) * convergence;
+  target[targetOffset + 2] += (lockZ - target[targetOffset + 2]) * convergence;
+}
 const physicsRodMidpoint = new THREE.Vector3();
 const physicsRodDirection = new THREE.Vector3();
 const physicsRodQuaternion = new THREE.Quaternion();
@@ -859,6 +1293,7 @@ const fatlineBaseColor = new THREE.Color();
 const undercoatColorScratch = new THREE.Color();
 const undercoatShadowTarget = new THREE.Color(0x08070a);
 const hairFiberColorScratch = { r: 0, g: 0, b: 0 };
+const patchDebugColorScratch = new THREE.Color();
 let paused = false;
 let cutting = false;
 let cuttingPointer = false;
@@ -1470,7 +1905,8 @@ function writeHydratedFiberStyle(
   copy,
   startParticle,
   endParticle,
-  activeSegments
+  activeSegments,
+  binding = -1
 ) {
   const hydration = sectionHydrationForGuide(guide);
   const familyScale = hydrationFamilyScales[copy];
@@ -1484,18 +1920,78 @@ function writeHydratedFiberStyle(
   );
   const proxy = 1 - hydration;
   const hairContribution = 0.32 + 0.68 * hydration;
-  colors[cursor] = Math.min(
-    1,
-    hairColorAtSegment.r * hairContribution + SECTION_CONTROL_TUBE_COLOR.r * proxy * 0.72
+  const bodyWidthMultiplier =
+    coreWidthHierarchyEnabled && binding >= 0
+      ? groomBindings.displayBodyWidthMultipliers[binding]
+      : 1;
+  const middleWidthMultiplier = sparseGroomWidthMultiplierAt(
+    bodyWidthMultiplier,
+    middleParticle / Math.max(1, activeSegments)
   );
-  colors[cursor + 1] = Math.min(
-    1,
-    hairColorAtSegment.g * hairContribution + SECTION_CONTROL_TUBE_COLOR.g * proxy * 0.72
-  );
-  colors[cursor + 2] = Math.min(
-    1,
-    hairColorAtSegment.b * hairContribution + SECTION_CONTROL_TUBE_COLOR.b * proxy * 0.72
-  );
+  if (layeredHaircutDiagnostic && binding >= 0) {
+    patchDebugColorScratch.setHex(
+      [0xf7d154, 0xff6f91, 0x63e6ff, 0x8f7cff][groomBindings.displayLengthZones[binding]]
+    );
+    colors[cursor] = patchDebugColorScratch.r;
+    colors[cursor + 1] = patchDebugColorScratch.g;
+    colors[cursor + 2] = patchDebugColorScratch.b;
+  } else if (coreWidthDiagnostic && binding >= 0) {
+    const value = Math.max(0, Math.min(1, middleWidthMultiplier / 3.5));
+    colors[cursor] = value;
+    colors[cursor + 1] = value;
+    colors[cursor + 2] = value;
+  } else if (sublockPhaseColors && binding >= 0) {
+    patchDebugColorScratch.setHex(
+      [0x49d6ff, 0xff5fb7, 0xffd35a][groomBindings.displaySublockPhases[binding]]
+    );
+    colors[cursor] = patchDebugColorScratch.r;
+    colors[cursor + 1] = patchDebugColorScratch.g;
+    colors[cursor + 2] = patchDebugColorScratch.b;
+  } else if (authoredRootZoneColors && authoredLaydownEnabled) {
+    const fraction = authoredGroomLaydownSampleFractionAt(
+      middleParticle / Math.max(1, activeSegments)
+    );
+    patchDebugColorScratch.setHex(
+      fraction < 0.045 ? 0xff4fa3 : fraction < AUTHORED_ROOT_HANDOFF_FRACTION ? 0x4fe4ff : 0xf8c45c
+    );
+    colors[cursor] = patchDebugColorScratch.r;
+    colors[cursor + 1] = patchDebugColorScratch.g;
+    colors[cursor + 2] = patchDebugColorScratch.b;
+  } else if (displayFollicleGuideColors && independentDisplayFolliclesEnabled) {
+    patchDebugColorScratch.setHSL((guide * 0.61803398875) % 1, 0.72, 0.58);
+    colors[cursor] = patchDebugColorScratch.r;
+    colors[cursor + 1] = patchDebugColorScratch.g;
+    colors[cursor + 2] = patchDebugColorScratch.b;
+  } else if (sparseGroomCageColors && sparseGroomCageEnabled) {
+    patchDebugColorScratch.setHSL((sparseGroomHeroByGuide[guide] * 0.61803398875) % 1, 0.72, 0.58);
+    colors[cursor] = patchDebugColorScratch.r;
+    colors[cursor + 1] = patchDebugColorScratch.g;
+    colors[cursor + 2] = patchDebugColorScratch.b;
+  } else if (authoredDebugColors && authoredRestGroomEnabled) {
+    patchDebugColorScratch.setHex(PHYSICS_CAGE_SECTION_COLORS[solver.guideSections[guide] % 8]);
+    colors[cursor] = patchDebugColorScratch.r;
+    colors[cursor + 1] = patchDebugColorScratch.g;
+    colors[cursor + 2] = patchDebugColorScratch.b;
+  } else if (patchDebugColors && groomBindings?.patchLockEnabled) {
+    const patch = groomBindings.guidePatchIds[guide];
+    patchDebugColorScratch.setHSL((patch * 0.61803398875) % 1, 0.78, 0.62);
+    colors[cursor] = patchDebugColorScratch.r;
+    colors[cursor + 1] = patchDebugColorScratch.g;
+    colors[cursor + 2] = patchDebugColorScratch.b;
+  } else {
+    colors[cursor] = Math.min(
+      1,
+      hairColorAtSegment.r * hairContribution + SECTION_CONTROL_TUBE_COLOR.r * proxy * 0.72
+    );
+    colors[cursor + 1] = Math.min(
+      1,
+      hairColorAtSegment.g * hairContribution + SECTION_CONTROL_TUBE_COLOR.g * proxy * 0.72
+    );
+    colors[cursor + 2] = Math.min(
+      1,
+      hairColorAtSegment.b * hairContribution + SECTION_CONTROL_TUBE_COLOR.b * proxy * 0.72
+    );
+  }
   const presentationWidthScale = fullGroomHydrationEnabled
     ? fullGroomPresentation.widthScale
     : 0.12 + 0.88 * hydration;
@@ -1536,8 +2032,24 @@ function writeHydratedFiberStyle(
     familyScale *
     massFamilyScale *
     hydrationRecipeWidthScaleAt(activeHydrationState, endParticle / Math.max(1, activeSegments));
-  widthsStart[instance] = Math.max(minimumHalfWidth, startWidth) * startEmergence;
-  widthsEnd[instance] = Math.max(minimumHalfWidth, endWidth) * endEmergence;
+  const startWidthMultiplier = sparseGroomWidthMultiplierAt(
+    bodyWidthMultiplier,
+    startParticle / Math.max(1, activeSegments)
+  );
+  const endWidthMultiplier = sparseGroomWidthMultiplierAt(
+    bodyWidthMultiplier,
+    endParticle / Math.max(1, activeSegments)
+  );
+  const startTipScale = layeredHaircutEnabled
+    ? layeredHaircutTipWidthScaleAt(startParticle / Math.max(1, activeSegments))
+    : 1;
+  const endTipScale = layeredHaircutEnabled
+    ? layeredHaircutTipWidthScaleAt(endParticle / Math.max(1, activeSegments))
+    : 1;
+  widthsStart[instance] =
+    Math.max(minimumHalfWidth, startWidth) * startEmergence * startWidthMultiplier * startTipScale;
+  widthsEnd[instance] =
+    Math.max(minimumHalfWidth, endWidth) * endEmergence * endWidthMultiplier * endTipScale;
 }
 
 function updateSectionControlTube() {
@@ -1968,9 +2480,72 @@ function rebuildSolver() {
   hydrationDetailOffsetCacheKey = "";
   groomBindings = groomMode.startsWith("section_")
     ? buildGroomInterpolationBindings(solver.roots, solver.guideCount, renderFibersPerGuide, {
-        parentCount: groomMode === "section_volume" ? 3 : 2,
+        parentCount: [
+          "section_volume",
+          "section_patch_lock",
+          "section_authored_rest",
+          "section_hairline_flow",
+          "section_sparse_cage",
+        ].includes(groomMode)
+          ? 3
+          : 2,
+        patchLockEnabled,
       })
     : null;
+  if (groomBindings && independentDisplayFolliclesEnabled) {
+    const display = buildIndependentDisplayFollicles(solver.roots, groomBindings.bindingCount);
+    const displayHeroIds = Uint8Array.from({ length: groomBindings.bindingCount }, (_, binding) =>
+      sparseGroomHeroForRoot(display.roots.subarray(binding * 3, binding * 3 + 3))
+    );
+    const displaySublockPhases = Uint8Array.from(
+      { length: groomBindings.bindingCount },
+      (_, binding) => sparseGroomSublockPhase(display.roots.subarray(binding * 3, binding * 3 + 3))
+    );
+    const displayBodyWidthMultipliers = Float32Array.from(
+      { length: groomBindings.bindingCount },
+      (_, binding) =>
+        sparseGroomCoreBodyWidthMultiplier(
+          display.roots.subarray(binding * 3, binding * 3 + 3),
+          displayHeroIds[binding],
+          displaySublockPhases[binding]
+        )
+    );
+    const displayLengthSamples = Array.from({ length: groomBindings.bindingCount }, (_, binding) =>
+      layeredHaircutSample(
+        display.roots.subarray(binding * 3, binding * 3 + 3),
+        displayHeroIds[binding],
+        displaySublockPhases[binding]
+      )
+    );
+    Object.assign(groomBindings, {
+      owners: display.owners,
+      neighbors: display.neighbors,
+      secondaryNeighbors: display.secondaryNeighbors,
+      neighborWeights: display.neighborWeights,
+      secondaryNeighborWeights: display.secondaryNeighborWeights,
+      displayRoots: display.roots,
+      displayNormals: display.normals,
+      displayFollicleTelemetry: display.telemetry,
+      displayHeroIds,
+      displaySublockPhases,
+      displayBodyWidthMultipliers,
+      displayLengthRatios: Float32Array.from(
+        displayLengthSamples,
+        (sample) => sample.retainedRatio
+      ),
+      displayLengthZones: Uint8Array.from(displayLengthSamples, (sample) => sample.zone),
+      independentDisplayFollicles: true,
+      displayFollicleLayoutId: DISPLAY_FOLLICLE_LAYOUT_ID,
+    });
+    groomBindings.bindingDigest = groomBindingDigest(groomBindings);
+  }
+  authoredReferenceReady = false;
+  authoredTopologyDigest = null;
+  sparseGroomHeroByGuide = sparseGroomCageEnabled
+    ? Uint8Array.from({ length: solver.guideCount }, (_, guide) =>
+        sparseGroomHeroForRoot(solver.roots.subarray(guide * 3, guide * 3 + 3))
+      )
+    : new Uint8Array(0);
   if (groomBindings) groomBindingBuildCount += 1;
   filmDirection.startTime = null;
   filmDirection.cutDone = false;
@@ -2176,6 +2751,7 @@ function updateFatlineGeometry() {
 function writeBlendedGroomCurvePointUncached(
   target,
   targetOffset,
+  binding,
   owner,
   neighbor,
   secondaryNeighbor,
@@ -2187,6 +2763,97 @@ function writeBlendedGroomCurvePointUncached(
   secondaryActiveSegments
 ) {
   const clampedParticle = Math.max(0, Math.min(activeSegments, particle));
+  if (
+    independentDisplayFolliclesEnabled &&
+    sparseGroomCageEnabled &&
+    groomBindings.independentDisplayFollicles
+  ) {
+    const displayRootOffset = binding * 3;
+    const displayRoot = groomBindings.displayRoots.subarray(
+      displayRootOffset,
+      displayRootOffset + 3
+    );
+    if (clampedParticle === 0) {
+      target[targetOffset] = displayRoot[0];
+      target[targetOffset + 1] = displayRoot[1];
+      target[targetOffset + 2] = displayRoot[2];
+      return;
+    }
+    const fraction = clampedParticle / Math.max(1, activeSegments);
+    const stations = solver.segments + 1;
+    const displayFrame = (binding * stations + clampedParticle) * 3;
+    target[targetOffset] = displayFollicleRestCenters[displayFrame];
+    target[targetOffset + 1] = displayFollicleRestCenters[displayFrame + 1];
+    target[targetOffset + 2] = displayFollicleRestCenters[displayFrame + 2];
+    const ownerFrame = (owner * stations + clampedParticle) * 3;
+    const neighborFrame = (neighbor * stations + clampedParticle) * 3;
+    const secondaryFrame = (secondaryNeighbor * stations + clampedParticle) * 3;
+    const transfer = authoredGroomDisplacementTransferAt(fraction);
+    const ownerWeight = 1 - neighborWeight - secondaryNeighborWeight;
+    for (let axis = 0; axis < 3; axis += 1) {
+      const deformation =
+        ownerWeight *
+          (authoredLiveCenters[ownerFrame + axis] - authoredRestCenters[ownerFrame + axis]) +
+        neighborWeight *
+          (authoredLiveCenters[neighborFrame + axis] - authoredRestCenters[neighborFrame + axis]) +
+        secondaryNeighborWeight *
+          (authoredLiveCenters[secondaryFrame + axis] - authoredRestCenters[secondaryFrame + axis]);
+      target[targetOffset + axis] += deformation * transfer;
+    }
+    const crossSectionScale = authoredGroomCrossSectionScaleAt(fraction);
+    const sample = binding * 2;
+    const outward =
+      groomEnvelopeSamples[sample] * AUTHORED_GROOM_OUTWARD_RADIUS_METERS * crossSectionScale;
+    const lateral =
+      groomEnvelopeSamples[sample + 1] * AUTHORED_GROOM_LATERAL_RADIUS_METERS * crossSectionScale;
+    for (let axis = 0; axis < 3; axis += 1) {
+      target[targetOffset + axis] +=
+        authoredOutwards[ownerFrame + axis] * outward +
+        authoredLaterals[ownerFrame + axis] * lateral;
+    }
+    return;
+  }
+  if (authoredRestGroomEnabled && authoredReferenceReady) {
+    const ownerRoot = owner * 3;
+    const neighborRoot = neighbor * 3;
+    const secondaryRoot = secondaryNeighbor * 3;
+    for (let axis = 0; axis < 3; axis += 1) {
+      target[targetOffset + axis] = interpolateGroomScalar(
+        solver.roots[ownerRoot + axis],
+        solver.roots[neighborRoot + axis],
+        neighborWeight,
+        solver.roots[secondaryRoot + axis],
+        0
+      );
+    }
+    projectPointToScalpShell(
+      target[targetOffset],
+      target[targetOffset + 1],
+      target[targetOffset + 2],
+      target,
+      targetOffset
+    );
+    if (clampedParticle === 0) return;
+    const fraction = clampedParticle / Math.max(1, activeSegments);
+    const stations = solver.segments + 1;
+    const frame = (owner * stations + Math.min(solver.segments, clampedParticle)) * 3;
+    const rootAnchor = 1 - envelopeSmoothStep(fraction / 0.26);
+    const crossSectionScale = authoredGroomCrossSectionScaleAt(fraction);
+    const sample = (owner * renderFibersPerGuide + copy) * 2;
+    const outward =
+      groomEnvelopeSamples[sample] * AUTHORED_GROOM_OUTWARD_RADIUS_METERS * crossSectionScale;
+    const lateral =
+      groomEnvelopeSamples[sample + 1] * AUTHORED_GROOM_LATERAL_RADIUS_METERS * crossSectionScale;
+    for (let axis = 0; axis < 3; axis += 1) {
+      const rootDelta = target[targetOffset + axis] - solver.roots[ownerRoot + axis];
+      target[targetOffset + axis] =
+        authoredLiveCenters[frame + axis] +
+        rootDelta * rootAnchor +
+        authoredOutwards[frame + axis] * outward +
+        authoredLaterals[frame + axis] * lateral;
+    }
+    return;
+  }
   const secondaryWeight = groomSecondaryWeightAt(
     clampedParticle,
     activeSegments,
@@ -2230,6 +2897,7 @@ function writeBlendedGroomCurvePointUncached(
   target[targetOffset + 1] += hydrationDetailOffsets[detailOffset + 1];
   target[targetOffset + 2] += hydrationDetailOffsets[detailOffset + 2];
   applyGroomEnvelopeToPoint(target, targetOffset, owner, copy, clampedParticle, activeSegments);
+  applyPatchLockToPoint(target, targetOffset, owner, copy, clampedParticle, activeSegments);
 }
 
 function rebuildGroomCurvePointCache() {
@@ -2250,12 +2918,15 @@ function rebuildGroomCurvePointCache() {
       0,
       Math.min(1 - displayNeighborWeight, secondaryNeighborWeight * displaySpread)
     );
-    const activeSegments = groomBindingActiveSegments(
+    const boundActiveSegments = groomBindingActiveSegments(
       solver.activeSegments,
       owner,
       neighbor,
       neighborWeight
     );
+    const activeSegments = displayFollicleRootDiagnostic
+      ? Math.min(2, boundActiveSegments)
+      : boundActiveSegments;
     const secondaryActiveSegments = solver.activeSegments[secondaryNeighbor];
     const copy = binding % renderFibersPerGuide;
     for (let particle = 0; particle <= activeSegments; particle += 1) {
@@ -2263,6 +2934,7 @@ function rebuildGroomCurvePointCache() {
       writeBlendedGroomCurvePointUncached(
         groomEnvelopeCurvePointCache,
         target,
+        binding,
         owner,
         neighbor,
         secondaryNeighbor,
@@ -2277,12 +2949,531 @@ function rebuildGroomCurvePointCache() {
   }
 }
 
+function patchLockDistanceTelemetry() {
+  if (!groomBindings?.patchLockEnabled) return null;
+  const fractions = [0.25, 0.6, 0.9];
+  const distances = fractions.map(() => []);
+  let maximumRootShellError = 0;
+  const stations = solver.segments + 1;
+  const radiusX = SCALP_RADII[0] + SCALP_ROOT_OFFSET;
+  const radiusY = SCALP_RADII[1] + SCALP_ROOT_OFFSET;
+  const radiusZ = SCALP_RADII[2] + SCALP_ROOT_OFFSET;
+  const patchGuideCounts = new Uint16Array(groomBindings.patchCount);
+  for (let guide = 0; guide < solver.guideCount; guide += 1) {
+    patchGuideCounts[groomBindings.guidePatchIds[guide]] += 1;
+  }
+  for (let binding = 0; binding < groomBindings.bindingCount; binding += 1) {
+    const owner = groomBindings.owners[binding];
+    const neighbor = groomBindings.neighbors[binding];
+    const activeSegments = groomBindingActiveSegments(
+      solver.activeSegments,
+      owner,
+      neighbor,
+      groomBindings.neighborWeights[binding]
+    );
+    const root = binding * stations * 3;
+    const dx = (groomEnvelopeCurvePointCache[root] - SCALP_CENTER[0]) / radiusX;
+    const dy = (groomEnvelopeCurvePointCache[root + 1] - SCALP_CENTER[1]) / radiusY;
+    const dz = (groomEnvelopeCurvePointCache[root + 2] - SCALP_CENTER[2]) / radiusZ;
+    maximumRootShellError = Math.max(maximumRootShellError, Math.abs(Math.hypot(dx, dy, dz) - 1));
+    const patch = groomBindings.guidePatchIds[owner];
+    for (let sampleIndex = 0; sampleIndex < fractions.length; sampleIndex += 1) {
+      const particle = Math.max(1, Math.round(activeSegments * fractions[sampleIndex]));
+      const point = (binding * stations + particle) * 3;
+      const center = (patch * stations + particle) * 3;
+      distances[sampleIndex].push(
+        Math.hypot(
+          groomEnvelopeCurvePointCache[point] - groomPatchCenters[center],
+          groomEnvelopeCurvePointCache[point + 1] - groomPatchCenters[center + 1],
+          groomEnvelopeCurvePointCache[point + 2] - groomPatchCenters[center + 2]
+        )
+      );
+    }
+  }
+  const summarize = (values) => {
+    values.sort((left, right) => left - right);
+    const quantile = (fraction) =>
+      values[Math.min(values.length - 1, Math.floor(values.length * fraction))];
+    return { median_m: quantile(0.5), p90_m: quantile(0.9) };
+  };
+  return {
+    enabled: true,
+    field_identity: PATCH_LOCK_FIELD_ID,
+    topology_digest: groomBindings.bindingDigest,
+    patch_count: groomBindings.patchCount,
+    guides_per_patch: {
+      minimum: Math.min(...patchGuideCounts),
+      maximum: Math.max(...patchGuideCounts),
+    },
+    convergence_fraction: [PATCH_LOCK_CONVERGENCE_START, PATCH_LOCK_CONVERGENCE_END],
+    cross_section_radii_m: [PATCH_LOCK_OUTWARD_RADIUS_METERS, PATCH_LOCK_LATERAL_RADIUS_METERS],
+    maximum_root_shell_error: maximumRootShellError,
+    child_to_patch_center: Object.fromEntries(
+      fractions.map((fraction, index) => [String(fraction), summarize(distances[index])])
+    ),
+    debug_patch_colors: patchDebugColors,
+    physics_authority: "none_renderer_only",
+  };
+}
+
+function summarizeOccupancyCores() {
+  const stations = solver.segments + 1;
+  const summarize = (values) => {
+    values.sort((left, right) => left - right);
+    return {
+      minimum: values[0],
+      p50: values[Math.floor(values.length * 0.5)],
+      maximum: values.at(-1),
+    };
+  };
+  return Object.fromEntries(
+    [0.35, 0.6, 0.85].map((fraction) => {
+      const particle = Math.round(solver.segments * fraction);
+      const groups = Array.from({ length: SPARSE_GROOM_HEROES.length * 3 }, () => []);
+      for (let binding = 0; binding < groomBindings.bindingCount; binding += 1) {
+        const group =
+          groomBindings.displayHeroIds[binding] * 3 + groomBindings.displaySublockPhases[binding];
+        const point = (binding * stations + particle) * 3;
+        groups[group].push([
+          displayFollicleRestCenters[point],
+          displayFollicleRestCenters[point + 1],
+          displayFollicleRestCenters[point + 2],
+        ]);
+      }
+      const centroids = groups.map((points) => {
+        if (points.length === 0) return null;
+        return [0, 1, 2].map(
+          (axis) => points.reduce((sum, point) => sum + point[axis], 0) / points.length
+        );
+      });
+      const heroTangents = SPARSE_GROOM_HEROES.map((hero) => {
+        const before = sparseGroomRestPoint(
+          hero.root,
+          Math.max(0, fraction - 0.001),
+          new Float64Array(3)
+        );
+        const after = sparseGroomRestPoint(
+          hero.root,
+          Math.min(1, fraction + 0.001),
+          new Float64Array(3)
+        );
+        const tangent = [after[0] - before[0], after[1] - before[1], after[2] - before[2]];
+        const length = Math.hypot(...tangent) || 1;
+        return tangent.map((value) => value / length);
+      });
+      const radii = [];
+      for (let group = 0; group < groups.length; group += 1) {
+        const centroid = centroids[group];
+        if (!centroid || groups[group].length < 2) continue;
+        const tangent = heroTangents[Math.floor(group / 3)];
+        const squared =
+          groups[group].reduce((sum, point) => {
+            const delta = [point[0] - centroid[0], point[1] - centroid[1], point[2] - centroid[2]];
+            const along = delta[0] * tangent[0] + delta[1] * tangent[1] + delta[2] * tangent[2];
+            return sum + Math.max(0, delta[0] ** 2 + delta[1] ** 2 + delta[2] ** 2 - along ** 2);
+          }, 0) / groups[group].length;
+        radii.push(Math.sqrt(squared));
+      }
+      const separations = [];
+      for (let hero = 0; hero < SPARSE_GROOM_HEROES.length; hero += 1) {
+        for (const [left, right] of [
+          [0, 1],
+          [1, 2],
+        ]) {
+          const a = centroids[hero * 3 + left];
+          const b = centroids[hero * 3 + right];
+          if (!a || !b) continue;
+          const tangent = heroTangents[hero];
+          const delta = [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+          const along = delta[0] * tangent[0] + delta[1] * tangent[1] + delta[2] * tangent[2];
+          separations.push(
+            Math.sqrt(Math.max(0, delta[0] ** 2 + delta[1] ** 2 + delta[2] ** 2 - along ** 2))
+          );
+        }
+      }
+      return [
+        String(fraction),
+        {
+          within_core_rms_radius_m: summarize(radii),
+          adjacent_core_centroid_separation_m: summarize(separations),
+        },
+      ];
+    })
+  );
+}
+
+function independentDisplayFollicleTelemetry() {
+  const stations = solver.segments + 1;
+  const outwardDots = [];
+  const heroCounts = new Uint16Array(SPARSE_GROOM_HEROES.length);
+  for (let binding = 0; binding < groomBindings.bindingCount; binding += 1) {
+    const rootOffset = binding * 3;
+    const curveRoot = binding * stations * 3;
+    const dx =
+      groomEnvelopeCurvePointCache[curveRoot + 3] - groomEnvelopeCurvePointCache[curveRoot];
+    const dy =
+      groomEnvelopeCurvePointCache[curveRoot + 4] - groomEnvelopeCurvePointCache[curveRoot + 1];
+    const dz =
+      groomEnvelopeCurvePointCache[curveRoot + 5] - groomEnvelopeCurvePointCache[curveRoot + 2];
+    const length = Math.hypot(dx, dy, dz) || 1;
+    outwardDots.push(
+      (dx * groomBindings.displayNormals[rootOffset] +
+        dy * groomBindings.displayNormals[rootOffset + 1] +
+        dz * groomBindings.displayNormals[rootOffset + 2]) /
+        length
+    );
+    heroCounts[groomBindings.displayHeroIds[binding]] += 1;
+  }
+  const sortedHeroCounts = Array.from(heroCounts).sort((left, right) => left - right);
+  const summarizeWidthAt = (fraction) => {
+    const values = Array.from(groomBindings.displayBodyWidthMultipliers, (bodyMultiplier) =>
+      sparseGroomWidthMultiplierAt(bodyMultiplier, fraction)
+    ).sort((left, right) => left - right);
+    const quantile = (value) =>
+      values[Math.min(values.length - 1, Math.floor(value * values.length))];
+    return {
+      mean: values.reduce((sum, value) => sum + value, 0) / values.length,
+      p10: quantile(0.1),
+      p50: quantile(0.5),
+      p90: quantile(0.9),
+      maximum: values.at(-1),
+    };
+  };
+  return {
+    ...groomBindings.displayFollicleTelemetry,
+    hero_occupancy: {
+      minimum: sortedHeroCounts[0],
+      median: sortedHeroCounts[Math.floor(sortedHeroCounts.length * 0.5)],
+      maximum: sortedHeroCounts.at(-1),
+    },
+    initial_tangent_outward_dot: {
+      minimum: Math.min(...outwardDots),
+      mean: outwardDots.reduce((sum, value) => sum + value, 0) / outwardDots.length,
+    },
+    motion_transfer_contract: {
+      center_deformation_operator: "same_three_guide_weighted_deformation_applied_to_rest_curve",
+      cross_section_frame_motion_also_applied: true,
+      final_rendered_point_ratio_and_cosine: "not_measured",
+    },
+    debug_nearest_guide_colors: displayFollicleGuideColors,
+    root_diagnostic_first_two_segments_only: displayFollicleRootDiagnostic,
+    correlated_rest_hierarchy: correlatedRestHierarchyEnabled
+      ? {
+          field_identity: SPARSE_GROOM_CORRELATED_HIERARCHY_ID,
+          sublock_phase_count: 3,
+          root_zero_through_fraction: 0.12,
+          maximum_observed_residual_m: maximumCorrelatedResidual,
+          debug_sublock_phase_colors: sublockPhaseColors,
+        }
+      : null,
+    cross_section_occupancy_remap: occupancyRemapEnabled
+      ? {
+          field_identity: SPARSE_GROOM_OCCUPANCY_REMAP_ID,
+          core_count: 3,
+          root_zero_through_fraction: 0.15,
+          maximum_observed_remap_m: maximumOccupancyRemap,
+          core_statistics: occupancyCoreTelemetryCache,
+        }
+      : null,
+    core_width_hierarchy: coreWidthHierarchyEnabled
+      ? {
+          field_identity: SPARSE_GROOM_CORE_WIDTH_FIELD_ID,
+          root_ramp_end_fraction: 0.18,
+          multiplier_at_fraction: {
+            0: summarizeWidthAt(0),
+            0.4: summarizeWidthAt(0.4),
+            0.8: summarizeWidthAt(0.8),
+          },
+          debug_grayscale_width: coreWidthDiagnostic,
+        }
+      : null,
+    layered_haircut: layeredHaircutEnabled ? layeredHaircutTelemetry() : null,
+    physics_authority: "none_renderer_only",
+  };
+}
+
+function layeredHaircutTelemetry() {
+  const byZone = Object.fromEntries(LAYERED_HAIRCUT_ZONE_NAMES.map((name) => [name, []]));
+  let belowFloor = 0;
+  for (let binding = 0; binding < groomBindings.bindingCount; binding += 1) {
+    const ratio = groomBindings.displayLengthRatios[binding];
+    const zone = LAYERED_HAIRCUT_ZONE_NAMES[groomBindings.displayLengthZones[binding]];
+    byZone[zone].push(ratio);
+    if (ratio < 0.7) belowFloor += 1;
+  }
+  const summarize = (values) => {
+    values.sort((left, right) => left - right);
+    const quantile = (fraction) =>
+      values[Math.min(values.length - 1, Math.floor(fraction * values.length))];
+    return {
+      count: values.length,
+      p10: quantile(0.1),
+      p50: quantile(0.5),
+      p90: quantile(0.9),
+    };
+  };
+  return {
+    field_identity: LAYERED_HAIRCUT_FIELD_ID,
+    retained_length_by_zone: Object.fromEntries(
+      Object.entries(byZone).map(([zone, values]) => [zone, summarize(values)])
+    ),
+    below_seventy_percent: belowFloor,
+    taper_fraction_of_new_length: 0.12,
+    debug_endpoint_zone_colors: layeredHaircutDiagnostic,
+    curve_sampling: "full_rest_curve_reparameterized_to_retained_fraction",
+  };
+}
+
+function authoredGroomTelemetry() {
+  if (!authoredRestGroomEnabled || !authoredReferenceReady) return null;
+  const stations = solver.segments + 1;
+  const outwardDots = [];
+  const turningAngles = [];
+  const rootTurningAngles = [];
+  const handoffFlowDots = [];
+  const laydownClearances = [];
+  const handoffTangentAngles = [];
+  const transferFractions = [0.6, 0.9];
+  const transferRatios = transferFractions.map(() => []);
+  const transferCosines = transferFractions.map(() => []);
+  let maximumRootShellError = 0;
+  const radiusX = SCALP_RADII[0] + SCALP_ROOT_OFFSET;
+  const radiusY = SCALP_RADII[1] + SCALP_ROOT_OFFSET;
+  const radiusZ = SCALP_RADII[2] + SCALP_ROOT_OFFSET;
+  for (let guide = 0; guide < solver.guideCount; guide += 1) {
+    const root = guide * stations * 3;
+    let firstX = authoredRestCenters[root + 3] - authoredRestCenters[root];
+    let firstY = authoredRestCenters[root + 4] - authoredRestCenters[root + 1];
+    let firstZ = authoredRestCenters[root + 5] - authoredRestCenters[root + 2];
+    const firstLength = Math.hypot(firstX, firstY, firstZ) || 1;
+    firstX /= firstLength;
+    firstY /= firstLength;
+    firstZ /= firstLength;
+    outwardDots.push(
+      firstX * solver.rootNormals[guide * 3] +
+        firstY * solver.rootNormals[guide * 3 + 1] +
+        firstZ * solver.rootNormals[guide * 3 + 2]
+    );
+    let priorTangent = null;
+    for (let particle = 0; particle < solver.segments; particle += 1) {
+      const left = (guide * stations + particle) * 3;
+      const right = left + 3;
+      const dx = authoredRestCenters[right] - authoredRestCenters[left];
+      const dy = authoredRestCenters[right + 1] - authoredRestCenters[left + 1];
+      const dz = authoredRestCenters[right + 2] - authoredRestCenters[left + 2];
+      const length = Math.hypot(dx, dy, dz) || 1;
+      const tangent = [dx / length, dy / length, dz / length];
+      if (priorTangent) {
+        const turningAngle =
+          (Math.acos(
+            Math.max(
+              -1,
+              Math.min(
+                1,
+                tangent[0] * priorTangent[0] +
+                  tangent[1] * priorTangent[1] +
+                  tangent[2] * priorTangent[2]
+              )
+            )
+          ) *
+            180) /
+          Math.PI;
+        turningAngles.push(turningAngle);
+        if ((particle + 1) / solver.segments <= 0.2) rootTurningAngles.push(turningAngle);
+      }
+      priorTangent = tangent;
+    }
+    if (authoredLaydownEnabled) {
+      const handoffParticle = Math.max(
+        1,
+        Math.min(
+          solver.segments - 1,
+          Math.round(AUTHORED_ROOT_HANDOFF_STATION_FRACTION * solver.segments)
+        )
+      );
+      const before = (guide * stations + handoffParticle - 1) * 3;
+      const handoff = (guide * stations + handoffParticle) * 3;
+      const after = (guide * stations + handoffParticle + 1) * 3;
+      const beforeVector = [
+        authoredRestCenters[handoff] - authoredRestCenters[before],
+        authoredRestCenters[handoff + 1] - authoredRestCenters[before + 1],
+        authoredRestCenters[handoff + 2] - authoredRestCenters[before + 2],
+      ];
+      const afterVector = [
+        authoredRestCenters[after] - authoredRestCenters[handoff],
+        authoredRestCenters[after + 1] - authoredRestCenters[handoff + 1],
+        authoredRestCenters[after + 2] - authoredRestCenters[handoff + 2],
+      ];
+      const beforeLength = Math.hypot(...beforeVector) || 1;
+      const afterLength = Math.hypot(...afterVector) || 1;
+      const tangentDot =
+        (beforeVector[0] * afterVector[0] +
+          beforeVector[1] * afterVector[1] +
+          beforeVector[2] * afterVector[2]) /
+        (beforeLength * afterLength);
+      handoffTangentAngles.push((Math.acos(Math.max(-1, Math.min(1, tangentDot))) * 180) / Math.PI);
+      const normalOffset = guide * 3;
+      const targetOffset = guide * solver.rootDirector.zoneSegments * 3;
+      const targetDotNormal =
+        solver.rootDirectorTargets[targetOffset] * solver.rootNormals[normalOffset] +
+        solver.rootDirectorTargets[targetOffset + 1] * solver.rootNormals[normalOffset + 1] +
+        solver.rootDirectorTargets[targetOffset + 2] * solver.rootNormals[normalOffset + 2];
+      const flow = [
+        solver.rootDirectorTargets[targetOffset] -
+          solver.rootNormals[normalOffset] * targetDotNormal,
+        solver.rootDirectorTargets[targetOffset + 1] -
+          solver.rootNormals[normalOffset + 1] * targetDotNormal,
+        solver.rootDirectorTargets[targetOffset + 2] -
+          solver.rootNormals[normalOffset + 2] * targetDotNormal,
+      ];
+      const flowLength = Math.hypot(...flow) || 1;
+      handoffFlowDots.push(
+        (afterVector[0] * flow[0] + afterVector[1] * flow[1] + afterVector[2] * flow[2]) /
+          (afterLength * flowLength)
+      );
+      for (let particle = 1; particle <= handoffParticle; particle += 1) {
+        const point = (guide * stations + particle) * 3;
+        const shellRadius = Math.hypot(
+          (authoredRestCenters[point] - SCALP_CENTER[0]) / radiusX,
+          (authoredRestCenters[point + 1] - SCALP_CENTER[1]) / radiusY,
+          (authoredRestCenters[point + 2] - SCALP_CENTER[2]) / radiusZ
+        );
+        laydownClearances.push((shellRadius - 1) * Math.min(radiusX, radiusY, radiusZ));
+      }
+    }
+    for (let index = 0; index < transferFractions.length; index += 1) {
+      const particle = Math.round(solver.segments * transferFractions[index]);
+      const frame = (guide * stations + particle) * 3;
+      const guideDx = solver.positions[frame] - authoredMechanicalReference[frame];
+      const guideDy = solver.positions[frame + 1] - authoredMechanicalReference[frame + 1];
+      const guideDz = solver.positions[frame + 2] - authoredMechanicalReference[frame + 2];
+      const groomDx = authoredLiveCenters[frame] - authoredRestCenters[frame];
+      const groomDy = authoredLiveCenters[frame + 1] - authoredRestCenters[frame + 1];
+      const groomDz = authoredLiveCenters[frame + 2] - authoredRestCenters[frame + 2];
+      const guideMagnitude = Math.hypot(guideDx, guideDy, guideDz);
+      const groomMagnitude = Math.hypot(groomDx, groomDy, groomDz);
+      if (guideMagnitude > 1e-7 && groomMagnitude > 1e-7) {
+        transferRatios[index].push(groomMagnitude / guideMagnitude);
+        transferCosines[index].push(
+          (guideDx * groomDx + guideDy * groomDy + guideDz * groomDz) /
+            (guideMagnitude * groomMagnitude)
+        );
+      }
+    }
+  }
+  for (let binding = 0; binding < groomBindings.bindingCount; binding += 1) {
+    const root = binding * stations * 3;
+    const dx = (groomEnvelopeCurvePointCache[root] - SCALP_CENTER[0]) / radiusX;
+    const dy = (groomEnvelopeCurvePointCache[root + 1] - SCALP_CENTER[1]) / radiusY;
+    const dz = (groomEnvelopeCurvePointCache[root + 2] - SCALP_CENTER[2]) / radiusZ;
+    maximumRootShellError = Math.max(maximumRootShellError, Math.abs(Math.hypot(dx, dy, dz) - 1));
+  }
+  const quantiles = (values) => {
+    values.sort((left, right) => left - right);
+    if (values.length === 0) return { p50: null, p90: null };
+    return {
+      p50: values[Math.min(values.length - 1, Math.floor(values.length * 0.5))],
+      p90: values[Math.min(values.length - 1, Math.floor(values.length * 0.9))],
+    };
+  };
+  return {
+    enabled: true,
+    field_identity: sparseGroomCageEnabled
+      ? SPARSE_GROOM_CAGE_ID
+      : hairlineFlowEnabled
+        ? HAIRLINE_FLOW_FIELD_ID
+        : AUTHORED_GROOM_FIELD_ID,
+    topology_digest: authoredTopologyDigest,
+    root_outward_dot: {
+      minimum: Math.min(...outwardDots),
+      mean: outwardDots.reduce((a, b) => a + b, 0) / outwardDots.length,
+    },
+    turning_angle_degrees: quantiles(turningAngles),
+    maximum_cross_section_radius_m: AUTHORED_GROOM_OUTWARD_RADIUS_METERS,
+    maximum_root_shell_error: maximumRootShellError,
+    displacement_transfer: Object.fromEntries(
+      transferFractions.map((fraction, index) => [
+        String(fraction),
+        {
+          magnitude_ratio: quantiles(transferRatios[index]),
+          direction_cosine: quantiles(transferCosines[index]),
+        },
+      ])
+    ),
+    debug_section_colors: authoredDebugColors,
+    root_operator: authoredLaydownEnabled
+      ? {
+          field_identity: AUTHORED_ROOT_LAYDOWN_FIELD_ID,
+          digest: authoredTopologyDigest,
+          emergence_length_range_m: AUTHORED_ROOT_EMERGENCE_RANGE_METERS,
+          laydown_length_range_m: AUTHORED_ROOT_LAYDOWN_RANGE_METERS,
+          handoff_curve_fraction: AUTHORED_ROOT_HANDOFF_FRACTION,
+          handoff_station_fraction: AUTHORED_ROOT_HANDOFF_STATION_FRACTION,
+          initial_tangent_outward_dot: {
+            minimum: Math.min(...outwardDots),
+            mean: outwardDots.reduce((a, b) => a + b, 0) / outwardDots.length,
+          },
+          handoff_styled_flow_dot: {
+            minimum: Math.min(...handoffFlowDots),
+            mean: handoffFlowDots.reduce((a, b) => a + b, 0) / handoffFlowDots.length,
+          },
+          laydown_shell_clearance_m: {
+            minimum: Math.min(...laydownClearances),
+            ...quantiles(laydownClearances),
+            maximum: Math.max(...laydownClearances),
+          },
+          first_20pct_turning_angle_degrees: quantiles(rootTurningAngles),
+          shaft_handoff: {
+            maximum_position_discontinuity_m: 0,
+            maximum_tangent_angle_degrees: Math.max(...handoffTangentAngles),
+          },
+          debug_zone_colors: authoredRootZoneColors,
+        }
+      : null,
+    hairline_flow: hairlineFlowEnabled
+      ? {
+          field_identity: HAIRLINE_FLOW_FIELD_ID,
+          surface_fraction: HAIRLINE_FLOW_SURFACE_FRACTION,
+          surface_length_m: HAIRLINE_FLOW_SURFACE_LENGTH_METERS,
+        }
+      : null,
+    sparse_groom_cage: sparseGroomCageEnabled
+      ? {
+          field_identity: SPARSE_GROOM_CAGE_ID,
+          hero_lock_count: SPARSE_GROOM_HEROES.length,
+          roots_per_lock: Array.from({ length: SPARSE_GROOM_HEROES.length }, (_, hero) =>
+            sparseGroomHeroByGuide.reduce((count, value) => count + Number(value === hero), 0)
+          ),
+          offset_retention: Object.fromEntries(
+            [0, 0.25, 0.6, 0.9].map((fraction) => [
+              String(fraction),
+              sparseGroomOffsetRetentionAt(fraction),
+            ])
+          ),
+          debug_hero_colors: sparseGroomCageColors,
+          display_follicles:
+            independentDisplayFolliclesEnabled && groomBindings.independentDisplayFollicles
+              ? independentDisplayFollicleTelemetry()
+              : null,
+        }
+      : null,
+    physics_authority: "none_renderer_only",
+  };
+}
+
 function readCachedGroomCurvePoint(target, targetOffset, binding, particle, activeSegments) {
   const clampedParticle = Math.max(0, Math.min(activeSegments, particle));
-  const source = (binding * (solver.segments + 1) + clampedParticle) * 3;
-  target[targetOffset] = groomEnvelopeCurvePointCache[source];
-  target[targetOffset + 1] = groomEnvelopeCurvePointCache[source + 1];
-  target[targetOffset + 2] = groomEnvelopeCurvePointCache[source + 2];
+  const lowerParticle = Math.floor(clampedParticle);
+  const upperParticle = Math.min(activeSegments, lowerParticle + 1);
+  const blend = clampedParticle - lowerParticle;
+  const stations = solver.segments + 1;
+  const lower = (binding * stations + lowerParticle) * 3;
+  const upper = (binding * stations + upperParticle) * 3;
+  for (let axis = 0; axis < 3; axis += 1) {
+    target[targetOffset + axis] =
+      groomEnvelopeCurvePointCache[lower + axis] * (1 - blend) +
+      groomEnvelopeCurvePointCache[upper + axis] * blend;
+  }
 }
 
 function updateSectionInterpolatedFatlineGeometry() {
@@ -2297,7 +3488,9 @@ function updateSectionInterpolatedFatlineGeometry() {
   const secondaryNeighbors = groomBindings.secondaryNeighbors;
   const weights = groomBindings.neighborWeights;
   const secondaryWeights = groomBindings.secondaryNeighborWeights;
-  const rootCoverageCopies = rootCoverageFiberCopies(renderFibersPerGuide);
+  const rootCoverageCopies = independentDisplayFolliclesEnabled
+    ? 0
+    : rootCoverageFiberCopies(renderFibersPerGuide);
   rebuildGroomCurvePointCache();
   let instance = 0;
   for (let binding = 0; binding < groomBindings.bindingCount; binding += 1) {
@@ -2306,12 +3499,16 @@ function updateSectionInterpolatedFatlineGeometry() {
     const secondaryNeighbor = secondaryNeighbors[binding];
     const neighborWeight = weights[binding];
     const secondaryNeighborWeight = secondaryWeights[binding];
-    const activeSegments = groomBindingActiveSegments(
+    const fullActiveSegments = groomBindingActiveSegments(
       solver.activeSegments,
       owner,
       neighbor,
       neighborWeight
     );
+    const activeSegments = displayFollicleRootDiagnostic
+      ? Math.min(2, fullActiveSegments)
+      : fullActiveSegments;
+    const retainedLength = layeredHaircutEnabled ? groomBindings.displayLengthRatios[binding] : 1;
     const copy = binding % renderFibersPerGuide;
     readCachedGroomCurvePoint(lockCurvePoints, 0, binding, 0, activeSegments);
     const ownerNormal = owner * 3;
@@ -2371,7 +3568,7 @@ function updateSectionInterpolatedFatlineGeometry() {
       lockRootCoverageProbe,
       0,
       binding,
-      Math.min(LOCK_AWARE_ROOT_COVER_PROBE_PARTICLE, activeSegments),
+      Math.min(LOCK_AWARE_ROOT_COVER_PROBE_PARTICLE, activeSegments) * retainedLength,
       activeSegments
     );
     blendRootCoverageFlow(
@@ -2422,7 +3619,8 @@ function updateSectionInterpolatedFatlineGeometry() {
           copy,
           0.45 + coverSegment * 0.38,
           0.83 + coverSegment * 0.38,
-          activeSegments
+          activeSegments,
+          binding
         );
         const familyScale = hydrationFamilyScales[copy];
         const hydration = fullGroomHydrationEnabled
@@ -2450,7 +3648,7 @@ function updateSectionInterpolatedFatlineGeometry() {
           lockCurvePoints,
           controlPoint * 3,
           binding,
-          segment + controlPoint - 1,
+          (segment + controlPoint - 1) * retainedLength,
           activeSegments
         );
       }
@@ -2487,7 +3685,8 @@ function updateSectionInterpolatedFatlineGeometry() {
           copy,
           segment + startFraction,
           segment + endFraction,
-          activeSegments
+          activeSegments,
+          binding
         );
         instance += 1;
       }
@@ -2860,6 +4059,7 @@ async function initializeNativeClipPlayback() {
     }
     nativeClipPlayback.clip = clip;
     nativeClipPlayback.elapsed = nativeClipPlayback.loopStartSeconds;
+    authoredReferenceReady = false;
     advanceNativeClip(0);
     updateHairGeometry();
     status.textContent =
@@ -3055,14 +4255,51 @@ function applyQueryConfiguration() {
     );
   }
   hairRenderMode = params.get("hairRender") === "fatline" ? "fatline" : "lines";
+  patchLockEnabled = params.get("lockTopology") === "patch";
+  hairlineFlowEnabled = params.get("lockTopology") === "hairline";
+  sparseGroomCageEnabled = params.get("lockTopology") === "cage";
+  independentDisplayFolliclesEnabled =
+    sparseGroomCageEnabled && params.get("displayFollicles") === "independent";
+  displayFollicleGuideColors =
+    independentDisplayFolliclesEnabled && params.get("follicleGuideColors") === "1";
+  displayFollicleRootDiagnostic =
+    independentDisplayFolliclesEnabled && params.get("follicleRootsOnly") === "1";
+  correlatedRestHierarchyEnabled =
+    independentDisplayFolliclesEnabled && params.get("restHierarchy") === "correlated";
+  occupancyRemapEnabled =
+    independentDisplayFolliclesEnabled && params.get("occupancyRemap") === "three-core";
+  coreWidthHierarchyEnabled =
+    independentDisplayFolliclesEnabled && params.get("widthHierarchy") === "core";
+  coreWidthDiagnostic = coreWidthHierarchyEnabled && params.get("widthDiagnostic") === "1";
+  layeredHaircutEnabled =
+    independentDisplayFolliclesEnabled && params.get("lengthField") === "layered";
+  layeredHaircutDiagnostic = layeredHaircutEnabled && params.get("lengthDiagnostic") === "1";
+  sublockPhaseColors =
+    (correlatedRestHierarchyEnabled || occupancyRemapEnabled) &&
+    params.get("sublockColors") === "1";
+  authoredRestGroomEnabled =
+    params.get("lockTopology") === "authored" || hairlineFlowEnabled || sparseGroomCageEnabled;
+  authoredDebugColors = authoredRestGroomEnabled && params.get("sectionColors") === "1";
+  authoredLaydownEnabled = authoredRestGroomEnabled && params.get("rootOperator") === "laydown";
+  authoredRootZoneColors = authoredLaydownEnabled && params.get("rootZones") === "1";
+  sparseGroomCageColors = sparseGroomCageEnabled && params.get("cageColors") === "1";
+  patchDebugColors = patchLockEnabled && params.get("patchColors") === "1";
   groomMode =
     hairRenderMode !== "fatline"
       ? "radial_xz"
-      : params.get("groomVolume") === "1"
-        ? "section_volume"
-        : params.get("groomSections") === "1"
-          ? "section_interp"
-          : "radial_xz";
+      : authoredRestGroomEnabled
+        ? sparseGroomCageEnabled
+          ? "section_sparse_cage"
+          : hairlineFlowEnabled
+            ? "section_hairline_flow"
+            : "section_authored_rest"
+        : patchLockEnabled
+          ? "section_patch_lock"
+          : params.get("groomVolume") === "1"
+            ? "section_volume"
+            : params.get("groomSections") === "1"
+              ? "section_interp"
+              : "radial_xz";
   document.querySelector("#groom-display").value = hairRenderMode === "lines" ? "lines" : groomMode;
   hairShadingMode = params.get("hairShade") === "flat" ? "flat" : "fiber_lobes";
   document.querySelector("#hair-surface").value = hairShadingMode;
@@ -3268,6 +4505,26 @@ document.querySelector("#groom-display").addEventListener("change", (event) => {
   const requestedMode = event.currentTarget.value;
   hairRenderMode = requestedMode === "lines" ? "lines" : "fatline";
   groomMode = requestedMode === "lines" ? "radial_xz" : requestedMode;
+  patchLockEnabled = requestedMode === "section_patch_lock";
+  authoredRestGroomEnabled = requestedMode === "section_authored_rest";
+  hairlineFlowEnabled = requestedMode === "section_hairline_flow";
+  sparseGroomCageEnabled = requestedMode === "section_sparse_cage";
+  independentDisplayFolliclesEnabled = false;
+  displayFollicleGuideColors = false;
+  displayFollicleRootDiagnostic = false;
+  correlatedRestHierarchyEnabled = false;
+  occupancyRemapEnabled = false;
+  coreWidthHierarchyEnabled = false;
+  coreWidthDiagnostic = false;
+  layeredHaircutEnabled = false;
+  layeredHaircutDiagnostic = false;
+  sublockPhaseColors = false;
+  authoredRestGroomEnabled ||= hairlineFlowEnabled || sparseGroomCageEnabled;
+  authoredDebugColors = false;
+  authoredLaydownEnabled = false;
+  authoredRootZoneColors = false;
+  sparseGroomCageColors = false;
+  patchDebugColors = false;
   rebuildSolver();
 });
 document.querySelector("#hair-surface").addEventListener("change", (event) => {
@@ -3487,6 +4744,8 @@ function createRenderReceipt() {
     hair_render_mode: hairRenderMode,
     groom_mode: groomMode,
     groom_interpolation: groomInterpolationReceipt(groomBindings, groomBindingBuildCount),
+    patch_lock_hydration: patchLockDistanceTelemetry(),
+    authored_rest_hydration: authoredGroomTelemetry(),
     groom_envelope: {
       enabled: Boolean(groomBindings) && groomEnvelopeId !== "off",
       ...groomEnvelopeSummary,

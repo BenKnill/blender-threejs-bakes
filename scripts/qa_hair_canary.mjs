@@ -74,7 +74,9 @@ socket.addEventListener("message", (event) => {
     return;
   }
   if (message.method === "Runtime.exceptionThrown") {
-    exceptions.push(message.params.exceptionDetails.text);
+    exceptions.push(
+      message.params.exceptionDetails.exception?.description ?? message.params.exceptionDetails.text
+    );
   }
   if (message.method === "Log.entryAdded" && message.params.entry.level === "error") {
     consoleErrors.push(message.params.entry.text);
@@ -171,7 +173,11 @@ try {
       "Boolean(window.hairMaterialReplay?.renderReceipt().native_box3d_clip.metadata)"
     ))
   ) {
-    if (Date.now() >= readyDeadline) throw new Error("native Box3D clip readiness timeout");
+    if (Date.now() >= readyDeadline) {
+      throw new Error(
+        `native Box3D clip readiness timeout\n${JSON.stringify({ exceptions, consoleErrors }, null, 2)}`
+      );
+    }
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   const entryState = await evaluate(`(() => {

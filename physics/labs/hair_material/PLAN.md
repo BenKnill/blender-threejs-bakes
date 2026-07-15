@@ -330,6 +330,25 @@ strand rendering; do not add another many-hair operator first.
       169-update Canary pass reports 31.36 ms mean / 65 ms p99 / 81 ms maximum
       hydrated geometry cost with zero exceptions or console errors. The result
       remains stylized and crown-spiky, with head collision still absent.
+- [x] Replace guide-copy scalp placement with an explicit sparse groom cage and
+      independent display follicles. Twenty authored hero locks define the rest
+      silhouette, while 5,376 deterministic follicles occupy unique analytic
+      scalp roots and inherit live deformation from three nearby mechanical
+      guides. The accepted Round 6 baseline has layout digest `157af12f`,
+      topology digest `a3c4cee6`, zero duplicate roots, 20.47/25.05/26.96 mm
+      nearest-neighbor p10/p50/p90, and 0.068/0.748 minimum/mean first-chord
+      outward alignment. Physics remains `b773984593f87d43`; the display layer
+      has no solver authority.
+- [x] Run a ten-round adversarial hydration game against matched Canary plates.
+      Round 6's independent-root placement remains the selected baseline at
+      21.75/35, up from 8.5/35 in Round 1. Correlated rest residuals (Round 7),
+      separated occupancy cores (Round 8), a 1.65x mean core-weighted width
+      field (Round 9), and an authored layered length field (Round 10) remain
+      opt-in studies. They respectively exposed diagnostic-only hierarchy,
+      rope-like gaps, slab-like width merging, and the limits of changing a
+      synchronized hem without changing the larger lock silhouette. Round 10
+      scored 22.5/35, keeps every strand above 70% retained length, and stays
+      within +11.9% geometry p99, but is not promoted over Round 6.
 - [x] Define three receipt-distinct reel shots before packaging video variants.
 - [ ] Package short 16:9 and vertical reels from those named moving shots.
 

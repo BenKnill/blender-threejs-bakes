@@ -4,6 +4,23 @@ import assert from "node:assert/strict";
 
 import { sampleQuantizedGuideClip } from "../physics/labs/hair_material/demo/box3d_clip.js";
 import {
+  AUTHORED_GROOM_FIELD_ID,
+  AUTHORED_GROOM_LATERAL_RADIUS_METERS,
+  AUTHORED_GROOM_OUTWARD_RADIUS_METERS,
+  AUTHORED_ROOT_EMERGENCE_RANGE_METERS,
+  AUTHORED_ROOT_HANDOFF_FRACTION,
+  AUTHORED_ROOT_HANDOFF_STATION_FRACTION,
+  AUTHORED_ROOT_LAYDOWN_FIELD_ID,
+  AUTHORED_ROOT_LAYDOWN_RANGE_METERS,
+  authoredGroomCrossSectionScaleAt,
+  authoredGroomDisplacementTransferAt,
+  authoredGroomLaydownDisplacementTransferAt,
+  authoredGroomLaydownRestPoint,
+  authoredGroomLaydownSampleFractionAt,
+  authoredGroomRestPoint,
+  authoredRootLaydownParameters,
+} from "../physics/labs/hair_material/demo/authored_groom.js";
+import {
   closestSegmentPoints,
   discoverSegmentPairs,
   hairSolverPersistentPairs,
@@ -16,8 +33,40 @@ import {
   segmentSegmentDistanceSquared,
 } from "../physics/labs/hair_material/demo/contact_discovery.js";
 import { barycentricEndpointWeights } from "../physics/labs/hair_material/demo/friction.js";
+import {
+  buildIndependentDisplayFollicles,
+  DISPLAY_FOLLICLE_LAYOUT_ID,
+} from "../physics/labs/hair_material/demo/display_follicles.js";
+import {
+  HAIRLINE_FLOW_FIELD_ID,
+  HAIRLINE_FLOW_SURFACE_FRACTION,
+  authoredHairlineFlowRestPoint,
+  hairlineBoundaryFlowAt,
+  integrateHairlineBoundaryFlow,
+} from "../physics/labs/hair_material/demo/hairline_flow.js";
+import {
+  LAYERED_HAIRCUT_FIELD_ID,
+  LAYERED_HAIRCUT_ZONE_NAMES,
+  layeredHaircutSample,
+  layeredHaircutTipWidthScaleAt,
+} from "../physics/labs/hair_material/demo/layered_haircut.js";
 import { runHairRodReference } from "../physics/labs/hair_material/demo/rod_reference.js";
 import { spatialFrictionPerformanceReceipt } from "../physics/labs/hair_material/demo/spatial_friction.js";
+import {
+  SPARSE_GROOM_CAGE_ID,
+  SPARSE_GROOM_CORRELATED_HIERARCHY_ID,
+  SPARSE_GROOM_CORE_WIDTH_FIELD_ID,
+  SPARSE_GROOM_OCCUPANCY_REMAP_ID,
+  SPARSE_GROOM_HEROES,
+  sparseGroomCorrelatedResidual,
+  sparseGroomCoreBodyWidthMultiplier,
+  sparseGroomHeroForRoot,
+  sparseGroomOffsetRetentionAt,
+  sparseGroomOccupancyRemap,
+  sparseGroomRestPoint,
+  sparseGroomSublockPhase,
+  sparseGroomWidthMultiplierAt,
+} from "../physics/labs/hair_material/demo/sparse_groom_cage.js";
 import {
   buildUndercoatCoverageProfile,
   buildRootCoverageCurve,
@@ -81,6 +130,12 @@ import {
   groomSecondaryWeightAt,
   groomSectionId,
   interpolateGroomScalar,
+  PATCH_LOCK_CONVERGENCE_END,
+  PATCH_LOCK_CONVERGENCE_START,
+  PATCH_LOCK_COUNT,
+  PATCH_LOCK_FIELD_ID,
+  PATCH_LOCK_LATERAL_RADIUS_METERS,
+  PATCH_LOCK_OUTWARD_RADIUS_METERS,
   transportGroomPoint,
 } from "../physics/labs/hair_material/demo/groom_interpolation.js";
 import {
@@ -162,6 +217,105 @@ import {
 
 function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} != ${expected}`);
+}
+
+{
+  const mechanicalRoots = new Float64Array([
+    -0.6, 2.1, 0.2, 0.6, 2.1, 0.2, -0.4, 1.9, -0.4, 0.4, 1.9, -0.4,
+  ]);
+  const display = buildIndependentDisplayFollicles(mechanicalRoots, 64);
+  assert.equal(display.roots.length, 64 * 3);
+  assert.equal(
+    new Set(
+      Array.from({ length: 64 }, (_, index) =>
+        display.roots.slice(index * 3, index * 3 + 3).join(",")
+      )
+    ).size,
+    64
+  );
+  for (let index = 0; index < 64; index += 1) {
+    assert.ok(display.owners[index] < 4);
+    assert.ok(display.neighbors[index] < 4);
+    assert.ok(display.secondaryNeighbors[index] < 4);
+    assert.ok(display.neighborWeights[index] + display.secondaryNeighborWeights[index] < 1);
+  }
+  assert.equal(DISPLAY_FOLLICLE_LAYOUT_ID, "independent_golden_scalp_follicles_v1");
+  assert.equal(display.telemetry.analytic_scalp_cap_boundary_violations, 0);
+}
+
+{
+  assert.equal(SPARSE_GROOM_HEROES.length, 20);
+  assert.equal(SPARSE_GROOM_CAGE_ID, "explicit_twenty_lock_side_part_cage_v1");
+  const hero = SPARSE_GROOM_HEROES[3];
+  assert.equal(sparseGroomHeroForRoot(hero.root), 3);
+  const start = sparseGroomRestPoint(hero.root, 0, new Float64Array(3));
+  const end = sparseGroomRestPoint(hero.root, 1, new Float64Array(3));
+  assert.deepEqual(Array.from(start), hero.root);
+  assert.ok(end[1] < hero.root[1] - 1);
+  nearlyEqual(sparseGroomOffsetRetentionAt(0), 1);
+  nearlyEqual(sparseGroomOffsetRetentionAt(0.25), 0.52);
+  nearlyEqual(sparseGroomOffsetRetentionAt(0.6), 0.44);
+  nearlyEqual(sparseGroomOffsetRetentionAt(0.9), 0.60875);
+  assert.ok(sparseGroomSublockPhase(hero.root) < 3);
+  const rootResidual = sparseGroomCorrelatedResidual(hero.root, hero.id, 0.12, new Float64Array(3));
+  nearlyEqual(Math.hypot(...rootResidual), 0);
+  const shaftResidual = sparseGroomCorrelatedResidual(hero.root, hero.id, 0.6, new Float64Array(3));
+  assert.ok(Math.hypot(...shaftResidual) > 0.002);
+  assert.ok(Math.hypot(...shaftResidual) < 0.04);
+  assert.equal(SPARSE_GROOM_CORRELATED_HIERARCHY_ID, "three_phase_correlated_rest_residual_v1");
+  const occupancyRoot = sparseGroomOccupancyRemap(
+    hero.root,
+    hero.id,
+    0.15,
+    start,
+    new Float64Array(3)
+  );
+  nearlyEqual(Math.hypot(...occupancyRoot), 0);
+  const occupancyShaft = sparseGroomOccupancyRemap(
+    hero.root,
+    hero.id,
+    0.6,
+    shaftResidual,
+    new Float64Array(3)
+  );
+  assert.ok(Math.hypot(...occupancyShaft) > 0);
+  assert.equal(SPARSE_GROOM_OCCUPANCY_REMAP_ID, "three_core_cross_section_occupancy_v1");
+  const phase = sparseGroomSublockPhase(hero.root, hero.id);
+  const bodyWidth = sparseGroomCoreBodyWidthMultiplier(hero.root, hero.id, phase);
+  assert.ok(bodyWidth >= 0.35 && bodyWidth <= 3.5);
+  nearlyEqual(sparseGroomWidthMultiplierAt(bodyWidth, 0), 0.8);
+  nearlyEqual(sparseGroomWidthMultiplierAt(bodyWidth, 0.18), bodyWidth);
+  nearlyEqual(sparseGroomWidthMultiplierAt(bodyWidth, 0.8), bodyWidth);
+  assert.equal(SPARSE_GROOM_CORE_WIDTH_FIELD_ID, "three_core_continuous_width_field_v1");
+  const haircut = layeredHaircutSample(hero.root, hero.id, phase);
+  assert.ok(haircut.retainedRatio >= 0.7 && haircut.retainedRatio <= 1);
+  assert.ok(haircut.zone >= 0 && haircut.zone < LAYERED_HAIRCUT_ZONE_NAMES.length);
+  assert.deepEqual(layeredHaircutSample(hero.root, hero.id, phase), haircut);
+  nearlyEqual(layeredHaircutTipWidthScaleAt(0.88), 1);
+  nearlyEqual(layeredHaircutTipWidthScaleAt(1), 0.18);
+  assert.equal(LAYERED_HAIRCUT_FIELD_ID, "authored_long_layers_v1");
+}
+
+{
+  const root = [0.12, 2.12, 0.58];
+  const normal = [0.12, 0.68, 0.72];
+  const flow = hairlineBoundaryFlowAt(root, new Float64Array(4));
+  nearlyEqual(Math.hypot(flow[0], flow[1], flow[2]), 1);
+  assert.ok(flow[0] > 0);
+  assert.ok(flow[2] < 0);
+  const integrated = integrateHairlineBoundaryFlow(root, 0.18, new Float64Array(3));
+  assert.ok(integrated[0] > root[0]);
+  const start = authoredHairlineFlowRestPoint(root, normal, 0, 2.2, new Float64Array(3));
+  const handoff = authoredHairlineFlowRestPoint(
+    root,
+    normal,
+    HAIRLINE_FLOW_SURFACE_FRACTION,
+    2.2,
+    new Float64Array(3)
+  );
+  assert.deepEqual(Array.from(start), root);
+  assert.ok(Math.hypot(...handoff.map((value, axis) => value - root[axis])) > 0.1);
+  assert.equal(HAIRLINE_FLOW_FIELD_ID, "continuous_hairline_temple_crown_flow_v1");
 }
 
 {
@@ -294,7 +448,7 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     "sections_5_and_6_have_zero_shell_opacity_and_width_floor"
   );
   assert.equal(massSummary.physics_authority, "none_renderer_hydration_only");
-  assert.equal(CURATED_HAIR_SCENE_FIELD_ID, "three_authored_hair_scenes_v1");
+  assert.equal(CURATED_HAIR_SCENE_FIELD_ID, "three_authored_hair_scenes_v2");
   assert.deepEqual(CURATED_HAIR_SCENE_ORDER, ["rig-becomes-hair", "copper-gale", "after-the-rain"]);
   assert.equal(CURATED_HAIR_SCENES.length, 3);
   assert.equal(nextCuratedHairSceneId("rig-becomes-hair"), "copper-gale");
@@ -304,6 +458,8 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.equal(copperScene.get("hydrationColor"), "copper");
   assert.equal(copperScene.get("groomEnvelope"), "storybook-volume");
   assert.equal(copperScene.get("nativeStart"), "22.5");
+  assert.equal(copperScene.get("lockTopology"), "cage");
+  assert.equal(copperScene.get("displayFollicles"), "independent");
   const wetScene = curatedHairSceneParameters("after-the-rain");
   assert.equal(wetScene.get("massFill"), "wet-compact");
   assert.equal(wetScene.get("nativeStart"), "28.5");
@@ -658,6 +814,85 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
 }
 
 {
+  const authoredRoot = [0.1, 2.4, 0.2];
+  const authoredNormal = [0.1, 0.98, 0.1];
+  const authoredDirection = [0.6, 0.3, -0.2];
+  const authoredStart = authoredGroomRestPoint(
+    authoredRoot,
+    authoredNormal,
+    authoredDirection,
+    0,
+    2.2,
+    new Float64Array(3)
+  );
+  const authoredEnd = authoredGroomRestPoint(
+    authoredRoot,
+    authoredNormal,
+    authoredDirection,
+    1,
+    2.2,
+    new Float64Array(3)
+  );
+  assert.deepEqual(Array.from(authoredStart), authoredRoot);
+  assert.ok(authoredEnd[1] < authoredRoot[1] - 1);
+  nearlyEqual(authoredGroomDisplacementTransferAt(0.08), 0);
+  nearlyEqual(authoredGroomDisplacementTransferAt(0.55), 1);
+  nearlyEqual(authoredGroomLaydownDisplacementTransferAt(AUTHORED_ROOT_HANDOFF_FRACTION), 0);
+  nearlyEqual(authoredGroomLaydownDisplacementTransferAt(0.55), 1);
+  nearlyEqual(authoredGroomLaydownSampleFractionAt(0), 0);
+  nearlyEqual(
+    authoredGroomLaydownSampleFractionAt(AUTHORED_ROOT_HANDOFF_STATION_FRACTION),
+    AUTHORED_ROOT_HANDOFF_FRACTION
+  );
+  nearlyEqual(authoredGroomLaydownSampleFractionAt(1), 1);
+  nearlyEqual(authoredGroomCrossSectionScaleAt(0.03), 0);
+  nearlyEqual(authoredGroomCrossSectionScaleAt(0.28), 1);
+  assert.equal(AUTHORED_GROOM_FIELD_ID, "side_part_rest_displacement_transfer_v1");
+  nearlyEqual(AUTHORED_GROOM_OUTWARD_RADIUS_METERS, 0.028);
+  nearlyEqual(AUTHORED_GROOM_LATERAL_RADIUS_METERS, 0.016);
+
+  const laydownParameters = authoredRootLaydownParameters(authoredRoot);
+  const repeatedParameters = authoredRootLaydownParameters(authoredRoot);
+  assert.deepEqual(laydownParameters, repeatedParameters);
+  assert.ok(
+    laydownParameters.emergenceLength >= AUTHORED_ROOT_EMERGENCE_RANGE_METERS[0] &&
+      laydownParameters.emergenceLength <= AUTHORED_ROOT_EMERGENCE_RANGE_METERS[1]
+  );
+  assert.ok(
+    laydownParameters.laydownLength >= AUTHORED_ROOT_LAYDOWN_RANGE_METERS[0] &&
+      laydownParameters.laydownLength <= AUTHORED_ROOT_LAYDOWN_RANGE_METERS[1]
+  );
+  const laydownStart = authoredGroomLaydownRestPoint(
+    authoredRoot,
+    authoredNormal,
+    authoredDirection,
+    0,
+    2.2,
+    new Float64Array(3)
+  );
+  const laydownHandoff = authoredGroomLaydownRestPoint(
+    authoredRoot,
+    authoredNormal,
+    authoredDirection,
+    AUTHORED_ROOT_HANDOFF_FRACTION,
+    2.2,
+    new Float64Array(3)
+  );
+  const laydownEnd = authoredGroomLaydownRestPoint(
+    authoredRoot,
+    authoredNormal,
+    authoredDirection,
+    1,
+    2.2,
+    new Float64Array(3)
+  );
+  assert.deepEqual(Array.from(laydownStart), authoredRoot);
+  assert.ok(Math.hypot(...laydownHandoff.map((value, axis) => value - authoredRoot[axis])) > 0.04);
+  assert.ok(laydownEnd[1] < authoredRoot[1] - 1);
+  assert.equal(AUTHORED_ROOT_LAYDOWN_FIELD_ID, "follicle_surface_laydown_handoff_v1");
+}
+
+{
   const roots = new Float64Array([
     1, 1, 0, 0.8, 1.1, 0.2, 0.5, 1.2, 0.5, -0.5, 1.2, 0.5, -0.8, 1.1, 0.2, -1, 1, 0, -0.5, 0.9,
     -0.5, 0.5, 0.9, -0.5,
@@ -738,6 +973,7 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     curve_transport: "owner_displacement_plus_bounded_donor_shape",
     donor_shape_transfer: 0.18,
     donor_shape_limit_m: 0.055,
+    patch_lock: null,
   });
 
   const volumeBindings = buildGroomInterpolationBindings(roots, 8, 5, { parentCount: 3 });
@@ -790,6 +1026,7 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     curve_transport: "owner_displacement_plus_bounded_donor_shape",
     donor_shape_transfer: 0.18,
     donor_shape_limit_m: 0.055,
+    patch_lock: null,
   });
 
   const productionGroomSolver = new HairSolver({ guideCount: 256, segments: 12 });
@@ -804,8 +1041,26 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     15,
     { parentCount: 3 }
   );
+  const productionPatchLocks = buildGroomInterpolationBindings(
+    productionGroomSolver.roots,
+    productionGroomSolver.guideCount,
+    15,
+    { parentCount: 3, patchLockEnabled: true }
+  );
   assert.equal(productionTwoParent.bindingDigest, "db0f26db");
   assert.equal(productionThreeParent.bindingDigest, "bbb64f44");
+  assert.equal(productionPatchLocks.patchCount, PATCH_LOCK_COUNT);
+  assert.equal(productionPatchLocks.guidePatchIds.length, 256);
+  assert.notEqual(productionPatchLocks.bindingDigest, productionThreeParent.bindingDigest);
+  assert.equal(new Set(productionPatchLocks.guidePatchIds).size, PATCH_LOCK_COUNT);
+  nearlyEqual(PATCH_LOCK_CONVERGENCE_START, 0.15);
+  nearlyEqual(PATCH_LOCK_CONVERGENCE_END, 0.4);
+  nearlyEqual(PATCH_LOCK_OUTWARD_RADIUS_METERS, 0.032);
+  nearlyEqual(PATCH_LOCK_LATERAL_RADIUS_METERS, 0.018);
+  assert.equal(
+    groomInterpolationReceipt(productionPatchLocks, 1).patch_lock.field_identity,
+    PATCH_LOCK_FIELD_ID
+  );
 }
 
 {
