@@ -422,6 +422,71 @@ strand rendering; do not add another many-hair operator first.
       strand depth without screen-door artifacts. The final adversarial score
       was 27.25/35. The three curated scenes now select the E12 laminae plus
       `laminaOptics=fixed-a2c`; explicit legacy E12 remains available for A/B.
+- [x] Reject E18's smooth eight-section drag-magnitude field. The native Box3D
+      candidate was deterministic and reduced maximum settled joint gap from
+      14.17 to 12.63 mm, but it left the strong-wind face-crossing plank nearly
+      unchanged and was visually indistinguishable under moderate wind. Mean
+      horizontal spread fell 0.9% under strong wind and 6.1% under moderate
+      wind, opposite the intended separation. Its adversarial score was
+      26.5/35, below E17's 27.25/35. Evidence remains under the gitignored
+      `attachments/20260719-lock-surface-round18/`. Do not pursue scalar drag
+      diversity; test coherent angular response instead.
+- [x] Reject E19's eight-section wind-response lag as a promotion while keeping
+      its localization result. Smooth 0.06-0.24 s native lags preserved mean
+      strong/moderate displacement within 0.13%, changed wind alignment from
+      0.954/0.959 to 0.920/0.935, and widened sampled section-mean directions
+      from about 14.1 to 17.2 degrees. The moderate silhouette visibly shifted,
+      proving the operator reached Box3D motion, but E12 hydration recombined
+      it into the same strong-wind plank and aggregate spread stayed within
+      0.5%. Its adversarial score was 26.75/35. Evidence remains under the
+      gitignored `attachments/20260719-lock-surface-round19/`. Isolate animated
+      display-parent transfer before changing native physics again.
+- [x] Reject E20's primary-owner-only animated displacement transfer. It kept
+      the native physics digest `eb53b6e105f6e58d` and produced a byte-identical
+      calm natural plate while changing only the receipt-identified hydration
+      deformation operator. Strong and moderate silhouettes still read as the
+      same broad plank, scoring 26.5/35. This cleanly falsifies multi-parent
+      dynamic blending as the main cause. Evidence remains under the gitignored
+      `attachments/20260719-lock-surface-round20/`. Restore weighted transfer
+      and test section-scale native curvature response.
+- [x] Reject E21's smooth section-scale midshaft/tip compliance field. The
+      first two carbon-fiber-stiff root joints, rest groom, wind, hydration,
+      shading, and camera stayed unchanged; the native candidate remained
+      deterministic with a 14.28 mm settled joint gap and unchanged root
+      alignment. Yet strong spread fell 1.7%, moderate spread rose only 0.6%,
+      and both plates remained visually indistinguishable, scoring 26.5/35.
+      Evidence remains under the gitignored
+      `attachments/20260719-lock-surface-round21/`. Three independent native
+      response changes now localize the plank to missing persistent negative
+      space in hydration.
+- [x] Reject E22's world-space twelve-lock boundary envelope. The nominal 4 mm
+      clearance implementation exposed a bad grouping fit by moving rest points
+      up to 766 mm and was discarded. Bounding the same operator to 12 mm kept
+      physics unchanged and preserved calm volume, but disappeared beneath 21
+      uniformly weighted fibers per guide in calm, strong, and moderate plates,
+      scoring 26.25/35. Evidence remains under the gitignored
+      `attachments/20260719-lock-surface-round22/`. The current dense primitive
+      needs an optical lock envelope; do not force negative space with larger
+      geometric displacement.
+- [x] Reject E23's twelve-lock alpha/coverage envelope. It preserved positions,
+      widths, fiber count, physics, fixed A2C, and shading while tapering each
+      lock from full optical weight through its central 58% to 0.15 at ranked
+      boundaries. The result removed crown and frontal mass before it revealed
+      channels; strong wind retained the same thinner plank. It scored
+      23.25/35. Evidence remains under the gitignored
+      `attachments/20260719-lock-surface-round23/`. Alpha attenuation cannot
+      manufacture lock hierarchy from this carpet. Next test should conserve
+      per-lock projected width while redistributing width toward lock centers;
+      if that also fails, replace the primitive with explicit hero-lock geometry
+      plus a separate undercoat.
+- [ ] Replace the broad authored scalp sweep with a biologically structured
+      follicle vector field before another optical-width round: crown whorl,
+      part-line divergence, temple/back falloff, and smooth transitions in the
+      scalp tangent plane, while retaining a measured strictly positive outward
+      component. Keep the first two root segments carbon-fiber-stiff and expose
+      whorl center/handedness as receipt identity. The visible gate is varied
+      from-scalp emergence and curved flow lanes in calm and wind—not another
+      uniform curtain.
 - [x] Define three receipt-distinct reel shots before packaging video variants.
 - [ ] Package short 16:9 and vertical reels from those named moving shots.
 
