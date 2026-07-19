@@ -625,6 +625,18 @@ opt-in because ordinary calm and grayscale beauty still conceal too much of the
 correct geometry; the next step is a new optical/surface representation, not
 another global width or separation guess.
 
+E13 tested a depth-writing, procedurally fiber-cut coverage veil over those
+laminae and was reverted. The first one-span surface was cheap and mechanically
+neutral, but its interior-fiber RMS p90 distance was 130 mm at 40% length and
+200 mm at 70%; the beauty frames read as striped cards. A single prescribed
+correction replaced each span with seven rest-baked rails and 8,640 total
+triangles. It still reported 230 cross-rail order inversions, 118/179 mm RMS
+p90 error at 40%/70%, 7.2 ms surface-update p99, and 31 ms total geometry p99.
+The moire and forehead sheets remained. This falsifies a 2D ruled-surface
+hydration for the current non-manifold root population; the implementation was
+pruned rather than retained as another dormant query mode. Its final
+adversarial score was 12.75/35.
+
 The paired evidence came from a ten-round critic loop: one isolated hypothesis,
 matched natural/diagnostic/wind frames, a numerical receipt, and an explicit
 keep/revert decision per round. The game moved the selected result from 8.5/35

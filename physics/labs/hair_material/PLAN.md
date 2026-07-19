@@ -362,6 +362,18 @@ strand rendering; do not add another many-hair operator first.
       coherent while calm beauty still reads too much like a dark curtain.
       Keep `lockSurface=laminae` opt-in and pursue a new optical representation
       rather than another geometry parameter correction.
+- [x] Revert the E13 fiber-cut coverage-veil representation after two bounded
+      localhost trials. A single ruled span preserved physics digest
+      `b773984593f87d43`, E12 fatline position digest `0740e679`, one draw call,
+      and a 1.0 ms surface-update p99, but missed its surface-fit gate by 3-6x
+      and read as striped cards. The prescribed seven-rail correction raised
+      the bound to 8,640 triangles but still produced 230 rail-order inversions,
+      118/179 mm RMS p90 fit error at 40%/70%, 7.2 ms surface p99, 31 ms total
+      geometry p99, and visible moire across the forehead and wind silhouette.
+      The final adversarial score was 12.75/35. The failed source was pruned;
+      receipts remain under the gitignored
+      `attachments/20260719-lock-surface-round13/`. Do not fit another 2D sheet
+      through this non-manifold root population.
 - [x] Define three receipt-distinct reel shots before packaging video variants.
 - [ ] Package short 16:9 and vertical reels from those named moving shots.
 
