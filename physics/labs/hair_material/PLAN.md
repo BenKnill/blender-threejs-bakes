@@ -385,6 +385,18 @@ strand rendering; do not add another many-hair operator first.
       45/90 mm gate. No aesthetic score was assigned because no renderer was
       built. Prune packet membership and aggregate the actual fine fibers
       optically instead.
+- [x] Revert the E15 direct-fiber additive optical-depth pass after its matched
+      localhost plate. The half-resolution RGBA16F experiment consumed all
+      64,512 actual E12 segments with no packet or temporal surrogate, retained
+      physics digest `b773984593f87d43` and position digest `0740e679`, and
+      added three draws. CPU endpoint preparation reached 0.5 ms p99; matched
+      geometry mean rose only 3.3% from 13.980 to 14.437 ms. That performance
+      success did not survive visual review: the blonde plate became an opaque
+      orange-brown mass, calm hair read as airbrushed paint, and wind smeared a
+      broad low-frequency sheet across the face. The final adversarial score
+      was 17.5/35. The failed source was pruned; receipts remain under the
+      gitignored `attachments/20260719-lock-surface-round15/`. Do not aggregate
+      actual strands into a low-frequency additive blur again.
 - [x] Define three receipt-distinct reel shots before packaging video variants.
 - [ ] Package short 16:9 and vertical reels from those named moving shots.
 

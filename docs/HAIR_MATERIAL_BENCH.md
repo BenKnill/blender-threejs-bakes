@@ -647,6 +647,19 @@ renderer was therefore never built and no aesthetic score was assigned. The
 receipt rules out another coarse surrogate: the next optical aggregate must
 consume the actual E12 fiber segments directly.
 
+E15 consumed those 64,512 real E12 segments directly in a half-resolution
+RGBA16F additive optical-depth target. It preserved physics and display
+positions, required no packet membership or temporal accumulation, prepared
+endpoints in 0.5 ms p99, and raised matched mean geometry time by only 3.3%.
+The representation nevertheless failed its purpose. Normalized Gaussian
+contributions collapsed blonde transmission into a uniform orange-brown mass,
+made calm locks look airbrushed, and turned strong-wind overlap into a broad
+paint smear across the face. Its 17.5/35 review score is a useful negative
+boundary: direct source geometry is necessary but not sufficient when the
+optical operator discards discrete per-strand depth. The code was pruned. The
+next study must preserve actual strand sample visibility and depth rather than
+integrating it into low-frequency optical mass.
+
 The paired evidence came from a ten-round critic loop: one isolated hypothesis,
 matched natural/diagnostic/wind frames, a numerical receipt, and an explicit
 keep/revert decision per round. The game moved the selected result from 8.5/35
