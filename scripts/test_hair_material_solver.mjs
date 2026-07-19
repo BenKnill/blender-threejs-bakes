@@ -50,6 +50,15 @@ import {
   layeredHaircutSample,
   layeredHaircutTipWidthScaleAt,
 } from "../physics/labs/hair_material/demo/layered_haircut.js";
+import {
+  LOCK_LAMINAE_FIELD_ID,
+  buildLockLaminaAssignments,
+  lockLaminaHalfWidthAt,
+  lockLaminaOffset,
+  lockLaminaOverlapRatioAt,
+  lockLaminaSample,
+  summarizeLockLaminaAssignments,
+} from "../physics/labs/hair_material/demo/lock_laminae.js";
 import { runHairRodReference } from "../physics/labs/hair_material/demo/rod_reference.js";
 import { spatialFrictionPerformanceReceipt } from "../physics/labs/hair_material/demo/spatial_friction.js";
 import {
@@ -294,6 +303,62 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   nearlyEqual(layeredHaircutTipWidthScaleAt(0.88), 1);
   nearlyEqual(layeredHaircutTipWidthScaleAt(1), 0.18);
   assert.equal(LAYERED_HAIRCUT_FIELD_ID, "authored_long_layers_v1");
+  const lamina = lockLaminaSample(hero.root, hero.id, phase);
+  assert.equal(lamina.role, 0);
+  assert.equal(lamina.retainedLength, 1);
+  const laminaRootOffset = lockLaminaOffset(hero.root, hero.id, lamina, 0.08, new Float64Array(3));
+  nearlyEqual(Math.hypot(...laminaRootOffset), 0);
+  const laminaBodyOffset = lockLaminaOffset(hero.root, hero.id, lamina, 0.7, new Float64Array(3));
+  assert.ok(Math.hypot(...laminaBodyOffset) > 0.01);
+  nearlyEqual(lockLaminaHalfWidthAt(0.4), 0.075);
+  nearlyEqual(lockLaminaHalfWidthAt(0.7), 0.09);
+  assert.ok(lockLaminaOverlapRatioAt(0.4) >= 0.25);
+  assert.ok(lockLaminaOverlapRatioAt(0.7) <= 0.45);
+  const interiorBoundary = lockLaminaOffset(
+    hero.root,
+    hero.id,
+    { ...lamina, coordinate: 0.72, role: 0 },
+    0.7,
+    new Float64Array(3)
+  );
+  const edgeBoundary = lockLaminaOffset(
+    hero.root,
+    hero.id,
+    { ...lamina, coordinate: 0.72, role: 2 },
+    0.7,
+    new Float64Array(3)
+  );
+  nearlyEqual(
+    Math.hypot(...interiorBoundary.map((value, index) => value - edgeBoundary[index])),
+    0
+  );
+  assert.equal(LOCK_LAMINAE_FIELD_ID, "spatially_contiguous_fiber_laminae_v2");
+  const assignmentCount = 5376;
+  const assignmentRoots = new Float64Array(assignmentCount * 3);
+  const assignmentHeroIds = new Uint8Array(assignmentCount);
+  for (let index = 0; index < assignmentCount; index += 1) {
+    const frame = scalpRootFrame(index, assignmentCount);
+    assignmentRoots.set(frame.root, index * 3);
+    assignmentHeroIds[index] = sparseGroomHeroForRoot(frame.root);
+  }
+  const assignments = buildLockLaminaAssignments(assignmentRoots, assignmentHeroIds);
+  const assignmentCounts = [0, 1, 2].map(
+    (laminaId) => assignments.filter((sample) => sample.laminaId === laminaId).length
+  );
+  assert.equal(
+    assignmentCounts.reduce((sum, count) => sum + count, 0),
+    assignmentCount
+  );
+  assert.ok(Math.max(...assignmentCounts) - Math.min(...assignmentCounts) <= 20);
+  const assignmentSummary = summarizeLockLaminaAssignments(
+    assignmentRoots,
+    assignmentHeroIds,
+    assignments
+  );
+  assert.equal(assignmentSummary.maximum_connected_intervals_per_hero_lamina, 1);
+  nearlyEqual(assignmentSummary.nearest_16_same_lamina_agreement.p10, 0.375);
+  nearlyEqual(assignmentSummary.nearest_16_same_lamina_agreement.p50, 0.8125);
+  nearlyEqual(assignmentSummary.nearest_16_same_lamina_agreement.p90, 1);
 }
 
 {

@@ -349,6 +349,19 @@ strand rendering; do not add another many-hair operator first.
       synchronized hem without changing the larger lock silhouette. Round 10
       scored 22.5/35, keeps every strand above 70% retained length, and stays
       within +11.9% geometry p99, but is not promoted over Round 6.
+- [x] Test overlapping fiber-populated lock surfaces without replacing the
+      public baseline. The accepted opt-in E12 assigns each hero's 5,376 total
+      display follicles to three spatially contiguous laminae at 40% rest
+      length. All 60 hero/lamina supports are single intervals; Euclidean
+      scalp-root nearest-16 same-lamina agreement is 0.375/0.8125/1.0
+      p10/p50/p90. Adjacent surface
+      supports overlap 28.9% at 40% length and 40.7% at 70%, with zero root-zone
+      displacement, zero role-boundary gap, unchanged physics digest
+      `b773984593f87d43`, and no per-frame neighbor search. It scored 24.5/35,
+      +2.75 over Round 6 but below the +3 promotion gate: diagnostic geometry is
+      coherent while calm beauty still reads too much like a dark curtain.
+      Keep `lockSurface=laminae` opt-in and pursue a new optical representation
+      rather than another geometry parameter correction.
 - [x] Define three receipt-distinct reel shots before packaging video variants.
 - [ ] Package short 16:9 and vertical reels from those named moving shots.
 

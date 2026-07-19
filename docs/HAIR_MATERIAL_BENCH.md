@@ -605,6 +605,26 @@ promoted by default:
   below 70% length; the hem improves, but the large silhouette remains too
   curtain-like to replace the independent-root baseline.
 
+`lockSurface=laminae` is the later, sole overlapping-surface study. Each of the
+20 hero locks owns three fiber-populated laminae. Ownership is sorted by signed
+cross-lock position at 40% rest length, so every hero/lamina support is one
+connected interval rather than interleaved strand confetti. The supports
+overlap 28.9% at 40% length and 40.7% at 70%; interior fibers carry 1.25x width,
+edge fibers carry 0.45x width and a continuous bounded feather, and all offsets
+remain zero through the first 8% of length. `laminaDiagnostic=1` colors lamina
+identity and brightens its edge roles.
+
+The E12 fixture retains physics digest `b773984593f87d43`, exact roots and guide
+weights, zero root-zone displacement, and no per-frame neighbor search. Its
+Euclidean scalp-root nearest-16 same-lamina agreement is 0.375/0.8125/1.0
+p10/p50/p90, and the matched
+960-wide Canary pass measured 14.04 ms mean / 16.5 ms p99 / 59.7 ms maximum
+geometry update with no exceptions or console errors. The visual review scored
+24.5/35, +2.75 over Round 6 but below the +3 promotion gate. The laminae remain
+opt-in because ordinary calm and grayscale beauty still conceal too much of the
+correct geometry; the next step is a new optical/surface representation, not
+another global width or separation guess.
+
 The paired evidence came from a ten-round critic loop: one isolated hypothesis,
 matched natural/diagnostic/wind frames, a numerical receipt, and an explicit
 keep/revert decision per round. The game moved the selected result from 8.5/35
