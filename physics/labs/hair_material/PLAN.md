@@ -374,6 +374,17 @@ strand rendering; do not add another many-hair operator first.
       receipts remain under the gitignored
       `attachments/20260719-lock-surface-round13/`. Do not fit another 2D sheet
       through this non-manifold root population.
+- [x] Reject the E14 packet optical-depth representation before building its
+      framebuffer path. The initial deterministic 447-packet partition assigned
+      all 5,376 fibers once in 8/12/13/13 min/p50/p90/max groups and aggregated
+      in 1.4 ms p99, but reached 99/202 mm and 152/336 mm p90/max radii at
+      40%/70% length. A capacity-constrained 13-station curve-medoid correction
+      improved curve-distance p90 from 123 mm to 72 mm while preserving physics
+      digest `b773984593f87d43` and E12 position digest `0740e679`; it still
+      reached 66/169 mm and 120/288 mm p90/max radii against the unchanged
+      45/90 mm gate. No aesthetic score was assigned because no renderer was
+      built. Prune packet membership and aggregate the actual fine fibers
+      optically instead.
 - [x] Define three receipt-distinct reel shots before packaging video variants.
 - [ ] Package short 16:9 and vertical reels from those named moving shots.
 
