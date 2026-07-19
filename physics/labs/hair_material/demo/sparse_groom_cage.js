@@ -1,4 +1,10 @@
 import { SCALP_CENTER, SCALP_RADII, SCALP_ROOT_OFFSET } from "./scalp_layout.js?v=116";
+import {
+  BIOLOGICAL_ROOT_EMERGENCE_DOT,
+  BIOLOGICAL_ROOT_EMERGENCE_HOLD_FRACTION,
+  BIOLOGICAL_ROOT_EMERGENCE_RELEASE_FRACTION,
+  biologicalScalpFlowDirection,
+} from "./biological_scalp_flow.js?v=4";
 
 export const SPARSE_GROOM_CAGE_ID = "explicit_twenty_lock_side_part_cage_v1";
 export const SPARSE_GROOM_CORRELATED_HIERARCHY_ID = "three_phase_correlated_rest_residual_v1";
@@ -294,13 +300,14 @@ export function sparseGroomOccupancyRemap(root, heroId, fraction, point, output,
   return output;
 }
 
-export function sparseGroomRestPoint(root, fraction, output, outputOffset = 0) {
+function sparseGroomRestPointWithFlow(root, fraction, output, outputOffset, biologicalFlow) {
   const t = Math.max(0, Math.min(1, fraction));
   const hero = SPARSE_GROOM_HEROES[sparseGroomHeroForRoot(root)];
-  const p0 = hero.root;
-  const p1 = hero.controlOffsets[0].map(
-    (value, axis) => p0[axis] + value + hero.anchor[axis] * 0.06
-  );
+  const p0 = biologicalFlow ? root : hero.root;
+  const flow = biologicalFlow ? biologicalScalpFlowDirection(root) : null;
+  const p1 = biologicalFlow
+    ? flow.map((value, axis) => p0[axis] + value * 0.3 + hero.anchor[axis] * 0.025)
+    : hero.controlOffsets[0].map((value, axis) => p0[axis] + value + hero.anchor[axis] * 0.06);
   const p2 = hero.controlOffsets[1].map((value, axis) => p0[axis] + value);
   const p3 = hero.controlOffsets[2].map((value, axis) => p0[axis] + value);
   const inverse = 1 - t;
@@ -338,5 +345,41 @@ export function sparseGroomRestPoint(root, fraction, output, outputOffset = 0) {
     (root[2] - p0[2]) * retention -
     correlatedBend * 0.45 +
     rootNormal[2] * emergenceWeight;
+  if (biologicalFlow && t > 0 && t < BIOLOGICAL_ROOT_EMERGENCE_RELEASE_FRACTION) {
+    const dx = output[outputOffset] - root[0];
+    const dy = output[outputOffset + 1] - root[1];
+    const dz = output[outputOffset + 2] - root[2];
+    const length = Math.hypot(dx, dy, dz);
+    const release = smoothstep01(
+      (t - BIOLOGICAL_ROOT_EMERGENCE_HOLD_FRACTION) /
+        (BIOLOGICAL_ROOT_EMERGENCE_RELEASE_FRACTION - BIOLOGICAL_ROOT_EMERGENCE_HOLD_FRACTION)
+    );
+    const targetDot = BIOLOGICAL_ROOT_EMERGENCE_DOT * (1 - release);
+    const outward = (dx * rootNormal[0] + dy * rootNormal[1] + dz * rootNormal[2]) / length;
+    if (outward < targetDot) {
+      let tangentX = dx / length - rootNormal[0] * outward;
+      let tangentY = dy / length - rootNormal[1] * outward;
+      let tangentZ = dz / length - rootNormal[2] * outward;
+      const tangentLength = Math.hypot(tangentX, tangentY, tangentZ) || 1;
+      tangentX /= tangentLength;
+      tangentY /= tangentLength;
+      tangentZ /= tangentLength;
+      const tangentWeight = Math.sqrt(Math.max(0, 1 - targetDot * targetDot));
+      output[outputOffset] =
+        root[0] + length * (rootNormal[0] * targetDot + tangentX * tangentWeight);
+      output[outputOffset + 1] =
+        root[1] + length * (rootNormal[1] * targetDot + tangentY * tangentWeight);
+      output[outputOffset + 2] =
+        root[2] + length * (rootNormal[2] * targetDot + tangentZ * tangentWeight);
+    }
+  }
   return output;
+}
+
+export function sparseGroomRestPoint(root, fraction, output, outputOffset = 0) {
+  return sparseGroomRestPointWithFlow(root, fraction, output, outputOffset, false);
+}
+
+export function biologicalSparseGroomRestPoint(root, fraction, output, outputOffset = 0) {
+  return sparseGroomRestPointWithFlow(root, fraction, output, outputOffset, true);
 }
