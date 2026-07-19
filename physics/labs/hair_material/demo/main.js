@@ -153,6 +153,14 @@ import {
   layeredHaircutTipWidthScaleAt,
 } from "./layered_haircut.js?v=1";
 import {
+  LOCK_LAMINAE_FIELD_ID,
+  buildLockLaminaAssignments,
+  lockLaminaHalfWidthAt,
+  lockLaminaOffset,
+  lockLaminaOverlapRatioAt,
+  summarizeLockLaminaAssignments,
+} from "./lock_laminae.js?v=1";
+import {
   projectPointToScalpShell,
   scalpPolarLimit,
   SCALP_CENTER,
@@ -192,6 +200,10 @@ let coreWidthHierarchyEnabled = false;
 let coreWidthDiagnostic = false;
 let layeredHaircutEnabled = false;
 let layeredHaircutDiagnostic = false;
+let lockLaminaeEnabled = false;
+let lockLaminaeDiagnostic = false;
+const lockLaminaOffsetScratch = new Float64Array(3);
+let maximumLockLaminaRootDisplacement = 0;
 let rootDirectorMode = "free";
 let rootDirectorStrength = 0.22;
 let faceClearGroomEnabled = true;
@@ -1000,6 +1012,7 @@ function ensureAuthoredGroomReference() {
   if (independentDisplayFolliclesEnabled && groomBindings?.independentDisplayFollicles) {
     maximumCorrelatedResidual = 0;
     maximumOccupancyRemap = 0;
+    maximumLockLaminaRootDisplacement = 0;
     const displayValues = groomBindings.bindingCount * stations * 3;
     if (displayFollicleRestCenters.length !== displayValues) {
       displayFollicleRestCenters = new Float64Array(displayValues);
@@ -1007,6 +1020,26 @@ function ensureAuthoredGroomReference() {
     for (let binding = 0; binding < groomBindings.bindingCount; binding += 1) {
       const rootOffset = binding * 3;
       const root = groomBindings.displayRoots.subarray(rootOffset, rootOffset + 3);
+      const laminaSample = {
+        laminaId: groomBindings.displayLaminaIds[binding],
+        coordinate: groomBindings.displayLaminaCoordinates[binding],
+        role: groomBindings.displayLaminaRoles[binding],
+      };
+      if (lockLaminaeEnabled) {
+        for (const rootFraction of [0, 0.04, 0.08]) {
+          lockLaminaOffset(
+            root,
+            groomBindings.displayHeroIds[binding],
+            laminaSample,
+            rootFraction,
+            lockLaminaOffsetScratch
+          );
+          maximumLockLaminaRootDisplacement = Math.max(
+            maximumLockLaminaRootDisplacement,
+            Math.hypot(...lockLaminaOffsetScratch)
+          );
+        }
+      }
       for (let particle = 0; particle < stations; particle += 1) {
         sparseGroomRestPoint(
           root,
@@ -1015,6 +1048,19 @@ function ensureAuthoredGroomReference() {
           (binding * stations + particle) * 3
         );
         const point = (binding * stations + particle) * 3;
+        if (lockLaminaeEnabled) {
+          const fraction = particle / solver.segments;
+          lockLaminaOffset(
+            root,
+            groomBindings.displayHeroIds[binding],
+            laminaSample,
+            fraction,
+            lockLaminaOffsetScratch
+          );
+          displayFollicleRestCenters[point] += lockLaminaOffsetScratch[0];
+          displayFollicleRestCenters[point + 1] += lockLaminaOffsetScratch[1];
+          displayFollicleRestCenters[point + 2] += lockLaminaOffsetScratch[2];
+        }
         if (occupancyRemapEnabled) {
           sparseGroomOccupancyRemap(
             root,
@@ -1053,6 +1099,7 @@ function ensureAuthoredGroomReference() {
     displayFollicleRestCenters = new Float64Array();
     maximumCorrelatedResidual = 0;
     maximumOccupancyRemap = 0;
+    maximumLockLaminaRootDisplacement = 0;
   }
   occupancyCoreTelemetryCache = occupancyRemapEnabled ? summarizeOccupancyCores() : null;
   authoredTopologyDigest = float32BufferDigest(Float32Array.from(authoredRestCenters));
@@ -1921,14 +1968,28 @@ function writeHydratedFiberStyle(
   const proxy = 1 - hydration;
   const hairContribution = 0.32 + 0.68 * hydration;
   const bodyWidthMultiplier =
-    coreWidthHierarchyEnabled && binding >= 0
-      ? groomBindings.displayBodyWidthMultipliers[binding]
-      : 1;
+    binding < 0
+      ? 1
+      : lockLaminaeEnabled
+        ? groomBindings.displayLaminaWidthMultipliers[binding]
+        : coreWidthHierarchyEnabled
+          ? groomBindings.displayBodyWidthMultipliers[binding]
+          : 1;
   const middleWidthMultiplier = sparseGroomWidthMultiplierAt(
     bodyWidthMultiplier,
     middleParticle / Math.max(1, activeSegments)
   );
-  if (layeredHaircutDiagnostic && binding >= 0) {
+  if (lockLaminaeDiagnostic && binding >= 0) {
+    patchDebugColorScratch.setHex(
+      [0x63e6ff, 0xff5fb7, 0xffd35a][groomBindings.displayLaminaIds[binding]]
+    );
+    patchDebugColorScratch.multiplyScalar(
+      groomBindings.displayLaminaRoles[binding] === 0 ? 0.68 : 1
+    );
+    colors[cursor] = patchDebugColorScratch.r;
+    colors[cursor + 1] = patchDebugColorScratch.g;
+    colors[cursor + 2] = patchDebugColorScratch.b;
+  } else if (layeredHaircutDiagnostic && binding >= 0) {
     patchDebugColorScratch.setHex(
       [0xf7d154, 0xff6f91, 0x63e6ff, 0x8f7cff][groomBindings.displayLengthZones[binding]]
     );
@@ -2040,10 +2101,13 @@ function writeHydratedFiberStyle(
     bodyWidthMultiplier,
     endParticle / Math.max(1, activeSegments)
   );
-  const startTipScale = layeredHaircutEnabled
+  const roleTipTaperEnabled =
+    layeredHaircutEnabled ||
+    (lockLaminaeEnabled && binding >= 0 && groomBindings.displayLaminaRoles[binding] !== 0);
+  const startTipScale = roleTipTaperEnabled
     ? layeredHaircutTipWidthScaleAt(startParticle / Math.max(1, activeSegments))
     : 1;
-  const endTipScale = layeredHaircutEnabled
+  const endTipScale = roleTipTaperEnabled
     ? layeredHaircutTipWidthScaleAt(endParticle / Math.max(1, activeSegments))
     : 1;
   widthsStart[instance] =
@@ -2517,6 +2581,12 @@ function rebuildSolver() {
         displaySublockPhases[binding]
       )
     );
+    const displayLaminaSamples = lockLaminaeEnabled
+      ? buildLockLaminaAssignments(display.roots, displayHeroIds)
+      : [];
+    const displayLaminaAssignmentTelemetry = lockLaminaeEnabled
+      ? summarizeLockLaminaAssignments(display.roots, displayHeroIds, displayLaminaSamples)
+      : null;
     Object.assign(groomBindings, {
       owners: display.owners,
       neighbors: display.neighbors,
@@ -2534,6 +2604,21 @@ function rebuildSolver() {
         (sample) => sample.retainedRatio
       ),
       displayLengthZones: Uint8Array.from(displayLengthSamples, (sample) => sample.zone),
+      displayLaminaCoordinates: Float32Array.from(
+        displayLaminaSamples,
+        (sample) => sample.coordinate
+      ),
+      displayLaminaRoles: Uint8Array.from(displayLaminaSamples, (sample) => sample.role),
+      displayLaminaIds: Uint8Array.from(displayLaminaSamples, (sample) => sample.laminaId),
+      displayLaminaWidthMultipliers: Float32Array.from(
+        displayLaminaSamples,
+        (sample) => sample.bodyWidthMultiplier
+      ),
+      displayLaminaRetainedLengths: Float32Array.from(
+        displayLaminaSamples,
+        (sample) => sample.retainedLength
+      ),
+      displayLaminaAssignmentTelemetry,
       independentDisplayFollicles: true,
       displayFollicleLayoutId: DISPLAY_FOLLICLE_LAYOUT_ID,
     });
@@ -3188,7 +3273,44 @@ function independentDisplayFollicleTelemetry() {
         }
       : null,
     layered_haircut: layeredHaircutEnabled ? layeredHaircutTelemetry() : null,
+    overlapping_lock_laminae: lockLaminaeEnabled ? lockLaminaTelemetry() : null,
     physics_authority: "none_renderer_only",
+  };
+}
+
+function lockLaminaTelemetry() {
+  const roleCounts = new Uint32Array(3);
+  const laminaCounts = new Uint32Array(3);
+  for (let binding = 0; binding < groomBindings.bindingCount; binding += 1) {
+    roleCounts[groomBindings.displayLaminaRoles[binding]] += 1;
+    laminaCounts[groomBindings.displayLaminaIds[binding]] += 1;
+  }
+  const surfaceAt = (fraction) => ({
+    full_width_m: lockLaminaHalfWidthAt(fraction) * 2,
+    adjacent_overlap_ratio: lockLaminaOverlapRatioAt(fraction),
+  });
+  return {
+    field_identity: LOCK_LAMINAE_FIELD_ID,
+    lamina_count_per_hero: 3,
+    role_counts: {
+      interior: roleCounts[0],
+      left_edge: roleCounts[1],
+      right_edge: roleCounts[2],
+    },
+    lamina_counts: Array.from(laminaCounts),
+    root_zero_through_fraction: 0.08,
+    surface_ramp_end_fraction: 0.18,
+    maximum_root_zone_displacement_m: maximumLockLaminaRootDisplacement,
+    surface_at_fraction: {
+      0.4: surfaceAt(0.4),
+      0.7: surfaceAt(0.7),
+    },
+    maximum_role_boundary_position_gap_m:
+      groomBindings.displayLaminaAssignmentTelemetry.evaluated_role_boundary_position_gap_m,
+    role_boundary_contract: "continuous_surface_coordinate_and_zero_edge_feather_at_72pct",
+    per_frame_neighbor_search: false,
+    debug_role_colors: lockLaminaeDiagnostic,
+    assignment: groomBindings.displayLaminaAssignmentTelemetry,
   };
 }
 
@@ -3508,7 +3630,11 @@ function updateSectionInterpolatedFatlineGeometry() {
     const activeSegments = displayFollicleRootDiagnostic
       ? Math.min(2, fullActiveSegments)
       : fullActiveSegments;
-    const retainedLength = layeredHaircutEnabled ? groomBindings.displayLengthRatios[binding] : 1;
+    const retainedLength = lockLaminaeEnabled
+      ? groomBindings.displayLaminaRetainedLengths[binding]
+      : layeredHaircutEnabled
+        ? groomBindings.displayLengthRatios[binding]
+        : 1;
     const copy = binding % renderFibersPerGuide;
     readCachedGroomCurvePoint(lockCurvePoints, 0, binding, 0, activeSegments);
     const ownerNormal = owner * 3;
@@ -4274,6 +4400,9 @@ function applyQueryConfiguration() {
   layeredHaircutEnabled =
     independentDisplayFolliclesEnabled && params.get("lengthField") === "layered";
   layeredHaircutDiagnostic = layeredHaircutEnabled && params.get("lengthDiagnostic") === "1";
+  lockLaminaeEnabled =
+    independentDisplayFolliclesEnabled && params.get("lockSurface") === "laminae";
+  lockLaminaeDiagnostic = lockLaminaeEnabled && params.get("laminaDiagnostic") === "1";
   sublockPhaseColors =
     (correlatedRestHierarchyEnabled || occupancyRemapEnabled) &&
     params.get("sublockColors") === "1";
@@ -4518,6 +4647,8 @@ document.querySelector("#groom-display").addEventListener("change", (event) => {
   coreWidthDiagnostic = false;
   layeredHaircutEnabled = false;
   layeredHaircutDiagnostic = false;
+  lockLaminaeEnabled = false;
+  lockLaminaeDiagnostic = false;
   sublockPhaseColors = false;
   authoredRestGroomEnabled ||= hairlineFlowEnabled || sparseGroomCageEnabled;
   authoredDebugColors = false;
