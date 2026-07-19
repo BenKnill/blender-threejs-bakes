@@ -202,6 +202,7 @@ let layeredHaircutEnabled = false;
 let layeredHaircutDiagnostic = false;
 let lockLaminaeEnabled = false;
 let lockLaminaeDiagnostic = false;
+let fixedAlphaCoverageEnabled = false;
 const lockLaminaOffsetScratch = new Float64Array(3);
 let maximumLockLaminaRootDisplacement = 0;
 let rootDirectorMode = "free";
@@ -229,6 +230,7 @@ let mannequinMode = "primitive";
 let mannequinStatus = "primitive_ready";
 let heroMannequin;
 let reelShot = "free";
+let reelYawOffsetDegrees = 0;
 let activeCuratedScene = null;
 const nativeClipPlayback = {
   enabled: false,
@@ -260,6 +262,22 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.setAnimationLoop(animate);
 viewport.append(renderer.domElement);
+const rendererContext = renderer.getContext();
+const rendererSampleCapabilities = Object.freeze({
+  webgl2: renderer.capabilities.isWebGL2,
+  maximum_samples: rendererContext.getParameter(rendererContext.MAX_SAMPLES),
+  default_sample_buffers: rendererContext.getParameter(rendererContext.SAMPLE_BUFFERS),
+  default_samples: rendererContext.getParameter(rendererContext.SAMPLES),
+});
+
+function stringFnv1a32(value) {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(16).padStart(8, "0");
+}
 
 const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0x080913, 0.045);
@@ -2363,6 +2381,17 @@ function createFatlineMaterial() {
   });
 }
 
+function createFixedAlphaCoverageFatlineMaterial() {
+  const material = createFatlineMaterial();
+  if (rendererSampleCapabilities.default_samples < 4) return material;
+  material.alphaToCoverage = true;
+  material.transparent = false;
+  material.blending = THREE.NoBlending;
+  material.depthTest = true;
+  material.depthWrite = true;
+  return material;
+}
+
 function createHairlineUndercoatGeometry(layer, rings = 12, slices = 96) {
   const shellOffset = SCALP_ROOT_OFFSET - 0.009 + layer * 0.0015;
   const positions = [
@@ -2474,7 +2503,10 @@ function rebuildFatlineObject() {
   geometry.instanceCount = 0;
   hairPositions = attributes.instanceStart.array;
   fatlineBaseColor.setHex(hairColor());
-  hair = new THREE.Mesh(geometry, createFatlineMaterial());
+  hair = new THREE.Mesh(
+    geometry,
+    fixedAlphaCoverageEnabled ? createFixedAlphaCoverageFatlineMaterial() : createFatlineMaterial()
+  );
   hair.frustumCulled = false;
   scene.add(hair);
   hairUndercoatCoverageProfile = buildUndercoatCoverageProfile(
@@ -3311,6 +3343,28 @@ function lockLaminaTelemetry() {
     per_frame_neighbor_search: false,
     debug_role_colors: lockLaminaeDiagnostic,
     assignment: groomBindings.displayLaminaAssignmentTelemetry,
+    fixed_function_alpha_to_coverage: fixedAlphaCoverageEnabled
+      ? {
+          field_identity: "fixed_function_alpha_to_coverage_legacy_strands_v1",
+          status: rendererSampleCapabilities.default_samples >= 4 ? "active" : "unsupported",
+          logical_segment_count: groomBindings.bindingCount * solver.segments,
+          fixed_fixture_expected_segments: 64512,
+          material_state: {
+            alpha_to_coverage: hair.material.alphaToCoverage,
+            transparent: hair.material.transparent,
+            blending: hair.material.blending === THREE.NoBlending ? "NoBlending" : "other",
+            depth_test: hair.material.depthTest,
+            depth_write: hair.material.depthWrite,
+          },
+          vertex_shader_fnv1a32: stringFnv1a32(hair.material.vertexShader),
+          fragment_shader_fnv1a32: stringFnv1a32(hair.material.fragmentShader),
+          renderer_capabilities: rendererSampleCapabilities,
+          programmable_sample_mask: false,
+          surrogate_geometry: false,
+          temporal_accumulation: false,
+          physics_authority: "none_renderer_state_only",
+        }
+      : null,
   };
 }
 
@@ -4230,6 +4284,18 @@ function drawCombTrace(trace) {
   }
 }
 
+function applyReelCameraPose(pose) {
+  const yaw = THREE.MathUtils.degToRad(reelYawOffsetDegrees);
+  const offsetX = pose.position[0] - pose.target[0];
+  const offsetZ = pose.position[2] - pose.target[2];
+  camera.position.set(
+    pose.target[0] + offsetX * Math.cos(yaw) + offsetZ * Math.sin(yaw),
+    pose.position[1],
+    pose.target[2] - offsetX * Math.sin(yaw) + offsetZ * Math.cos(yaw)
+  );
+  controls.target.fromArray(pose.target);
+}
+
 function animate(now) {
   const frameDt = Math.min(1 / 30, Math.max(1 / 240, (now - lastFrame) / 1000));
   lastFrame = now;
@@ -4272,8 +4338,7 @@ function animate(now) {
   comb.position.x = solver.comb.currentX;
   if (reelShot !== "free") {
     const pose = reelCameraPoseAtStep(deterministicReplay.state.step, reelShot);
-    camera.position.fromArray(pose.position);
-    controls.target.fromArray(pose.target);
+    applyReelCameraPose(pose);
   }
   controls.update();
   renderer.render(scene, camera);
@@ -4403,6 +4468,7 @@ function applyQueryConfiguration() {
   lockLaminaeEnabled =
     independentDisplayFolliclesEnabled && params.get("lockSurface") === "laminae";
   lockLaminaeDiagnostic = lockLaminaeEnabled && params.get("laminaDiagnostic") === "1";
+  fixedAlphaCoverageEnabled = lockLaminaeEnabled && params.get("laminaOptics") === "fixed-a2c";
   sublockPhaseColors =
     (correlatedRestHierarchyEnabled || occupancyRemapEnabled) &&
     params.get("sublockColors") === "1";
@@ -4479,6 +4545,7 @@ function applyQueryConfiguration() {
   reelShot = ["beauty", "control", "cut"].includes(params.get("reel"))
     ? params.get("reel")
     : "free";
+  reelYawOffsetDegrees = Math.max(-45, Math.min(45, Number(params.get("reelYaw") ?? 0) || 0));
   document.querySelector("#reel-shot").value = reelShot;
   if (reelShot !== "free") controls.autoRotate = false;
   fullGroomHydrationEnabled = params.get("groomHydration") === "1";
@@ -4649,6 +4716,7 @@ document.querySelector("#groom-display").addEventListener("change", (event) => {
   layeredHaircutDiagnostic = false;
   lockLaminaeEnabled = false;
   lockLaminaeDiagnostic = false;
+  fixedAlphaCoverageEnabled = false;
   sublockPhaseColors = false;
   authoredRestGroomEnabled ||= hairlineFlowEnabled || sparseGroomCageEnabled;
   authoredDebugColors = false;
@@ -4807,8 +4875,7 @@ window.hairMaterialReplay = {
     updateHairGeometry();
     if (reelShot !== "free") {
       const pose = reelCameraPoseAtStep(deterministicReplay.state.step, reelShot);
-      camera.position.fromArray(pose.position);
-      controls.target.fromArray(pose.target);
+      applyReelCameraPose(pose);
       controls.update();
     }
     renderer.render(scene, camera);
@@ -4873,6 +4940,18 @@ function createRenderReceipt() {
       physics_authority: nativeClipPlayback.clip?.metadata.physics_authority ?? null,
     },
     hair_render_mode: hairRenderMode,
+    fatline_material_state:
+      hairRenderMode === "fatline"
+        ? {
+            vertex_shader_fnv1a32: stringFnv1a32(hair.material.vertexShader),
+            fragment_shader_fnv1a32: stringFnv1a32(hair.material.fragmentShader),
+            alpha_to_coverage: hair.material.alphaToCoverage,
+            transparent: hair.material.transparent,
+            blending: hair.material.blending,
+            depth_test: hair.material.depthTest,
+            depth_write: hair.material.depthWrite,
+          }
+        : null,
     groom_mode: groomMode,
     groom_interpolation: groomInterpolationReceipt(groomBindings, groomBindingBuildCount),
     patch_lock_hydration: patchLockDistanceTelemetry(),
@@ -5045,6 +5124,7 @@ function createRenderReceipt() {
     reel_camera: {
       shot: reelShot,
       field_identity: REEL_CAMERA_FIELD_ID,
+      yaw_offset_degrees: reelYawOffsetDegrees,
       cycle_steps: PRESENTATION_LOOP_END_STEP,
       pose:
         reelShot === "free" ? null : reelCameraPoseAtStep(deterministicReplay.state.step, reelShot),

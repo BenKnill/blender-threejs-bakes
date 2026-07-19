@@ -674,6 +674,19 @@ was pruned. The next attribution test should keep the legacy shaders unchanged
 and ask whether fixed-function alpha-to-coverage supplies the useful depth
 without programmable-mask overhead.
 
+E17 answered that attribution cleanly. A separately instantiated copy of the
+unchanged legacy strand material enables fixed-function alpha-to-coverage,
+disables blending, and writes per-sample depth in the existing four-sample
+default framebuffer. The shader-source digests stay `45a13b00` and `cf96d92e`;
+the 64,512 logical segments, physics, and display positions are unchanged.
+Opposite fresh-process orders repeated every E12 and E17 frame exactly. Two
+matched pairs measured geometry p99 ratios of 1.00x and 0.80x with mean ratios
+of 0.998x. Narrow and yaw evidence preserved internal strand variation without
+screen-door texture or view-dependent collapse. At 27.25/35, E17 is the first
+optical study to clear the promotion gate and is now selected by all three
+curated scenes. The remaining strong-wind defect is mechanical hierarchy: too
+many locks form one horizontal sheet across the face.
+
 The paired evidence came from a ten-round critic loop: one isolated hypothesis,
 matched natural/diagnostic/wind frames, a numerical receipt, and an explicit
 keep/revert decision per round. The game moved the selected result from 8.5/35

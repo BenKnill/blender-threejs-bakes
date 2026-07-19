@@ -410,6 +410,18 @@ strand rendering; do not add another many-hair operator first.
       failed source was pruned; evidence remains under the gitignored
       `attachments/20260719-lock-surface-round16/`. Attribute the next test to
       fixed-function alpha-to-coverage before revisiting programmable masks.
+- [x] Promote E17 fixed-function alpha-to-coverage as the curated optical
+      baseline. It instantiates the unchanged legacy strand shaders with only
+      `alphaToCoverage=true`, opaque no-blend state, and depth writes in the
+      confirmed four-sample default framebuffer. Vertex/fragment digests remain
+      `45a13b00`/`cf96d92e`; physics `b773984593f87d43`, display positions
+      `0740e679`, and all 64,512 logical E12 segments remain unchanged. Opposite
+      fresh-process orders repeated all 20 E12 and all 20 E17 PNGs exactly.
+      Matched p99 ratios were 1.00x and 0.80x, while both mean ratios were
+      0.998x. Narrow 520x760 and yaw -25/0/+25 degree plates retained discrete
+      strand depth without screen-door artifacts. The final adversarial score
+      was 27.25/35. The three curated scenes now select the E12 laminae plus
+      `laminaOptics=fixed-a2c`; explicit legacy E12 remains available for A/B.
 - [x] Define three receipt-distinct reel shots before packaging video variants.
 - [ ] Package short 16:9 and vertical reels from those named moving shots.
 

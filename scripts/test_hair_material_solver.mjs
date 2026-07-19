@@ -513,7 +513,7 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
     "sections_5_and_6_have_zero_shell_opacity_and_width_floor"
   );
   assert.equal(massSummary.physics_authority, "none_renderer_hydration_only");
-  assert.equal(CURATED_HAIR_SCENE_FIELD_ID, "three_authored_hair_scenes_v2");
+  assert.equal(CURATED_HAIR_SCENE_FIELD_ID, "three_authored_hair_scenes_v3");
   assert.deepEqual(CURATED_HAIR_SCENE_ORDER, ["rig-becomes-hair", "copper-gale", "after-the-rain"]);
   assert.equal(CURATED_HAIR_SCENES.length, 3);
   assert.equal(nextCuratedHairSceneId("rig-becomes-hair"), "copper-gale");
@@ -525,6 +525,8 @@ function nearlyEqual(actual, expected, tolerance = 1e-10) {
   assert.equal(copperScene.get("nativeStart"), "22.5");
   assert.equal(copperScene.get("lockTopology"), "cage");
   assert.equal(copperScene.get("displayFollicles"), "independent");
+  assert.equal(copperScene.get("lockSurface"), "laminae");
+  assert.equal(copperScene.get("laminaOptics"), "fixed-a2c");
   const wetScene = curatedHairSceneParameters("after-the-rain");
   assert.equal(wetScene.get("massFill"), "wet-compact");
   assert.equal(wetScene.get("nativeStart"), "28.5");
