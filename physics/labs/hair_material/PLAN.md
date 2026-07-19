@@ -479,14 +479,52 @@ strand rendering; do not add another many-hair operator first.
       per-lock projected width while redistributing width toward lock centers;
       if that also fails, replace the primitive with explicit hero-lock geometry
       plus a separate undercoat.
-- [ ] Replace the broad authored scalp sweep with a biologically structured
-      follicle vector field before another optical-width round: crown whorl,
-      part-line divergence, temple/back falloff, and smooth transitions in the
-      scalp tangent plane, while retaining a measured strictly positive outward
-      component. Keep the first two root segments carbon-fiber-stiff and expose
-      whorl center/handedness as receipt identity. The visible gate is varied
-      from-scalp emergence and curved flow lanes in calm and wind—not another
-      uniform curtain.
+- [ ] Build E24 explicit hero locks seeded by a biological scalp-flow field
+      (Issue #205). A crown whorl should flow into the authored side part with
+      temple/back falloff, smooth scalp-tangent transitions, and strictly
+      positive outward emergence. Use that topology for 12-20 durable lock
+      assignments rendered as 3-5 thick primaries per lock with at least 8 mm
+      face-aperture clearance, plus a separately masked low-opacity undercoat
+      that cannot refill those channels. Freeze Box3D, E17 fixed A2C, camera,
+      wind, and root stiffness. At one-third-window scale, pass strong wind only
+      at <=75% face-crop hair occupancy with at least two clear gaps each >=8%
+      crop width; fail at >=90% occupancy or maximum gap <5%. Calm must retain
+      crown and side mass. Receipt identity includes whorl center/handedness,
+      lock/fiber map, and undercoat-mask digest.
+- [x] Localize E24's representation change without claiming the full Issue
+      #205 gate. The opt-in clockwise crown-whorl/side-part field assigns 20
+      hero families with five visible primaries each and a rest-space
+      anatomy-masked undercoat. It changed the strong-wind face third from one
+      continuous hair run to five runs with a 70.9% maximum, while preserving
+      the native physics digest and leaving the no-`scalpFlow` calm and strong
+      reference plates byte-identical. This is the first post-E17 experiment
+      to crack the hydration plank, but it still fails the requested clear-gap
+      gate and leaves the calm crown underfilled. Grok's external review calls
+      the direction productive, not complete; its durable conference note is
+      `attachments/20260719-grok-round17-23-review.md`.
+- [x] Add a bounded biological root-emergence cone as an E24 correctness
+      invariant. Only the first two rendered spans hold a 0.62 scalp-normal
+      target before releasing to the whorl by 25% strand length. The matched
+      browser receipt improved min/mean first-station outward alignment from
+      0.165/0.360 to 0.574/0.621 with no physics authority. It did not fix calm
+      hydration by itself; retain it to prevent forehead-directed roots, not as
+      an aesthetic claim.
+- [x] Reject E25 line-based within-lock fill after two bounded implementations.
+      Selecting ten neighboring root bindings per lock merely added forehead
+      cables. Replacing those with exactly two children per primary, first as
+      +/-3 mm parallels and then as transported 5/12/8 mm root/mid/tip
+      elliptical bundles, remained perceptually cable-like. The failed source
+      was pruned. Do not add more hydrated lines around the same centerlines.
+- [x] Reject E26-E28's wide independent-quad primaries as a baseline while
+      retaining the representation result. Raising the 100 primaries from
+      2.5x to 7.5x finally produced unmistakably broad, separately moving lock
+      bodies, but per-segment alpha resets and overlapping quad joins made
+      dotted then polygonal centipede surfaces. A tangent/join shader probe did
+      not remove the crown artifacts and disturbed the strong-wind default
+      boundary, so all wide/join source was pruned. The next bounded hydration
+      primitive is one continuous joined ribbon strip per primary path with
+      shared vertices, bounded miter/bevel joins, and tapered end caps; do not
+      revisit width until that geometry exists.
 - [x] Define three receipt-distinct reel shots before packaging video variants.
 - [ ] Package short 16:9 and vertical reels from those named moving shots.
 
