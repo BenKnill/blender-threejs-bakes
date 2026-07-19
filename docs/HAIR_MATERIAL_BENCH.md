@@ -637,6 +637,16 @@ hydration for the current non-manifold root population; the implementation was
 pruned rather than retained as another dormant query mode. Its final
 adversarial score was 12.75/35.
 
+E14 then tested whether 8–16-fiber curve-space packets were localized enough
+to drive order-independent optical depth. The first 447-packet partition was
+fast and exact in membership but exceeded the 45/90 mm p90/maximum radius gate
+by several times. Four deterministic capacity-constrained medoid passes over
+all 13 rest stations improved curve-distance p90 from 123 mm to 72 mm, yet live
+radii still reached 66/169 mm at 40% length and 120/288 mm at 70%. The packet
+renderer was therefore never built and no aesthetic score was assigned. The
+receipt rules out another coarse surrogate: the next optical aggregate must
+consume the actual E12 fiber segments directly.
+
 The paired evidence came from a ten-round critic loop: one isolated hypothesis,
 matched natural/diagnostic/wind frames, a numerical receipt, and an explicit
 keep/revert decision per round. The game moved the selected result from 8.5/35
