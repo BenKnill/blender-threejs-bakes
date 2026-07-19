@@ -660,6 +660,20 @@ optical operator discards discrete per-strand depth. The code was pruned. The
 next study must preserve actual strand sample visibility and depth rather than
 integrating it into low-frequency optical mass.
 
+E16 preserved discrete strand depth with deterministic four-sample masks in
+the confirmed four-sample default framebuffer. It was the first optical study
+to avoid sheets, packets, and low-frequency paint while producing coherent
+natural, blonde, and wind silhouettes. A corrected isolated implementation
+kept the original E12 material byte-for-byte separate, repeated all 20 E12 and
+all 20 stochastic plates across reverse-order fresh processes, preserved
+physics and display positions, and distributed mask rotations within 0.18
+percentage points of 25%. Its 24.75/35 visual score was promising, but the
+programmable path repeated geometry p99 ratios of 1.27x and 1.24x against E12;
+mean ratios near 1.006x did not override the explicit tail-cost gate. The code
+was pruned. The next attribution test should keep the legacy shaders unchanged
+and ask whether fixed-function alpha-to-coverage supplies the useful depth
+without programmable-mask overhead.
+
 The paired evidence came from a ten-round critic loop: one isolated hypothesis,
 matched natural/diagnostic/wind frames, a numerical receipt, and an explicit
 keep/revert decision per round. The game moved the selected result from 8.5/35

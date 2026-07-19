@@ -397,6 +397,19 @@ strand rendering; do not add another many-hair operator first.
       was 17.5/35. The failed source was pruned; receipts remain under the
       gitignored `attachments/20260719-lock-surface-round15/`. Do not aggregate
       actual strands into a low-frequency additive blur again.
+- [x] Revert E16's programmable four-sample strand visibility despite its first
+      credible optical result. The opt-in pass wrote deterministic rotated
+      sample masks and depth for all 64,512 logical E12 segments in the
+      confirmed four-sample default framebuffer, with no blending, surrogate
+      geometry, or temporal accumulation. It retained physics digest
+      `b773984593f87d43`, position digest `0740e679`, exact reverse-order pixels,
+      and mask-rotation digest `696f283a`; mask-bit rotations stayed between
+      24.91% and 25.18%. The final visual score reached 24.75/35 and avoided the
+      paint/fog failure, but two isolated timing pairs repeated 1.27x and 1.24x
+      geometry p99 ratios against E12 despite mean ratios near 1.006x. The
+      failed source was pruned; evidence remains under the gitignored
+      `attachments/20260719-lock-surface-round16/`. Attribute the next test to
+      fixed-function alpha-to-coverage before revisiting programmable masks.
 - [x] Define three receipt-distinct reel shots before packaging video variants.
 - [ ] Package short 16:9 and vertical reels from those named moving shots.
 
