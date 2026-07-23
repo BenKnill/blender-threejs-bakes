@@ -108,7 +108,17 @@ Validate a layout or manifest contract:
 ```sh
 python3 scripts/bt.py validate layouts/live.layout.json
 python3 scripts/bt.py validate assets/manifest.json --json
+python3 scripts/bt.py validate assets/manifest.json --check-proxies --json
 python3 scripts/check_lighting_presets.py
+```
+
+Bootstrap missing browser proxy GLBs from the manifest:
+
+```sh
+./scripts/blender.sh --background --python scripts/export_proxies.py -- \
+  --manifest assets/manifest.json --missing-only --dry-run
+./scripts/blender.sh --background --python scripts/export_proxies.py -- \
+  --manifest assets/manifest.json --missing-only
 ```
 
 Author and render a layout without the browser:
@@ -252,6 +262,12 @@ that endpoint instead of citing closed #11.
 presets, and shot packages. It exits 0 on success and 2 for contract errors.
 `--json` emits structured results, and text errors use JSON-pointer-style paths
 such as `/instances/3/quaternion: expected 4 numbers`.
+
+Manifest validation is structural by default so fresh checkouts can pass even
+when ignored `assets/glb/*.glb` proxies are missing. Add `--check-proxies` when
+you specifically need editor preview-readiness to fail on missing browser GLBs,
+then rebuild them with `scripts/export_proxies.py --manifest assets/manifest.json
+--missing-only`.
 
 ## Current: `bt` CLI
 
