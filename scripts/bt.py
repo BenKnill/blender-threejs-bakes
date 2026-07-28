@@ -49,14 +49,14 @@ from btlib.presets import (
 from btlib.validate import ContractError, validate_layout, validate_manifest, validate_shot
 
 
-def validate_file(path: Path) -> None:
+def validate_file(path: Path, *, check_proxy_files: bool = False) -> None:
     data = load_json(path)
     if path.name == "shot.json" or ("frames" in data and "source_layouts" in data):
         validate_shot(data)
     elif "layout" in data and "required_assets" in data:
         validate_preset(data)
     elif path.name == "manifest.json" or "assets" in data:
-        validate_manifest(data, path, check_proxy_files=True)
+        validate_manifest(data, path, check_proxy_files=check_proxy_files)
     else:
         validate_layout(data)
 
@@ -66,7 +66,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
     ok_paths = []
     for path in args.paths:
         try:
-            validate_file(path)
+            validate_file(path, check_proxy_files=args.check_proxies)
         except ContractError as exc:
             failures.append({"path": str(path), "errors": exc.errors})
         else:
@@ -1259,6 +1259,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     validate = subcommands.add_parser("validate", help="validate a layout or manifest JSON file")
     validate.add_argument("paths", type=Path, nargs="+")
+    validate.add_argument(
+        "--check-proxies",
+        action="store_true",
+        help="also fail manifests when referenced browser proxy GLBs are missing",
+    )
     validate.add_argument("--json", action="store_true")
     validate.set_defaults(func=cmd_validate)
 
