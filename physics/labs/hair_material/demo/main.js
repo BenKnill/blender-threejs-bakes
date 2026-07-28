@@ -141,7 +141,13 @@ import {
   sparseGroomRestPoint,
   sparseGroomSublockPhase,
   sparseGroomWidthMultiplierAt,
-} from "./sparse_groom_cage.js?v=1";
+  biologicalSparseGroomRestPoint,
+} from "./sparse_groom_cage.js?v=4";
+import {
+  BIOLOGICAL_PRIMARY_WIDTH_MULTIPLIER,
+  biologicalHeroLockTelemetry,
+  buildBiologicalHeroLockMap,
+} from "./biological_scalp_flow.js?v=4";
 import {
   buildIndependentDisplayFollicles,
   DISPLAY_FOLLICLE_LAYOUT_ID,
@@ -202,6 +208,7 @@ let layeredHaircutEnabled = false;
 let layeredHaircutDiagnostic = false;
 let lockLaminaeEnabled = false;
 let lockLaminaeDiagnostic = false;
+let biologicalHeroLocksEnabled = false;
 let fixedAlphaCoverageEnabled = false;
 const lockLaminaOffsetScratch = new Float64Array(3);
 let maximumLockLaminaRootDisplacement = 0;
@@ -252,6 +259,7 @@ const FATLINE_DYNAMIC_ATTRIBUTES = Object.freeze([
   "instanceColor",
   "instanceWidthStart",
   "instanceWidthEnd",
+  "instanceCoverage",
 ]);
 
 const viewport = document.querySelector("#viewport");
@@ -979,6 +987,9 @@ function ensureAuthoredGroomReference() {
     authoredReferenceReady = false;
   }
   if (authoredReferenceReady) return true;
+  const sparseRestPoint = biologicalHeroLocksEnabled
+    ? biologicalSparseGroomRestPoint
+    : sparseGroomRestPoint;
   for (let guide = 0; guide < solver.guideCount; guide += 1) {
     const rootOffset = guide * 3;
     const targetOffset = guide * solver.rootDirector.zoneSegments * 3;
@@ -998,7 +1009,7 @@ function ensureAuthoredGroomReference() {
         ? authoredGroomLaydownSampleFractionAt(stationFraction)
         : stationFraction;
       if (sparseGroomCageEnabled) {
-        sparseGroomRestPoint(
+        sparseRestPoint(
           root,
           groomFraction,
           authoredRestCenters,
@@ -1059,7 +1070,7 @@ function ensureAuthoredGroomReference() {
         }
       }
       for (let particle = 0; particle < stations; particle += 1) {
-        sparseGroomRestPoint(
+        sparseRestPoint(
           root,
           particle / solver.segments,
           displayFollicleRestCenters,
@@ -2247,11 +2258,13 @@ function createFatlineMaterial() {
       attribute vec3 instanceColor;
       attribute float instanceWidthStart;
       attribute float instanceWidthEnd;
+      attribute float instanceCoverage;
       varying vec3 vColor;
       varying vec3 vTangentView;
       varying vec3 vPositionView;
       varying float vAcross;
       varying float vAlong;
+      varying float vInstanceCoverage;
 
       void main() {
         float along = position.x;
@@ -2277,6 +2290,7 @@ function createFatlineMaterial() {
         vPositionView = mix(startView.xyz, endView.xyz, along);
         vAcross = sideSign;
         vAlong = along;
+        vInstanceCoverage = instanceCoverage;
       }
     `,
     fragmentShader: `
@@ -2303,6 +2317,7 @@ function createFatlineMaterial() {
       varying vec3 vPositionView;
       varying float vAcross;
       varying float vAlong;
+      varying float vInstanceCoverage;
 
       float strandDiffuse(vec3 tangent, vec3 lightDirection) {
         float cosine = clamp(dot(tangent, lightDirection), -1.0, 1.0);
@@ -2323,7 +2338,8 @@ function createFatlineMaterial() {
             jointCoverage *
             (0.72 + 0.22 * crossSection) *
             presentationHydration *
-            fiberOpacityScale,
+            fiberOpacityScale *
+            vInstanceCoverage,
           0.0,
           1.0
         );
@@ -2495,6 +2511,7 @@ function rebuildFatlineObject() {
     instanceColor: new THREE.InstancedBufferAttribute(new Float32Array(instanceCapacity * 3), 3),
     instanceWidthStart: new THREE.InstancedBufferAttribute(new Float32Array(instanceCapacity), 1),
     instanceWidthEnd: new THREE.InstancedBufferAttribute(new Float32Array(instanceCapacity), 1),
+    instanceCoverage: new THREE.InstancedBufferAttribute(new Float32Array(instanceCapacity), 1),
   };
   for (const [name, attribute] of Object.entries(attributes)) {
     attribute.setUsage(THREE.DynamicDrawUsage);
@@ -2654,6 +2671,12 @@ function rebuildSolver() {
       independentDisplayFollicles: true,
       displayFollicleLayoutId: DISPLAY_FOLLICLE_LAYOUT_ID,
     });
+    if (biologicalHeroLocksEnabled) {
+      Object.assign(
+        groomBindings,
+        buildBiologicalHeroLockMap(groomBindings.displayRoots, displayHeroIds)
+      );
+    }
     groomBindings.bindingDigest = groomBindingDigest(groomBindings);
   }
   authoredReferenceReady = false;
@@ -2823,6 +2846,7 @@ function updateFatlineGeometry() {
   const colors = geometry.attributes.instanceColor.array;
   const widthsStart = geometry.attributes.instanceWidthStart.array;
   const widthsEnd = geometry.attributes.instanceWidthEnd.array;
+  const coverages = geometry.attributes.instanceCoverage.array;
   let instance = 0;
   for (let strand = 0; strand < solver.guideCount; strand += 1) {
     const activeSegments = solver.activeSegments[strand];
@@ -2854,6 +2878,7 @@ function updateFatlineGeometry() {
           segment + 1,
           activeSegments
         );
+        coverages[instance] = 1;
         instance += 1;
       }
     }
@@ -3306,6 +3331,9 @@ function independentDisplayFollicleTelemetry() {
       : null,
     layered_haircut: layeredHaircutEnabled ? layeredHaircutTelemetry() : null,
     overlapping_lock_laminae: lockLaminaeEnabled ? lockLaminaTelemetry() : null,
+    biological_hero_locks: biologicalHeroLocksEnabled
+      ? biologicalHeroLockTelemetry(groomBindings)
+      : null,
     physics_authority: "none_renderer_only",
   };
 }
@@ -3659,6 +3687,7 @@ function updateSectionInterpolatedFatlineGeometry() {
   const colors = geometry.attributes.instanceColor.array;
   const widthsStart = geometry.attributes.instanceWidthStart.array;
   const widthsEnd = geometry.attributes.instanceWidthEnd.array;
+  const coverages = geometry.attributes.instanceCoverage.array;
   const owners = groomBindings.owners;
   const neighbors = groomBindings.neighbors;
   const secondaryNeighbors = groomBindings.secondaryNeighbors;
@@ -3802,6 +3831,13 @@ function updateSectionInterpolatedFatlineGeometry() {
           activeSegments,
           binding
         );
+        coverages[instance] = biologicalHeroLocksEnabled
+          ? groomBindings.biologicalFiberCoverage[binding]
+          : 1;
+        if (biologicalHeroLocksEnabled && groomBindings.biologicalPrimaryFibers[binding]) {
+          widthsStart[instance] *= BIOLOGICAL_PRIMARY_WIDTH_MULTIPLIER;
+          widthsEnd[instance] *= BIOLOGICAL_PRIMARY_WIDTH_MULTIPLIER;
+        }
         const familyScale = hydrationFamilyScales[copy];
         const hydration = fullGroomHydrationEnabled
           ? fullGroomPresentation.widthScale
@@ -3868,6 +3904,13 @@ function updateSectionInterpolatedFatlineGeometry() {
           activeSegments,
           binding
         );
+        coverages[instance] = biologicalHeroLocksEnabled
+          ? groomBindings.biologicalFiberCoverage[binding]
+          : 1;
+        if (biologicalHeroLocksEnabled && groomBindings.biologicalPrimaryFibers[binding]) {
+          widthsStart[instance] *= BIOLOGICAL_PRIMARY_WIDTH_MULTIPLIER;
+          widthsEnd[instance] *= BIOLOGICAL_PRIMARY_WIDTH_MULTIPLIER;
+        }
         instance += 1;
       }
     }
@@ -4467,6 +4510,7 @@ function applyQueryConfiguration() {
   layeredHaircutDiagnostic = layeredHaircutEnabled && params.get("lengthDiagnostic") === "1";
   lockLaminaeEnabled =
     independentDisplayFolliclesEnabled && params.get("lockSurface") === "laminae";
+  biologicalHeroLocksEnabled = lockLaminaeEnabled && params.get("scalpFlow") === "biological-whorl";
   lockLaminaeDiagnostic = lockLaminaeEnabled && params.get("laminaDiagnostic") === "1";
   fixedAlphaCoverageEnabled = lockLaminaeEnabled && params.get("laminaOptics") === "fixed-a2c";
   sublockPhaseColors =
