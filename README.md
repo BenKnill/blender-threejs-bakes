@@ -1,16 +1,51 @@
-# Blender ⇄ Three.js Bakes
+# Hair Material Bench + Blender ⇄ Three.js Bakes
 
-Static Three.js blocking editor plus Blender scripts for final Cycles renders from
-original `.blend` assets.
-
-For agent-facing operating notes, see [AGENTS.md](AGENTS.md).
-For the stable physics/render boundary and deliberate non-claims, see
-[the integration handoff](docs/INTEGRATION_HANDOFF.md).
-
-Canonical Hair Material Bench:
+The current product wedge is the **Hair Material Bench**: an interactive
+hair-material research and authoring workbench with three curated scenes and an
+explicit full-control lab mode. The canonical deployed experience is
 [hair-material-bench.pages.dev](https://hair-material-bench.pages.dev/).
 
-## Run the editor
+The repository also retains the Blender/Three.js composition-and-bake platform
+that preceded the hair work. That platform remains supported infrastructure:
+lightweight GLB proxies make layout cheap in the browser, original `.blend`
+assets remain the render source, and versioned JSON contracts connect the
+editor, Box3D recordings, and Blender.
+
+## Start here
+
+Run the current curated hair experience locally:
+
+```sh
+just hair-groom-hydration-showcase
+```
+
+Run the editable Hair Material Bench instead:
+
+```sh
+just hair-material
+```
+
+The Hair Material Bench is a reduced-order research and authoring workbench. It
+does not claim calibrated real-hair prediction, per-visible-fiber simulation,
+production salon training, or Disney-quality rendering. See
+[the current product contract](docs/HAIR_MATERIAL_BENCH.md) and
+[the longer product direction](docs/HAIRCUT_SIMULATOR_DIRECTION.md).
+
+## Repository map
+
+| Surface                  | Primary owners                                                     | Status                                             |
+| ------------------------ | ------------------------------------------------------------------ | -------------------------------------------------- |
+| Hair Material Bench      | `physics/labs/hair_material/demo/`, hair runners, Pages packager   | Current product and active R&D wedge               |
+| Layout and bake platform | `editor/`, `scripts/bt.py`, `scripts/render_layout.py`, `schemas/` | Supported infrastructure                           |
+| Recorded motion bridge   | `physics/box3d_scene_runner.c`, scene/job schemas, motion replay   | Supported constrained integration                  |
+| Physics studies          | `physics/labs/`, experiment builders, receipts                     | Separate research lanes; not one production solver |
+
+For a routed documentation index, see [docs/README.md](docs/README.md). Agent
+operating notes live in [AGENTS.md](AGENTS.md), the layout/bake design is in
+[DESIGN.md](DESIGN.md), and the stable integration boundary and non-claims are
+in [docs/INTEGRATION_HANDOFF.md](docs/INTEGRATION_HANDOFF.md).
+
+## Run the layout editor
 
 ```sh
 ./scripts/serve.sh
@@ -31,7 +66,7 @@ The editor reads `assets/manifest.json`, lets you place and transform instances,
 saves the current OrbitControls camera, stores lighting presets/sun/world intent,
 and exports a `*.layout.json` file that the Blender renderer can consume.
 
-## Generate GLB proxies
+## Author GLB proxies and the manifest
 
 Fresh checkouts intentionally do not commit most browser proxy GLBs. To rebuild
 the missing proxies from the manifest's `source_blend` paths:
@@ -52,8 +87,9 @@ To create a new manifest from a source directory instead:
   --limit 12
 ```
 
-Both flows write `assets/glb/*.glb` and refresh `assets/manifest.json` plus
-`assets/manifest.receipt.json`.
+The manifest-driven flow is the safe fill-missing bootstrap. The source-directory
+flow is a manifest-authoring command: it generates proxies and rewrites
+`assets/manifest.json`. Both flows refresh `assets/manifest.receipt.json`.
 
 ## Render a layout
 

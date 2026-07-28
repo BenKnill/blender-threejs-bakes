@@ -1,7 +1,16 @@
-# Blender ⇄ Three.js Bake Workflow — Design
+# Layout And Bake Foundation — Design
 
 Date: 2026-06-25
-Status: **Implemented prototype** — schema-v2 layouts carry camera, render, and lighting intent.
+Status: **Supported foundation** — the original prototype is implemented and
+now lives alongside the Hair Material Bench and recorded-physics work. The
+surfaces share selected serving, vendored Three.js, and offline replay/bake
+infrastructure; the live hair app does not use layout JSON or Blender.
+
+This document owns the reusable Three.js layout → JSON contract → Blender bake
+pipeline. It is not a description of the repository's whole product surface.
+See [README.md](README.md) for the current product map and
+[docs/HAIR_MATERIAL_BENCH.md](docs/HAIR_MATERIAL_BENCH.md) for the active Hair
+Material Bench contract.
 
 ## Goal
 
@@ -30,13 +39,19 @@ The two are connected by a small JSON contract, not by sharing geometry.
    • Cycles render → hero PNG/EXR
 ```
 
+The Hair Material Bench has its own static browser runtime. Its live loop does
+not send every frame through this layout contract or Blender. The generic
+recorded-motion path emits `motion-clip/1` for the editor and Blender; the hair
+app instead replays its own quantized `hair-box3d-guide-clip/1` format in the
+browser. That hair-specific clip is not the generic Blender bake contract.
+
 ## The core idea (read this first)
 
 **GLB is a disposable proxy used only for positioning. The `.blend` is the real
 bake source.** They are linked by a stable `asset_id`.
 
 You never bake the GLB. The browser tells Blender "asset `mushroom` sits at this
-transform, camera is here," and Blender re-imports the *good* mushroom from its
+transform, camera is here," and Blender re-imports the _good_ mushroom from its
 original `.blend` and renders that. This keeps the browser fast and the render
 full-fidelity, and avoids the lossy "export everything to glTF and hope materials
 survive" trap.
@@ -45,24 +60,33 @@ survive" trap.
 
 ```
 blender-threejs-bakes/
-├── DESIGN.md                     # this file
-├── README.md                     # quickstart once code lands
+├── README.md                     # current product map and quickstarts
+├── DESIGN.md                     # this layout/bake foundation
 ├── assets/
-│   ├── manifest.json             # [{id, name, glb, source_blend, collection, bbox}]
-│   └── glb/                      # generated GLB proxies (gitignored, regenerable)
+│   ├── manifest.json             # stable asset ids and source/proxy metadata
+│   ├── glb/                      # mostly generated proxies
+│   └── source_blends/            # deliberately self-contained source exceptions
 ├── editor/                       # the Three.js layout editor (static, no build step)
 │   ├── index.html
-│   ├── editor.js                 # scene, controls, instance list, save/load
+│   ├── main.js                   # bootstrap and composition
+│   ├── scene.js                  # renderer, camera, lighting, resize
+│   ├── instances.js              # placement and selection owner
+│   ├── layout-io.js              # layout serialization and hydration
 │   ├── manifest-loader.js
 │   └── vendor/                   # pinned three.js + addons (OrbitControls, TransformControls, GLTFLoader)
-├── layouts/                      # saved compositions
-│   └── *.layout.json             # the browser→blender contract
+├── physics/
+│   ├── box3d_scene_runner.c      # generic recorded-motion runner
+│   └── labs/                     # separate experimental models and receipts
+├── layouts/                      # browser→Blender composition contracts
+├── scenes/ + jobs/               # authored physics/render inputs
+├── schemas/                      # machine-readable contracts
 ├── renders/                      # Blender output (gitignored)
 └── scripts/
-    ├── export_proxies.py         # Blender: .blend hero assets → assets/glb/*.glb + manifest.json
-    ├── render_layout.py          # Blender: layout.json → renders/<name>.png
-    ├── blender.sh                # thin wrapper over /Applications/Blender.app/.../Blender
-    └── serve.sh                  # `python3 -m http.server` for the editor (avoids file:// CORS)
+    ├── bt.py + btlib/            # non-interactive layout/bake control surface
+    ├── export_proxies.py         # source .blend → GLB proxy + manifest
+    ├── compile_*.py              # scene/job → recorded-motion inputs
+    ├── render_layout.py          # layout.json → Blender render + receipt
+    └── editor_server.py          # local static/API server
 ```
 
 `Blender` binary (confirmed present): `/Applications/Blender.app/Contents/MacOS/Blender`
@@ -75,7 +99,7 @@ JSON-pointer-style errors.
 
 `python3 scripts/bt.py` is also the text control surface for layout authoring
 and baking. It writes the same schema-v2 Three.js Y-up layout contract as the
-browser editor.
+browser editor; schema 3 adds keyframe poses for shot packages.
 
 ### `assets/manifest.json` — produced by stage 1, consumed by the editor
 
@@ -171,8 +195,7 @@ slightly different conventions.
 
 ## Stage 1 — `export_proxies.py` (Blender, headless)
 
-For each hero `.blend` (start with the 12 in
-`/Users/boxer/asset-menagerie/blenderkit-live/model/`):
+For each selected hero `.blend`:
 
 1. Open / append its main collection into an empty scene.
 2. Export that collection to `assets/glb/<id>.glb`
@@ -180,6 +203,7 @@ For each hero `.blend` (start with the 12 in
 3. Record `id`, `name`, `source_blend`, `collection`, `bbox` into `manifest.json`.
 
 Notes:
+
 - Decimate or cap proxy poly count if any asset is heavy (proxies just need
   silhouette + rough material — matte is fine, per the findings' "clay-model-room"
   preference). A `--max-tris` knob, default e.g. 50k.
@@ -224,32 +248,23 @@ Blender --background --python scripts/render_layout.py -- layouts/foo.layout.jso
    (inputs, sample count, asset list, timestamp) — receipts proved their worth
    in the prior run.
 
-## Open questions to resolve before/at implementation
+## Current Boundaries
 
-1. **Material parity in the proxy.** GLB proxies will look matte/approximate vs.
-   the final Blender materials. Acceptable for blocking? (Findings say yes — clay
-   preview is preferred.) If you later want closer preview, we can bake a small
-   albedo into the GLB.
-2. **Lighting authoring.** v1 = single world HDRI. Do you want light placement in
-   the browser too (a later "lights are just another asset type" extension), or
-   keep lighting purely Blender-side via a named rig?
-3. **Append vs link** for the bake. Default append (self-contained). Revisit only
-   if scenes get heavy.
-4. **Asset starter scale.** Layouts keep true Three.js Y-up coordinates and
-   explicit instance scales, but placement can use `default_scale` metadata for
-   oversized assets. Without metadata, the helper only downscales very large
-   bounding boxes so normal assets keep their source scale.
+- **Proxy appearance is approximate.** GLBs are placement aids, not proof of
+  final Blender material parity.
+- **Append remains the bake default.** Linking may be revisited for very large
+  scenes, but it is not the supported contract today.
+- **Starter scale is placement metadata.** Layouts retain explicit transforms;
+  the helper only supplies a reasonable initial scale.
+- **The editor is not a material or physics authority.** It authors layout and
+  previews sampled motion. Blender owns final bake appearance, and Box3D owns
+  the rigid-body integration that produced a motion clip.
+- **Fresh-checkout proxy coverage remains a readiness concern.** Current
+  manifest validation includes proxy-file availability, so a missing local
+  proxy is reported as a validation failure. Do not interpret that result as a
+  schema-only verdict.
 
-## Build milestones (when code is greenlit)
-
-- **M1** `export_proxies.py` + `manifest.json` for 2–3 assets; eyeball the GLBs.
-- **M2** Editor loads manifest, drops/transforms instances, saves `layout.json`.
-- **M3** `render_layout.py` round-trips one hand-written layout → correct render
-  (proves the coordinate conversion before the editor is even pretty).
-- **M4** Full loop: place in browser → export → render, on the 12 hero assets.
-- **M5** Save Camera, instance list polish, receipts, lighting hook.
-
-The critical de-risking step is **M3 before M2's polish** — get the
-browser→Blender coordinate round-trip provably correct on one asset, because
-that's where this class of tool usually breaks.
-```
+The end-to-end coordinate round trip is already implemented. Changes to
+parenting, transforms, camera conversion, or layout schemas must preserve it by
+running `scripts/smoke_roundtrip.py`; screenshots alone do not prove this
+foundation.

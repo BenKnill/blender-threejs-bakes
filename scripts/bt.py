@@ -756,11 +756,18 @@ def cmd_animate_effects(args: argparse.Namespace) -> int:
     }
     manifest_path = animation_dir / "animation.json"
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-    payload = {"ok": True, "animation": animation_id, "directory": relative(animation_dir), **manifest}
+    payload = {
+        "ok": True,
+        "animation": animation_id,
+        "directory": relative(animation_dir),
+        **manifest,
+    }
     return print_result(payload, args.json)
 
 
-def prepare_animation_layout(layout_path: Path, args: argparse.Namespace, animation_dir: Path) -> Path:
+def prepare_animation_layout(
+    layout_path: Path, args: argparse.Namespace, animation_dir: Path
+) -> Path:
     layout = load_layout(layout_path)
     render = layout.setdefault("render", {})
     if args.width is not None:
@@ -1149,7 +1156,9 @@ def build_parser() -> argparse.ArgumentParser:
     place_effect = subcommands.add_parser("place-effect", help="add a compute effect placeholder")
     add_layout_arg(place_effect)
     place_effect.add_argument("effect_id", choices=sorted(COMPUTE_EFFECTS))
-    place_effect.add_argument("--at", type=float, nargs=3, metavar=("X", "Y", "Z"), default=[0, 0, 0])
+    place_effect.add_argument(
+        "--at", type=float, nargs=3, metavar=("X", "Y", "Z"), default=[0, 0, 0]
+    )
     place_effect.add_argument("--scale", type=float, nargs="+")
     place_effect.add_argument("--quat", type=float, nargs=4, metavar=("X", "Y", "Z", "W"))
     place_effect.add_argument("--id")
