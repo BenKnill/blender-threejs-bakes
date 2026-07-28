@@ -1,5 +1,17 @@
 # Agent Operating Guide
 
+## Machine Workbench Authority
+
+Proof sources may live in this repository, but HOL Light Workbench clients do
+not. On this Mac, use only the installed commands under
+`/Users/boxer/.local/share/hol-light-workbench/bin`, including `smoke`, `prove`,
+and `inspect`. The sole client checkout is `/Users/boxer/hol-light-workbench`.
+
+The installed dispatcher fails closed unless that checkout is clean `main` at
+the same revision as local `origin/main`. Repair or merge canonical `main` if it
+refuses; do not fall back to a checkout-relative client or rebuild a profile in
+response to stale-client advice.
+
 This is the front door for coding agents working in this repo. It documents the
 current supported loop and the contracts that must stay stable. Treat only the
 surfaces documented here as stable; do not assume unlisted editor APIs or browser
