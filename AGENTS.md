@@ -5,14 +5,59 @@ current supported loop and the contracts that must stay stable. Treat only the
 surfaces documented here as stable; do not assume unlisted editor APIs or browser
 automation hooks exist.
 
-## Model
+Use [docs/README.md](docs/README.md) to route into product, foundation, and
+research documentation before editing a specialized lane.
 
-The browser editor uses lightweight GLB proxies only for positioning. The
-original `.blend` assets are the bake source. `assets/manifest.json` joins those
+## Product And Architecture Model
+
+The repository has four distinct ownership layers:
+
+1. **Current product:** the Hair Material Bench under
+   `physics/labs/hair_material/demo/`, packaged for the canonical Pages site by
+   `scripts/build_hair_pages.mjs`.
+2. **Supported foundation:** the static Three.js layout editor, `bt` CLI,
+   versioned JSON contracts, and Blender bake scripts.
+3. **Recorded motion integration:** authored scene/job contracts compile to
+   Box3D, which records `motion-clip/1`; browser and Blender consumers replay
+   those samples without running a second rigid-body solver.
+4. **Research lanes:** the other `physics/labs/*` experiments keep separate
+   models, receipts, and non-claims. Do not flatten them into one generic
+   production physics API.
+
+In the layout/bake foundation, lightweight GLBs are positioning proxies only.
+Original `.blend` assets are the bake source. `assets/manifest.json` joins those
 worlds by stable `asset_id`, and `*.layout.json` is the browser-to-Blender
-contract. Coordinate conversion happens in one place: `scripts/render_layout.py`.
+contract. Coordinate conversion happens in one place:
+`scripts/render_layout.py`.
 
 ## Current Commands
+
+### Hair Material Bench
+
+Start the canonical curated scene locally:
+
+```sh
+just hair-groom-hydration-showcase
+```
+
+Start the editable laboratory:
+
+```sh
+just hair-material
+```
+
+Build the self-contained public payload without deploying it:
+
+```sh
+just hair-pages-build
+```
+
+The deployed scenes are presentation and research artifacts, not calibrated
+hair prediction or proof that every visible fiber is simulated. Preserve the
+claim boundaries and deterministic receipts in
+`docs/HAIR_MATERIAL_BENCH.md`.
+
+### Layout And Bake Foundation
 
 Serve the editor:
 
@@ -40,7 +85,7 @@ Smoke-test the Blender round trip:
 ./scripts/blender.sh --background --python scripts/smoke_roundtrip.py
 ```
 
-Lint/format the static editor:
+Lint/format the JavaScript browser and Node surfaces:
 
 ```sh
 npm run lint
@@ -66,8 +111,11 @@ and declared artifact sizes without hiding child output. See
 `docs/BAKE_TELEMETRY.md`.
 
 The local `just lint` and `just test` commands are the source of truth for
-editor lint/format and Python/compiler checks. See [the integration handoff](docs/INTEGRATION_HANDOFF.md)
-for the stable boundary and deliberate non-claims.
+JavaScript lint/format, Python lint, and dependency-light contract checks. See
+[the integration handoff](docs/INTEGRATION_HANDOFF.md) for the stable boundary
+and deliberate non-claims.
+
+### Recorded Physics And Research Lanes
 
 Run the complete native Box3D → Blender proof (requires a local Box3D checkout
 and Blender):
@@ -137,8 +185,14 @@ python3 scripts/bt.py inspect /tmp/preset_sanity.layout.json
 
 ## Architecture Invariants
 
+- The Hair Material Bench is the current product surface. The layout editor is
+  supported infrastructure, and sibling physics labs remain separate research
+  lanes with their own claim boundaries.
 - The editor is static ESM with vendored Three.js under `editor/vendor/`; there
   is no build step.
+- The Hair Material Bench has a packaging step, not an application bundler:
+  `scripts/build_hair_pages.mjs` copies the self-contained browser app and
+  required vendored modules into `dist/`.
 - Editor space is always Three.js Y-up. Layouts use `"space": "threejs_yup"`.
 - The Y-up to Blender Z-up conversion lives only in `scripts/render_layout.py`.
   If another caller needs conversion, extract shared logic instead of copying the
@@ -147,17 +201,20 @@ python3 scripts/bt.py inspect /tmp/preset_sanity.layout.json
   must bump `"schema"` and either preserve or loudly reject old versions.
 - `asset_id` is the stable join key across GLB proxy, manifest entry, and source
   `.blend`; do not rename or reuse ids casually.
-- Generated/heavy artifacts stay out of git: `assets/glb/`, `renders/`,
-  `__pycache__/`, and `node_modules/`.
+- Generated/heavy artifacts normally stay out of git: `assets/glb/`,
+  `renders/`, `__pycache__/`, and `node_modules/`. A deliberately
+  self-contained source/proxy pair may be tracked under
+  `assets/source_blends/` and `assets/glb/` with provenance and a reviewable
+  payload boundary.
 - Blender outputs write receipt JSON sidecars. Keep that provenance intact when
   touching render or proxy export paths.
 - The first physics bridge keeps authored and simulated state in Three.js Y-up
   MKS space. Box3D is the sole rigid-body integrator; Blender consumes the
   sampled motion clip and performs the existing Y-up → Z-up conversion only at
   the render boundary.
-- The shipped compiler supports static and dynamic bbox-collider bodies. It
-  explicitly rejects kinematic bodies and does not yet author joints or
-  articulated assemblies.
+- The generic scene compiler supports static and dynamic bbox-collider bodies.
+  It explicitly rejects kinematic bodies and generic joint authoring.
+  Specialized tree and hair paths do not widen that stable generic contract.
 
 ## Current Data Contracts
 

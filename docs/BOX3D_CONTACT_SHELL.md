@@ -77,7 +77,7 @@ and public Box3D observations.
 ```sh
 just contact-shell
 
-/Users/boxer/hol-light-workbench/hol-workbench/bin/prove \
+/Users/boxer/.local/share/hol-light-workbench/bin/prove \
   "$PWD/physics/labs/contact_shell/contact_shell.ml" \
   --profile heavy \
   --run-root /Users/boxer/workbench-artifacts/box3d-contact-shell

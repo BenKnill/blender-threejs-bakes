@@ -2,7 +2,7 @@
   "name": "blender-threejs-bakes",
   "private": true,
   "type": "module",
-  "description": "Tooling-only manifest. The editor itself has NO build step and ships vendored ESM.",
+  "description": "Static Hair Material Bench plus Three.js layout and Blender bake tooling.",
   "scripts": {
     "prepare": "lefthook install",
     "serve": "./scripts/serve.sh",

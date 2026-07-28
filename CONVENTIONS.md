@@ -22,8 +22,9 @@ elsewhere, extract it to a shared module — do not copy the matrix.
 
 - Every layout carries `"schema": <int>`. Bump it on any breaking change and handle
   old versions in `render_layout.py` (or reject them loudly).
-- Current editor output is schema 2: camera + render + lighting. Schema 1 layouts
-  remain accepted by `render_layout.py` and use legacy lighting defaults.
+- Current editor output is schema 2: camera + render + lighting. Schema 3 adds
+  keyframe pose data for shot packages. Schema 1 layouts remain accepted by
+  `render_layout.py` and use legacy lighting defaults.
 - `asset_id` is the stable join key across GLB proxy ⇄ manifest ⇄ source `.blend`.
   Never reuse or rename an id casually.
 - Schemas are documented in `DESIGN.md` and `schemas/`. Update both in the same
@@ -32,10 +33,14 @@ elsewhere, extract it to a shared module — do not copy the matrix.
 ## 2. File size
 
 - **Soft cap 350 lines per source file** (enforced as an ESLint `warn` for JS).
-  `editor/editor.js` is already at ~399 — it should be split *before* it grows further.
-  See §6 for the target module layout.
-- Hard ceiling 500. A file past that is a design smell, not a style nit.
-- Functions: prefer < 40 lines. One job each.
+  Treat the warning as a prompt to inspect ownership, callers, and test seams.
+- Do not split a file merely to satisfy a line count. Extract a module when it
+  has a coherent owner and reduces the number of reasons the original file
+  changes.
+- Existing oversized Hair Material Bench modules are known consolidation debt,
+  not a waiver for adding unrelated behavior to them.
+- Functions should usually stay under 40 lines and have one job. Larger
+  orchestration functions need named phases or a tested pure helper boundary.
 
 ## 3. Python (Blender scripts)
 
@@ -50,15 +55,22 @@ elsewhere, extract it to a shared module — do not copy the matrix.
 - No bare `bpy.ops.*` where a `bpy.data.*` call is clearer; ops depend on context state
   and are the usual source of headless-mode surprises.
 
-## 4. JavaScript (editor)
+## 4. JavaScript (browser apps and Node harnesses)
 
-- **No build step, ever.** The editor is static ESM with a vendored, pinned Three.js
-  under `editor/vendor/`. `python3 -m http.server` (or `scripts/serve.sh`) is the whole
-  dev server. `package.json` exists for lint/format tooling only — never for a bundler.
+- The layout editor is static ESM with a vendored, pinned Three.js under
+  `editor/vendor/`. `scripts/serve.sh` is the development server; do not add a
+  bundler to the editor.
+- The Hair Material Bench is also static ESM. Its supported Pages build copies
+  the app and required vendor modules into `dist/`; it does not transpile or
+  bundle runtime source.
+- `package.json` owns JavaScript quality tooling and the Hair Pages packaging
+  commands. A new application build system requires an explicit architecture
+  decision rather than an incidental dependency.
 - Formatter: **prettier**. Linter: **eslint** (flat config). `npm run lint` / `npm run format`.
 - `editor/vendor/` is third-party — never linted, never hand-edited. Upgrade by replacing
   the whole vendored tree and noting the version in the commit.
-- Browser globals only; no Node APIs in editor code.
+- Browser code uses browser globals only. Node APIs belong in `scripts/*.mjs`,
+  not in `editor/` or browser demo modules.
 
 ## 5. Provenance / receipts
 
@@ -80,9 +92,10 @@ That test exists specifically to catch the silent failure mode where the instanc
 has the right matrix but parented asset roots do not inherit it. Editor screenshots are
 not proof of the Blender bake contract.
 
-## 6. Target front-end module split (do this at the next editor change)
+## 6. Front-end ownership
 
-`editor.js` is one 399-line file. Split along seams that already exist in it:
+The layout editor split is implemented. Preserve these owners instead of
+rebuilding a single controller:
 
 ```
 editor/
@@ -98,9 +111,20 @@ editor/
 Keep module-level mutable state (the `instances` Map, `selected`) in one owner module
 and pass it, rather than scattering globals across files.
 
+The Hair Material Bench has separate solver, rendering, replay, groom, and
+contact modules under `physics/labs/hair_material/demo/`. New work should
+extend the narrowest existing owner or extract a pure owner with direct tests.
+`main.js` is still a mixed integration and presentation owner: it contains
+bootstrap, query configuration, groom geometry, shaders, telemetry, and UI
+orchestration. Treat those responsibilities as known extraction debt; do not
+add another unrelated owner to the file for convenience.
+
 ## 7. Git hygiene
 
-- Generated/heavy artifacts stay gitignored: `assets/glb/`, `renders/`, `__pycache__/`,
-  `node_modules/`. Source-of-truth `.blend` files live outside this repo
-  (`/Users/boxer/asset-menagerie/...`) and are referenced by absolute path in the manifest.
+- Generated/heavy artifacts normally stay gitignored: `assets/glb/`,
+  `renders/`, `__pycache__/`, `node_modules/`. Most source-of-truth `.blend`
+  assets live outside this repo and are referenced by the manifest. A
+  deliberately self-contained source/proxy pair may be committed under
+  `assets/source_blends/` and `assets/glb/` only with provenance and a
+  reviewable payload boundary.
 - Commit the manifest and layouts (they're small and meaningful), not the binaries they point to.

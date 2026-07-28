@@ -22,11 +22,19 @@ reported by [`/build.json`](https://hair-material-bench.pages.dev/build.json).
 The canonical page now exposes one Next button rather than the laboratory
 control wall. The complete controls remain available explicitly at `?lab=1`.
 
+For the same canonical first scene locally:
+
+```sh
+just hair-groom-hydration-showcase
+```
+
+For the uncurated editable laboratory:
+
 ```sh
 just hair-material
 ```
 
-Then open:
+The latter prints:
 
 ```text
 http://127.0.0.1:8091/physics/labs/hair_material/demo/
@@ -252,7 +260,7 @@ pressure, and root-field decomposition have deliberately narrow componentwise HO
 `physics/labs/hair_material/proofs/pair_constraint.ml`.
 
 ```sh
-hol-workbench/bin/prove \
+/Users/boxer/.local/share/hol-light-workbench/bin/prove \
   "$PWD/physics/labs/hair_material/proofs/pair_constraint.ml" \
   --profile light --run-root /tmp/hair-material-hol-runs
 ```
