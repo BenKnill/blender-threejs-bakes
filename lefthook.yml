@@ -7,8 +7,8 @@
 #
 # Globs are explicit for each source surface because lefthook's `**/` requires a
 # subdirectory and would silently skip the flat editor, demo, and scripts roots.
-# Keeping the browser demos and Node harnesses here makes the staged-file hook
-# cover the same JavaScript ownership surfaces as `npm run lint`.
+# Keep each source root explicit so the staged-file hooks cover the same
+# JavaScript and Python ownership surfaces as the full local lint gate.
 
 commit-msg:
   commands:
@@ -26,11 +26,11 @@ pre-commit:
       glob: "{editor/*.js,physics/labs/*/demo/*.js,scripts/*.mjs}"
       run: npx eslint {staged_files}
     ruff-format:
-      glob: "scripts/*.py"
+      glob: "{scripts/*.py,scripts/btlib/*.py}"
       run: sh -c 'command -v ruff >/dev/null 2>&1 && ruff format "$@" || uvx ruff format "$@"' _ {staged_files}
       stage_fixed: true
     ruff-check:
-      glob: "scripts/*.py"
+      glob: "{scripts/*.py,scripts/btlib/*.py}"
       run: sh -c 'command -v ruff >/dev/null 2>&1 && ruff check "$@" || uvx ruff check "$@"' _ {staged_files}
     contracts:
       glob: "{layouts/*.json,assets/manifest.json}"
