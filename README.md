@@ -68,16 +68,28 @@ and exports a `*.layout.json` file that the Blender renderer can consume.
 
 ## Author GLB proxies and the manifest
 
+Fresh checkouts intentionally do not commit most browser proxy GLBs. To rebuild
+the missing proxies from the manifest's `source_blend` paths:
+
+```sh
+./scripts/blender.sh --background --python scripts/export_proxies.py -- \
+  --manifest assets/manifest.json --missing-only
+```
+
+Use `--dry-run` first to see which proxies would be exported and whether any
+source `.blend` path is unavailable locally.
+
+To create a new manifest from a source directory instead:
+
 ```sh
 ./scripts/blender.sh --background --python scripts/export_proxies.py -- \
   --source-dir /Users/boxer/asset-menagerie/blenderkit-live/model \
   --limit 12
 ```
 
-This generates proxies **and rewrites** `assets/manifest.json`; it is a
-manifest-authoring command, not a safe fill-missing bootstrap. A clean checkout
-currently tracks only the self-contained Starship source/proxy pair, so most
-manifest entries require local proxies before they are previewable.
+The manifest-driven flow is the safe fill-missing bootstrap. The source-directory
+flow is a manifest-authoring command: it generates proxies and rewrites
+`assets/manifest.json`. Both flows refresh `assets/manifest.receipt.json`.
 
 ## Render a layout
 
@@ -216,6 +228,7 @@ render receipts folded into `render_metadata`.
 ```sh
 python3 scripts/bt.py validate layouts/live.layout.json
 python3 scripts/bt.py validate assets/manifest.json --json
+python3 scripts/bt.py validate assets/manifest.json --check-proxies --json
 python3 scripts/check_lighting_presets.py
 ```
 
@@ -223,9 +236,9 @@ Validation errors use JSON-pointer-style paths such as
 `/instances/3/quaternion: expected 4 numbers`.
 The lighting preset check compares the browser editor presets against the CLI
 presets so calibration changes cannot silently drift.
-Manifest validation also checks that each `glb` proxy resolves under `assets/`;
-missing browser proxies are errors because the editor preview can otherwise
-diverge from Blender renders.
+Default manifest validation checks the contract only. Add `--check-proxies` when
+you specifically want preview-readiness to fail on missing browser GLBs; rebuild
+missing proxies with the manifest bootstrap command above.
 
 ## Author from the CLI
 

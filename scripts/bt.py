@@ -49,14 +49,14 @@ from btlib.presets import (
 from btlib.validate import ContractError, validate_layout, validate_manifest, validate_shot
 
 
-def validate_file(path: Path) -> None:
+def validate_file(path: Path, *, check_proxy_files: bool = False) -> None:
     data = load_json(path)
     if path.name == "shot.json" or ("frames" in data and "source_layouts" in data):
         validate_shot(data)
     elif "layout" in data and "required_assets" in data:
         validate_preset(data)
     elif path.name == "manifest.json" or "assets" in data:
-        validate_manifest(data, path, check_proxy_files=True)
+        validate_manifest(data, path, check_proxy_files=check_proxy_files)
     else:
         validate_layout(data)
 
@@ -66,7 +66,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
     ok_paths = []
     for path in args.paths:
         try:
-            validate_file(path)
+            validate_file(path, check_proxy_files=args.check_proxies)
         except ContractError as exc:
             failures.append({"path": str(path), "errors": exc.errors})
         else:
@@ -756,11 +756,18 @@ def cmd_animate_effects(args: argparse.Namespace) -> int:
     }
     manifest_path = animation_dir / "animation.json"
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-    payload = {"ok": True, "animation": animation_id, "directory": relative(animation_dir), **manifest}
+    payload = {
+        "ok": True,
+        "animation": animation_id,
+        "directory": relative(animation_dir),
+        **manifest,
+    }
     return print_result(payload, args.json)
 
 
-def prepare_animation_layout(layout_path: Path, args: argparse.Namespace, animation_dir: Path) -> Path:
+def prepare_animation_layout(
+    layout_path: Path, args: argparse.Namespace, animation_dir: Path
+) -> Path:
     layout = load_layout(layout_path)
     render = layout.setdefault("render", {})
     if args.width is not None:
@@ -1149,7 +1156,9 @@ def build_parser() -> argparse.ArgumentParser:
     place_effect = subcommands.add_parser("place-effect", help="add a compute effect placeholder")
     add_layout_arg(place_effect)
     place_effect.add_argument("effect_id", choices=sorted(COMPUTE_EFFECTS))
-    place_effect.add_argument("--at", type=float, nargs=3, metavar=("X", "Y", "Z"), default=[0, 0, 0])
+    place_effect.add_argument(
+        "--at", type=float, nargs=3, metavar=("X", "Y", "Z"), default=[0, 0, 0]
+    )
     place_effect.add_argument("--scale", type=float, nargs="+")
     place_effect.add_argument("--quat", type=float, nargs=4, metavar=("X", "Y", "Z", "W"))
     place_effect.add_argument("--id")
@@ -1259,6 +1268,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     validate = subcommands.add_parser("validate", help="validate a layout or manifest JSON file")
     validate.add_argument("paths", type=Path, nargs="+")
+    validate.add_argument(
+        "--check-proxies",
+        action="store_true",
+        help="also fail manifests when referenced browser proxy GLBs are missing",
+    )
     validate.add_argument("--json", action="store_true")
     validate.set_defaults(func=cmd_validate)
 

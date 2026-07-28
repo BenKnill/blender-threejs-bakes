@@ -225,7 +225,7 @@ try {
         window_size: windowSize.split(",").map(Number),
         entry_state: entryState,
         loop_wrap_probe: loopWrapProbe,
-        captures: captures.map(({ receipt: ignored, ...captureItem }) => captureItem),
+        captures: captures.map(({ receipt: _receipt, ...captureItem }) => captureItem),
         exceptions,
         console_errors: consoleErrors,
         final_render_receipt: receipt ? JSON.parse(receipt) : null,
