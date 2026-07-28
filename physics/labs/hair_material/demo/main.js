@@ -522,7 +522,6 @@ let groomPatchTangents = new Float64Array();
 let groomPatchOutwards = new Float64Array();
 let groomPatchLaterals = new Float64Array();
 let groomPatchFrameCounts = new Uint16Array();
-let patchLockTelemetry = null;
 let authoredRestCenters = new Float64Array();
 let authoredLiveCenters = new Float64Array();
 let authoredMechanicalReference = new Float64Array();
