@@ -260,16 +260,18 @@ pressure, and root-field decomposition have deliberately narrow componentwise HO
 `physics/labs/hair_material/proofs/pair_constraint.ml`.
 
 ```sh
-/Users/boxer/.local/share/hol-light-workbench/bin/prove \
-  "$PWD/physics/labs/hair_material/proofs/pair_constraint.ml" \
+orb -m dev
+cd /home/boxer/src/hol-light-workbench
+hol-workbench/bin/prove \
+  /Users/boxer/blender-threejs-bakes/physics/labs/hair_material/proofs/pair_constraint.ml \
   --profile light --run-root /tmp/hair-material-hol-runs
 ```
 
-On the primary Mac this routes automatically through the live OrbStack CRIU
-`light` shelf. The styled-root addition reused the shelf in 0.000 seconds and
-the full source succeeded in 0.6 seconds. This is warm development evidence,
-not a cold audit or a proof that the JavaScript implementation refines the HOL
-statements.
+The following timing is a historical receipt from the retired Mac-dispatcher
+and CRIU-shelf workflow: the styled-root addition reused the `light` shelf in
+0.000 seconds and the full source succeeded in 0.6 seconds. Preserve it as warm
+development evidence, not as a current invocation route, a cold audit, or a
+proof that the JavaScript implementation refines the HOL statements.
 
 The pressure suite now also pins the production coefficient `0.36 = 9 / 25`.
 `HAIR_PRESSURE_STRENGTH_036_PREVENTS_GAP_OVERSHOOT` proves that the symmetric
@@ -277,9 +279,10 @@ uncapped update closes 72% of a scalar pore-gap deficit without crossing the
 minimum gap. Changing that coefficient now requires changing a theorem rather
 than merely refreshing a choreography receipt.
 
-The loop produced useful Workbench feedback: the first failed attempt identified
-the incorrect use of `REAL_RING` as a tactic without printing a transcript; later
-attempts exposed the bounded residual goal. It also exposed a visibility issue:
+That historical loop produced useful Workbench feedback: the first failed
+attempt identified the incorrect use of `REAL_RING` as a tactic without printing
+a transcript; later attempts exposed the bounded residual goal. It also exposed
+a visibility issue:
 `workbench state` reported `light: cold` immediately before `prove` reused an
 already-live CRIU shelf. That feedback is tracked in
 [hol-light-workbench issue #308](https://github.com/BenKnill/hol-light-workbench/issues/308).

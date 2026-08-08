@@ -1,4 +1,4 @@
-import { SCALP_CENTER, SCALP_RADII, SCALP_ROOT_OFFSET } from "./scalp_layout.js?v=116";
+import { SCALP_CENTER, SCALP_RADII, SCALP_ROOT_OFFSET } from "./scalp_layout.js";
 
 export const LAYERED_HAIRCUT_FIELD_ID = "authored_long_layers_v1";
 export const LAYERED_HAIRCUT_ZONE_NAMES = Object.freeze(["crown", "front", "side", "back"]);

@@ -23,7 +23,7 @@ import {
   ROOT_STYLE_PART_X,
   ROOT_STYLE_SECTION_COUNT,
   summarizeRootTargets,
-} from "./root_style_field.js?v=115";
+} from "./root_style_field.js";
 import { groomSectionId } from "./groom_interpolation.js";
 import {
   scalpRootFrame,
@@ -31,7 +31,7 @@ import {
   SCALP_LAYOUT_ID,
   SCALP_RADII,
   summarizeScalpLayout,
-} from "./scalp_layout.js?v=115";
+} from "./scalp_layout.js";
 
 export { blendPairAnisotropicFriction } from "./friction.js";
 

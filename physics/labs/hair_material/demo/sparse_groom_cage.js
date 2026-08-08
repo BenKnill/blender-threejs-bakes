@@ -1,10 +1,10 @@
-import { SCALP_CENTER, SCALP_RADII, SCALP_ROOT_OFFSET } from "./scalp_layout.js?v=116";
+import { SCALP_CENTER, SCALP_RADII, SCALP_ROOT_OFFSET } from "./scalp_layout.js";
 import {
   BIOLOGICAL_ROOT_EMERGENCE_DOT,
   BIOLOGICAL_ROOT_EMERGENCE_HOLD_FRACTION,
   BIOLOGICAL_ROOT_EMERGENCE_RELEASE_FRACTION,
   biologicalScalpFlowDirection,
-} from "./biological_scalp_flow.js?v=4";
+} from "./biological_scalp_flow.js";
 
 export const SPARSE_GROOM_CAGE_ID = "explicit_twenty_lock_side_part_cage_v1";
 export const SPARSE_GROOM_CORRELATED_HIERARCHY_ID = "three_phase_correlated_rest_residual_v1";

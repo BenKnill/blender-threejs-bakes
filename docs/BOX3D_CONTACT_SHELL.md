@@ -77,13 +77,17 @@ and public Box3D observations.
 ```sh
 just contact-shell
 
-/Users/boxer/.local/share/hol-light-workbench/bin/prove \
-  "$PWD/physics/labs/contact_shell/contact_shell.ml" \
+orb -m dev
+cd /home/boxer/src/hol-light-workbench
+hol-workbench/bin/prove \
+  /Users/boxer/blender-threejs-bakes/physics/labs/contact_shell/contact_shell.ml \
   --profile heavy \
-  --run-root /Users/boxer/workbench-artifacts/box3d-contact-shell
+  --run-root /tmp/proof-runs/box3d-contact-shell
 ```
 
-Inspect the proof run through the Workbench receipt, not process exit alone.
+`just contact-shell` builds and probes the C fixture on the Mac. The HOL command
+must run in Ubuntu. Inspect the guest proof run through its Workbench receipt,
+not process exit alone.
 
 ## Interactive laboratory
 

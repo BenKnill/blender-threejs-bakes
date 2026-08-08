@@ -2,8 +2,8 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
-import { loadBox3dGuideClip, sampleQuantizedGuideClip } from "./box3d_clip.js?v=125";
-import { HairSolver } from "./solver.js?v=124";
+import { loadBox3dGuideClip, sampleQuantizedGuideClip } from "./box3d_clip.js";
+import { HairSolver } from "./solver.js";
 import {
   advanceHairReplay,
   COMB_MATERIAL_CONDITIONS,
@@ -14,7 +14,7 @@ import {
   previewWindProgramAtStep,
   resolvePreviewWindMagnitudes,
   summarizeCombReceipt,
-} from "./replay.js?v=114";
+} from "./replay.js";
 import {
   buildUndercoatCoverageProfile,
   buildRootCoverageCurve,
@@ -64,7 +64,7 @@ import {
   rootCoverageFiberCopies,
   sectionPosePresentationAtStep,
   summarizeGeometryTimings,
-} from "./rendering.js?v=132";
+} from "./rendering.js";
 import {
   buildGroomInterpolationBindings,
   groomDonorShapeTransferAt,
@@ -79,7 +79,7 @@ import {
   PATCH_LOCK_LATERAL_RADIUS_METERS,
   PATCH_LOCK_OUTWARD_RADIUS_METERS,
   transportGroomPoint,
-} from "./groom_interpolation.js?v=118";
+} from "./groom_interpolation.js";
 import {
   GROOM_ENVELOPE_PROFILES,
   GROOM_ENVELOPE_PROFILE_ORDER,
@@ -87,7 +87,7 @@ import {
   groomEnvelopeRadiiAt,
   resolveGroomEnvelopeProfile,
   summarizeGroomEnvelope,
-} from "./groom_envelope.js?v=1";
+} from "./groom_envelope.js";
 import {
   HAIR_MASS_FILL_PROFILES,
   HAIR_MASS_FILL_PROFILE_ORDER,
@@ -97,14 +97,14 @@ import {
   hairMassMinimumHalfWidth,
   resolveHairMassFillProfile,
   summarizeHairMassFill,
-} from "./hair_mass_fill.js?v=2";
+} from "./hair_mass_fill.js";
 import {
   CURATED_HAIR_SCENE_FIELD_ID,
   CURATED_HAIR_SCENES,
   curatedHairSceneParameters,
   nextCuratedHairSceneId,
   resolveCuratedHairScene,
-} from "./curated_scenes.js?v=2";
+} from "./curated_scenes.js";
 import {
   AUTHORED_GROOM_FIELD_ID,
   AUTHORED_GROOM_LATERAL_RADIUS_METERS,
@@ -120,13 +120,13 @@ import {
   authoredGroomLaydownRestPoint,
   authoredGroomLaydownSampleFractionAt,
   authoredGroomRestPoint,
-} from "./authored_groom.js?v=1";
+} from "./authored_groom.js";
 import {
   HAIRLINE_FLOW_FIELD_ID,
   HAIRLINE_FLOW_SURFACE_FRACTION,
   HAIRLINE_FLOW_SURFACE_LENGTH_METERS,
   authoredHairlineFlowRestPoint,
-} from "./hairline_flow.js?v=1";
+} from "./hairline_flow.js";
 import {
   SPARSE_GROOM_CAGE_ID,
   SPARSE_GROOM_CORRELATED_HIERARCHY_ID,
@@ -142,22 +142,22 @@ import {
   sparseGroomSublockPhase,
   sparseGroomWidthMultiplierAt,
   biologicalSparseGroomRestPoint,
-} from "./sparse_groom_cage.js?v=4";
+} from "./sparse_groom_cage.js";
 import {
   BIOLOGICAL_PRIMARY_WIDTH_MULTIPLIER,
   biologicalHeroLockTelemetry,
   buildBiologicalHeroLockMap,
-} from "./biological_scalp_flow.js?v=4";
+} from "./biological_scalp_flow.js";
 import {
   buildIndependentDisplayFollicles,
   DISPLAY_FOLLICLE_LAYOUT_ID,
-} from "./display_follicles.js?v=1";
+} from "./display_follicles.js";
 import {
   LAYERED_HAIRCUT_FIELD_ID,
   LAYERED_HAIRCUT_ZONE_NAMES,
   layeredHaircutSample,
   layeredHaircutTipWidthScaleAt,
-} from "./layered_haircut.js?v=1";
+} from "./layered_haircut.js";
 import {
   LOCK_LAMINAE_FIELD_ID,
   buildLockLaminaAssignments,
@@ -165,7 +165,7 @@ import {
   lockLaminaOffset,
   lockLaminaOverlapRatioAt,
   summarizeLockLaminaAssignments,
-} from "./lock_laminae.js?v=1";
+} from "./lock_laminae.js";
 import {
   projectPointToScalpShell,
   scalpPolarLimit,
@@ -174,7 +174,7 @@ import {
   SCALP_RADII,
   SCALP_ROOT_PROJECTION_ID,
   SCALP_ROOT_OFFSET,
-} from "./scalp_layout.js?v=116";
+} from "./scalp_layout.js";
 
 let renderFibersPerGuide = 9;
 let hairRenderMode = "lines";

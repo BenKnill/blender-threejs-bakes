@@ -1,4 +1,4 @@
-import { SCALP_CENTER, SCALP_RADII, SCALP_ROOT_OFFSET } from "./scalp_layout.js?v=116";
+import { SCALP_CENTER, SCALP_RADII, SCALP_ROOT_OFFSET } from "./scalp_layout.js";
 
 export const BIOLOGICAL_SCALP_FLOW_ID = "crown_whorl_side_part_flow_v1";
 export const BIOLOGICAL_WHORL_CENTER = Object.freeze([-0.16, 0.97, -0.18]);
