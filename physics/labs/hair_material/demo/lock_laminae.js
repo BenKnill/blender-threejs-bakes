@@ -1,4 +1,4 @@
-import { SPARSE_GROOM_HEROES, sparseGroomRestPoint } from "./sparse_groom_cage.js?v=1";
+import { SPARSE_GROOM_HEROES, sparseGroomRestPoint } from "./sparse_groom_cage.js";
 
 export const LOCK_LAMINAE_FIELD_ID = "spatially_contiguous_fiber_laminae_v2";
 export const LOCK_LAMINA_COUNT = 3;

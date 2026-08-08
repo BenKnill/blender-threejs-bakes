@@ -1,4 +1,4 @@
-import { projectPointToScalpShell, scalpPolarLimit, scalpRootFrame } from "./scalp_layout.js?v=116";
+import { projectPointToScalpShell, scalpPolarLimit, scalpRootFrame } from "./scalp_layout.js";
 
 export const DISPLAY_FOLLICLE_LAYOUT_ID = "independent_golden_scalp_follicles_v1";
 export const DISPLAY_FOLLICLE_PART_X = -0.18;

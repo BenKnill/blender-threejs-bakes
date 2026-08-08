@@ -2,15 +2,26 @@
 
 ## Machine Workbench Authority
 
-Proof sources may live in this repository, but HOL Light Workbench clients do
-not. On this Mac, use only the installed commands under
-`/Users/boxer/.local/share/hol-light-workbench/bin`, including `smoke`, `prove`,
-and `inspect`. The sole client checkout is `/Users/boxer/hol-light-workbench`.
+HOL Light Workbench is Ubuntu-only. On this MacBook, every Workbench, HOL,
+OCaml, CRIU, Dune, syntax-check, inspection, and test process must run inside
+the local OrbStack Ubuntu guest. The authoritative guest checkout is
+`/home/boxer/src/hol-light-workbench`.
 
-The installed dispatcher fails closed unless that checkout is clean `main` at
-the same revision as local `origin/main`. Repair or merge canonical `main` if it
-refuses; do not fall back to a checkout-relative client or rebuild a profile in
-response to stale-client advice.
+Project proof sources may stay in this repository through the guest filesystem
+mount. From a Mac shell, use `orb -m dev` only to enter Ubuntu, then run the
+checkout-relative guest clients:
+
+```sh
+orb -m dev
+cd /home/boxer/src/hol-light-workbench
+hol-workbench/bin/smoke
+hol-workbench/bin/prove /absolute/path/to/source.ml --run-root /tmp/proof-runs
+hol-workbench/bin/inspect /tmp/proof-runs
+```
+
+Never invoke `/Users/boxer/.local/share/hol-light-workbench/bin`; that retired
+installation is refusal-only. Do not fall back to native macOS, WSL, an old
+installed client, a cold load, or a profile rebuild.
 
 This is the front door for coding agents working in this repo. It documents the
 current supported loop and the contracts that must stay stable. Treat only the
@@ -104,11 +115,12 @@ npm run lint
 npm run format
 ```
 
-Python scripts follow the repo ruff settings:
+Python scripts follow the repo Ruff settings. `just lint` uses `ruff` when
+installed and otherwise runs the same checks through `uvx`:
 
 ```sh
-pipx run ruff format scripts
-pipx run ruff check scripts
+uvx ruff format scripts
+uvx ruff check scripts
 ```
 
 Run the dependency-light Box3D scene/physics compiler contracts:
@@ -291,7 +303,8 @@ The local server is `scripts/editor_server.py`, normally reached through
   `layouts/live.layout.json`, and returns paths.
 - `POST /api/render-layout` accepts `{ "layout": "layouts/name.layout.json" }`
   or defaults to `layouts/live.layout.json`, runs Blender headlessly, and returns
-  render metadata or an error payload.
+  render metadata or a structured error payload. A render that exceeds 900
+  seconds returns HTTP 504 with `error` and `timeout_seconds` fields.
 
 Static files are also served from the repo root, including `/editor/`,
 `/assets/...`, and `/renders/...`.

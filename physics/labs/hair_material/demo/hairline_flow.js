@@ -1,10 +1,5 @@
-import {
-  SCALP_CENTER,
-  SCALP_RADII,
-  SCALP_ROOT_OFFSET,
-  scalpPolarLimit,
-} from "./scalp_layout.js?v=116";
-import { AUTHORED_GROOM_PART_X, authoredGroomRestPoint } from "./authored_groom.js?v=116";
+import { SCALP_CENTER, SCALP_RADII, SCALP_ROOT_OFFSET, scalpPolarLimit } from "./scalp_layout.js";
+import { AUTHORED_GROOM_PART_X, authoredGroomRestPoint } from "./authored_groom.js";
 
 export const HAIRLINE_FLOW_FIELD_ID = "continuous_hairline_temple_crown_flow_v1";
 export const HAIRLINE_FLOW_SURFACE_FRACTION = 0.14;

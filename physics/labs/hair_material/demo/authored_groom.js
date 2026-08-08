@@ -1,4 +1,4 @@
-import { projectPointToScalpShell } from "./scalp_layout.js?v=116";
+import { projectPointToScalpShell } from "./scalp_layout.js";
 
 export const AUTHORED_GROOM_FIELD_ID = "side_part_rest_displacement_transfer_v1";
 export const AUTHORED_GROOM_PART_X = -0.18;

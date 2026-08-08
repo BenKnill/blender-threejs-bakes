@@ -59,6 +59,12 @@ await writeFile(
 /index.html
   Cache-Control: no-cache
 
+/*.js
+  Cache-Control: no-cache
+
+/*.css
+  Cache-Control: no-cache
+
 /build.json
   Cache-Control: no-store
 

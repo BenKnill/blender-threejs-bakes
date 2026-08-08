@@ -20,6 +20,7 @@ MANIFEST = ROOT / "assets" / "manifest.json"
 RENDERS = ROOT / "renders"
 BLENDER = ROOT / "scripts" / "blender.sh"
 RENDER_SCRIPT = ROOT / "scripts" / "render_layout.py"
+RENDER_TIMEOUT_SECONDS = 900
 
 
 class EditorHandler(SimpleHTTPRequestHandler):
@@ -95,9 +96,24 @@ class EditorHandler(SimpleHTTPRequestHandler):
             "--output-dir",
             str(RENDERS),
         ]
-        proc = subprocess.run(
-            cmd, cwd=ROOT, capture_output=True, text=True, timeout=900, check=False
-        )
+        try:
+            proc = subprocess.run(
+                cmd,
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                timeout=RENDER_TIMEOUT_SECONDS,
+                check=False,
+            )
+        except subprocess.TimeoutExpired:
+            self.send_json(
+                {
+                    "error": "Blender render timed out",
+                    "timeout_seconds": RENDER_TIMEOUT_SECONDS,
+                },
+                HTTPStatus.GATEWAY_TIMEOUT,
+            )
+            return
         if proc.returncode != 0:
             self.send_json(
                 {

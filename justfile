@@ -19,6 +19,7 @@ test:
     python3 scripts/test_compile_physics.py
     python3 scripts/test_compile_tree_assembly.py
     python3 scripts/test_bake_telemetry.py
+    python3 scripts/test_editor_server.py
     python3 scripts/test_wind_canopy_math.py
     python3 scripts/test_haircut_math.py
     node scripts/test_hair_pages_build.mjs
@@ -53,7 +54,7 @@ hair-box3d-swatch:
 soft-ribbon-video: soft-ribbon
     bash scripts/render_soft_ribbon_animation.sh
 
-# Prove and probe the bounded Box3D contact-update shell.
+# Build and probe the bounded Box3D contact-update shell; HOL runs in Ubuntu separately.
 contact-shell:
     bash scripts/build_contact_shell.sh
 

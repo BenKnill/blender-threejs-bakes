@@ -52,6 +52,8 @@ const moduleSpecifiers = (source) => {
   return specifiers;
 };
 
+const localModuleIdentities = new Map();
+
 const resolveModule = (importer, specifier) => {
   const cleanSpecifier = specifier.replace(/[?#].*$/, "");
   if (cleanSpecifier === "three") {
@@ -61,7 +63,20 @@ const resolveModule = (importer, specifier) => {
     return path.join(output, "vendor", cleanSpecifier.slice("three/addons/".length));
   }
   if (cleanSpecifier.startsWith(".")) {
-    return path.resolve(path.dirname(importer), cleanSpecifier);
+    const modulePath = path.resolve(path.dirname(importer), cleanSpecifier);
+    const previousSpecifier = localModuleIdentities.get(modulePath);
+    assert.equal(
+      previousSpecifier ?? specifier,
+      specifier,
+      `${path.relative(output, modulePath)} has multiple browser module identities`
+    );
+    assert.equal(
+      cleanSpecifier,
+      specifier,
+      `${path.relative(output, importer)} uses a hand-authored module cache suffix`
+    );
+    localModuleIdentities.set(modulePath, specifier);
+    return modulePath;
   }
   throw new Error(
     `unsupported bare module import ${specifier} in ${path.relative(output, importer)}`
@@ -98,6 +113,11 @@ assert.ok(!index.includes("windProgram=strong-then-moderate-orbits"));
 assert.ok(!index.includes("strongWind="));
 assert.ok(!index.includes("moderateWind="));
 assert.ok(!index.includes("../../../../editor/vendor"));
+assert.ok(!index.includes("?v="));
+
+const headers = await readFile(path.join(output, "_headers"), "utf8");
+assert.match(headers, /\/\*\.js\n  Cache-Control: no-cache/);
+assert.match(headers, /\/\*\.css\n  Cache-Control: no-cache/);
 
 const receipt = JSON.parse(await readFile(path.join(output, "build.json"), "utf8"));
 const commit = execFileSync("git", ["rev-parse", "HEAD"], {
