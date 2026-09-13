@@ -92,6 +92,14 @@ hair-wind-showcase:
     ./scripts/serve.sh start
     @echo "http://127.0.0.1:8091/physics/labs/hair_material/demo/?replay=1&showcase=1&comb=1&cycle=1&guides=256&iterations=6&wetness=0.85&product=0.2&wind=0.32&gust=0.48&windRotation=0.62&orbit=0.22&scenario=rotating-wind-two-pass"
 
+# Launch the geometry-first rescue ship views as an observable background job.
+rescue-ship:
+    bash scripts/build_parametric_rescue_ship.sh start
+
+# Read live elapsed time, memory, completion, and artifacts for the rescue ship.
+rescue-ship-status:
+    bash scripts/build_parametric_rescue_ship.sh status
+
 # Compare free, scalp-normal, and styled roots through the same cut/comb replay.
 hair-root-field-ab:
     node scripts/run_hair_root_field_ab.mjs
