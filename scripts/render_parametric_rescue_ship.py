@@ -500,17 +500,31 @@ def setup_studio(width: int, height: int, samples: int) -> bpy.types.Object:
     camera_data.ortho_scale = 23.0
     scene.camera = camera
 
-    scene.use_nodes = True
-    nodes = scene.node_tree.nodes
-    links = scene.node_tree.links
+    if hasattr(scene, "compositing_node_group"):
+        tree = bpy.data.node_groups.new("conditioning compositor", "CompositorNodeTree")
+        tree.interface.new_socket(name="Image", in_out="OUTPUT", socket_type="NodeSocketColor")
+        scene.compositing_node_group = tree
+    else:
+        scene.use_nodes = True
+        tree = scene.node_tree
+    nodes = tree.nodes
+    links = tree.links
     nodes.clear()
     render_layers = nodes.new("CompositorNodeRLayers")
     glare = nodes.new("CompositorNodeGlare")
-    glare.glare_type = "FOG_GLOW"
-    glare.quality = "HIGH"
-    glare.threshold = 1.2
-    glare.size = 6
-    composite = nodes.new("CompositorNodeComposite")
+    if "Type" in glare.inputs:
+        glare.inputs["Type"].default_value = "Fog Glow"
+        glare.inputs["Quality"].default_value = "High"
+        glare.inputs["Threshold"].default_value = 1.2
+        glare.inputs["Size"].default_value = 0.25
+    else:
+        glare.glare_type = "FOG_GLOW"
+        glare.quality = "HIGH"
+        glare.threshold = 1.2
+        glare.size = 6
+    composite = nodes.new(
+        "NodeGroupOutput" if hasattr(scene, "compositing_node_group") else "CompositorNodeComposite"
+    )
     links.new(render_layers.outputs["Image"], glare.inputs["Image"])
     links.new(glare.outputs["Image"], composite.inputs["Image"])
     return camera
@@ -558,8 +572,8 @@ def main() -> None:
     counts = build_ship(spec)
     camera = setup_studio(args.width, args.height, args.samples)
     blend_path = output_dir / "parametric_rescue_ship.blend"
-    bpy.ops.wm.save_as_mainfile(filepath=str(blend_path))
     renders = render_views(camera, output_dir, views)
+    bpy.ops.wm.save_as_mainfile(filepath=str(blend_path))
     receipt = {
         "schema": "parametric-rescue-ship/1",
         "design_intent": "geometry-first conditioning plate for later image generation",

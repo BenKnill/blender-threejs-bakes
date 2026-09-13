@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import os
 import sys
 import traceback
 from datetime import UTC, datetime
@@ -20,6 +19,9 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
 from asset_texture_report import inspect_current_file  # noqa: E402 -- Blender --python path setup.
+from btlib.cycles_devices import (  # noqa: E402 -- Blender --python path setup.
+    configure_cycles_device,
+)
 from btlib.keyframes import layout_with_pose  # noqa: E402 -- Blender --python omits script dir.
 from btlib.source_paths import resolve_source_blend  # noqa: E402 -- Blender --python path setup.
 from btlib.texture_paths import (  # noqa: E402 -- Blender --python path setup.
@@ -500,54 +502,11 @@ def configure_sky_texture(sky, sun: dict) -> None:
         sky.inputs["Sun Rotation"].default_value = math.radians(float(sun.get("azimuth_deg", 120)))
 
 
-CYCLES_BACKENDS = ("OPTIX", "CUDA", "HIP", "METAL", "ONEAPI")
-
-
-def configure_cycles_device() -> dict:
-    """Pick a Cycles compute device.
-
-    ``BT_CYCLES_DEVICE`` may be ``CPU``, ``GPU`` (fail if none), or ``auto``
-    (default: use the first backend with a non-CPU device, else CPU). Without
-    this Blender silently renders on the CPU even when a CUDA GPU is present.
-    """
-
-    requested = os.environ.get("BT_CYCLES_DEVICE", "auto").strip().upper() or "AUTO"
-    scene = bpy.context.scene
-    result = {"requested": requested.lower(), "device": "CPU", "backend": None, "names": []}
-    if requested == "CPU":
-        scene.cycles.device = "CPU"
-        return result
-    prefs = bpy.context.preferences.addons.get("cycles")
-    if prefs is None:
-        if requested == "GPU":
-            raise RuntimeError("BT_CYCLES_DEVICE=GPU but the Cycles add-on is unavailable")
-        return result
-    prefs = prefs.preferences
-    for backend in CYCLES_BACKENDS:
-        try:
-            prefs.compute_device_type = backend
-        except TypeError:
-            continue
-        prefs.get_devices()
-        gpus = [d for d in prefs.devices if d.type != "CPU"]
-        if not gpus:
-            continue
-        for device in prefs.devices:
-            device.use = device.type != "CPU"
-        scene.cycles.device = "GPU"
-        result.update({"device": "GPU", "backend": backend, "names": [d.name for d in gpus]})
-        return result
-    if requested == "GPU":
-        raise RuntimeError("BT_CYCLES_DEVICE=GPU but Cycles found no GPU device")
-    scene.cycles.device = "CPU"
-    return result
-
-
 def configure_render(layout: dict, out_path: Path) -> dict:
     render = layout.get("render", {})
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
-    compute = configure_cycles_device()
+    compute = configure_cycles_device(bpy.context)
     scene.cycles.samples = int(render.get("samples", 256))
     scene.cycles.use_denoising = True
     if hasattr(scene.cycles, "transparent_max_bounces"):

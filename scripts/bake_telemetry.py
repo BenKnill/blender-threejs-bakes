@@ -192,7 +192,28 @@ def run_with_telemetry(
     receipt_path.parent.mkdir(parents=True, exist_ok=True)
     started_at = datetime.now(UTC)
     started = time.perf_counter()
-    process = subprocess.Popen(command)
+    try:
+        process = subprocess.Popen(command)
+    except OSError as error:
+        receipt = telemetry_receipt(
+            command=command,
+            label=label,
+            started_at=started_at,
+            elapsed_seconds=time.perf_counter() - started,
+            status="failed",
+            exit_code=127,
+            pid=os.getpid(),
+            peak_rss_kib=0,
+            rss_available=False,
+            interval_s=interval_s,
+            sample_count=0,
+            artifacts=artifacts,
+            log_path=log_path,
+            final=True,
+        )
+        receipt["error"] = str(error)
+        write_json_atomic(receipt_path, receipt)
+        return 127
     peak_rss_kib = 0
     rss_available = False
     sample_count = 0
@@ -357,15 +378,7 @@ def launch_background(
         detached_prefix.append("setsid")
     detached_command = shlex.join([*detached_prefix, *worker_command])
     launch_line = f"{detached_command} >> {shlex.quote(str(log_path))} 2>&1 < /dev/null & echo $!"
-    launched = subprocess.run(
-        [shell, "-c", launch_line],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if launched.returncode != 0:
-        raise RuntimeError(f"background launch failed: {launched.stderr.strip()}")
-    worker_pid = int(launched.stdout.strip())
+    # Publish before spawning: the worker is the sole writer after launch.
     write_json_atomic(
         receipt_path,
         {
@@ -374,7 +387,7 @@ def launch_background(
             "status": "launching",
             "command": command,
             "cwd": str(Path.cwd()),
-            "pid": worker_pid,
+            "pid": os.getpid(),
             "started_at": started_at.isoformat(),
             "updated_at": started_at.isoformat(),
             "elapsed_seconds": 0.0,
@@ -386,6 +399,15 @@ def launch_background(
             "artifacts": [running_artifact_record(path) for path in artifacts],
         },
     )
+    launched = subprocess.run(
+        [shell, "-c", launch_line],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if launched.returncode != 0:
+        raise RuntimeError(f"background launch failed: {launched.stderr.strip()}")
+    worker_pid = int(launched.stdout.strip())
     print(
         json.dumps(
             {

@@ -19,6 +19,8 @@ test:
     python3 scripts/test_compile_physics.py
     python3 scripts/test_compile_tree_assembly.py
     python3 scripts/test_bake_telemetry.py
+    python3 scripts/test_source_paths.py
+    python3 scripts/test_cycles_devices.py
     python3 scripts/test_editor_server.py
     python3 scripts/test_wind_canopy_math.py
     python3 scripts/test_haircut_math.py

@@ -11,9 +11,9 @@ python3 scripts/bake_telemetry.py --background \
   --label "rescue ship hero render" \
   --receipt renders/rescue_ship/hero.telemetry.json \
   --log renders/rescue_ship/hero.log \
-  --artifact renders/rescue_ship/hero.png \
+  --artifact renders/rescue_ship/rescue_ship_hero.png \
   -- scripts/blender.sh --background --python scripts/render_parametric_rescue_ship.py -- \
-    --output renders/rescue_ship/hero.png
+    --output-dir renders/rescue_ship --views hero
 ```
 
 Inspect it at any time without attaching to the child process:
@@ -32,7 +32,7 @@ even if a child has stopped updating unexpectedly.
 On completion the same receipt records `succeeded`, `failed`, or `interrupted`,
 the exit code, final wall time, sampled peak process-tree memory, and recursive
 artifact byte/file counts. Peak memory remains an observational high-water
-estimate sampled through `ps`; short spikes between samples can be missed.
+estimate sampled through `/proc` on Linux or `ps` elsewhere; short spikes between samples can be missed.
 
 Omit `--background` when live child output in the current terminal is useful.
 The receipt is still updated while the job runs. Model-specific launchers should
