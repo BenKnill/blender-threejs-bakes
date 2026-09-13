@@ -15,6 +15,9 @@ import bpy
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
+from btlib.source_paths import (  # noqa: E402 -- Blender --python omits script dir.
+    resolve_source_blend,
+)
 from btlib.texture_paths import (  # noqa: E402 -- Blender --python omits script dir.
     default_texture_roots,
     existing_unique_paths,
@@ -187,7 +190,7 @@ def main() -> None:
 
     asset_reports = [
         inspect_blend(
-            Path(asset["source_blend"]).expanduser(),
+            resolve_source_blend(asset["source_blend"], ROOT),
             asset_id=asset["asset_id"],
             texture_index=texture_index,
             relink=args.relink,

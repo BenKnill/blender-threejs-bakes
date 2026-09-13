@@ -275,6 +275,29 @@ python3 scripts/bt.py light preset golden_hour --layout /tmp/preset_sanity.layou
 python3 scripts/bt.py inspect /tmp/preset_sanity.layout.json
 ```
 
+## Render on another machine (WSL, Linux, GPU)
+
+The manifest stores absolute `source_blend` paths from the authoring Mac. On
+another host, point the renderer at the same files without editing the
+manifest:
+
+```sh
+# explicit prefix remap (os.pathsep-separated old=new pairs)
+export BT_SOURCE_BLEND_MAP="/Users/boxer/asset-menagerie=/mnt/k/asset-menagerie"
+# or rely on the default: any .../asset-menagerie/<rest> path is retried under
+# ~/asset-menagerie/<rest>, so a symlinked or mounted menagerie just works.
+```
+
+Cycles picks a GPU automatically when one is available (OptiX, CUDA, HIP,
+Metal, oneAPI, in that order). Set `BT_CYCLES_DEVICE=CPU` to force the CPU or
+`BT_CYCLES_DEVICE=GPU` to fail loudly when no GPU is found. The render receipt
+records the chosen `compute` device and `render_seconds`.
+
+Texture relink indexing is lazy: the texture roots are only scanned when an
+appended asset actually has a missing image. On a network or 9p-mounted
+menagerie a full scan can take minutes, so the receipt's
+`texture_index_scanned` flag tells you whether that cost was paid.
+
 ## Diagnose missing source textures
 
 Material image links live inside the source `.blend` files, so texture diagnostics

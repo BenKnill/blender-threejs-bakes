@@ -1,22 +1,40 @@
-# Bake telemetry
+# Bake jobs and live telemetry
 
-Wrap an expensive Blender, ffmpeg, or packaging stage to record its elapsed
-time, sampled peak process-tree memory, exit status, and output sizes:
+Long Blender, browser-capture, ffmpeg, and packaging stages should run as
+observable jobs. The wrapper writes a live receipt while the command runs and a
+final receipt on success, failure, or interruption.
+
+Launch a job without holding the calling terminal:
+
+```sh
+python3 scripts/bake_telemetry.py --background \
+  --label "rescue ship hero render" \
+  --receipt renders/rescue_ship/hero.telemetry.json \
+  --log renders/rescue_ship/hero.log \
+  --artifact renders/rescue_ship/rescue_ship_hero.png \
+  -- scripts/blender.sh --background --python scripts/render_parametric_rescue_ship.py -- \
+    --output-dir renders/rescue_ship --views hero
+```
+
+Inspect it at any time without attaching to the child process:
 
 ```sh
 python3 scripts/bake_telemetry.py \
-  --label "wind canopy Blender frames" \
-  --receipt physics/outputs/wind-canopy-blender.telemetry.json \
-  --artifact renders/wind_canopy_frames \
-  -- scripts/blender.sh --background --python scripts/render_wind_canopy.py -- ...
+  --status renders/rescue_ship/hero.telemetry.json
 ```
 
-Child stdout and stderr remain live. The wrapper returns the child's exit code
-and writes `bake-telemetry/1` JSON on success or failure. Peak memory is sampled
-from the launched process and all descendants with `ps`; it is an observational
-high-water estimate, not an allocator-level measurement. Short spikes between
-samples can be missed. Directories report recursive file count and byte size.
+The live `bake-telemetry/2` receipt includes `status`, `pid`, `started_at`,
+`updated_at`, `elapsed_seconds`, sampled process-tree RSS, log path, command,
+and declared artifact presence. `--status` also computes
+`live_elapsed_seconds` from the observation time, so elapsed time remains useful
+even if a child has stopped updating unexpectedly.
 
-The wrapper is opt-in in this first slice. Bake scripts should give Blender,
-encoding, and other materially different stages separate receipts so the slow
-or memory-heavy stage stays visible.
+On completion the same receipt records `succeeded`, `failed`, or `interrupted`,
+the exit code, final wall time, sampled peak process-tree memory, and recursive
+artifact byte/file counts. Peak memory remains an observational high-water
+estimate sampled through `/proc` on Linux or `ps` elsewhere; short spikes between samples can be missed.
+
+Omit `--background` when live child output in the current terminal is useful.
+The receipt is still updated while the job runs. Model-specific launchers should
+use the background form by default and provide an explicit foreground/debug
+override.

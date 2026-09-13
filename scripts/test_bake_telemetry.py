@@ -4,15 +4,21 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from bake_telemetry import (
+    SCHEMA,
     artifact_record,
+    launch_background,
     parse_process_table,
     process_tree_rss_kib,
+    read_status,
     run_with_telemetry,
 )
 
@@ -58,7 +64,8 @@ class BakeTelemetryTests(unittest.TestCase):
             )
             self.assertEqual(result, 0)
             data = json.loads(receipt.read_text(encoding="utf-8"))
-            self.assertEqual(data["schema"], "bake-telemetry/1")
+            self.assertEqual(data["schema"], SCHEMA)
+            self.assertEqual(data["status"], "succeeded")
             self.assertEqual(data["exit_code"], 0)
             self.assertGreater(data["wall_seconds"], 0.1)
             self.assertGreater(data["memory"]["peak_rss_bytes"], 1_000_000)
@@ -75,7 +82,83 @@ class BakeTelemetryTests(unittest.TestCase):
                 interval_s=0.02,
             )
             self.assertEqual(result, 7)
-            self.assertEqual(json.loads(receipt.read_text())["exit_code"], 7)
+            data = json.loads(receipt.read_text())
+            self.assertEqual(data["status"], "failed")
+            self.assertEqual(data["exit_code"], 7)
+
+    def test_missing_executable_is_receipted_as_failed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            receipt = Path(directory) / "failure.json"
+            result = run_with_telemetry(
+                [str(Path(directory) / "missing-command")],
+                receipt_path=receipt,
+                label="missing child",
+                artifacts=[],
+                interval_s=0.02,
+            )
+            self.assertEqual(result, 127)
+            data = read_status(receipt)
+            self.assertEqual(data["status"], "failed")
+            self.assertIn("error", data)
+
+    def test_fast_worker_completion_is_not_overwritten_by_launcher(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            receipt = root / "receipt.json"
+
+            def finish_worker(*args, **kwargs):
+                receipt.write_text(json.dumps({"status": "succeeded", "exit_code": 0}))
+                return subprocess.CompletedProcess([], 0, "12345\n", "")
+
+            with patch("bake_telemetry.subprocess.run", side_effect=finish_worker):
+                launch_background(
+                    [sys.executable, "-c", "pass"],
+                    receipt_path=receipt,
+                    label="fast worker",
+                    artifacts=[],
+                    interval_s=0.02,
+                    status_interval_s=0.05,
+                    log_path=root / "job.log",
+                )
+            self.assertEqual(read_status(receipt)["status"], "succeeded")
+
+    def test_background_job_exposes_live_elapsed_log_and_completion(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            artifact = root / "finished.txt"
+            receipt = root / "background.telemetry.json"
+            log = root / "background.log"
+            child = (
+                "import pathlib,time; time.sleep(0.25); "
+                f"pathlib.Path({str(artifact)!r}).write_text('done'); print('finished')"
+            )
+            result = launch_background(
+                [sys.executable, "-c", child],
+                receipt_path=receipt,
+                label="background unit child",
+                artifacts=[artifact],
+                interval_s=0.02,
+                status_interval_s=0.05,
+                log_path=log,
+            )
+            self.assertEqual(result, 0)
+            observed_running = False
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                status = read_status(receipt)
+                observed_running |= status["status"] in {
+                    "launching",
+                    "running",
+                    "finalizing",
+                }
+                if status["status"] == "succeeded":
+                    break
+                time.sleep(0.03)
+            self.assertTrue(observed_running)
+            self.assertEqual(status["status"], "succeeded")
+            self.assertGreater(status["live_elapsed_seconds"], 0.2)
+            self.assertEqual(status["artifacts"][0]["size_bytes"], 4)
+            self.assertIn("finished", log.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":
