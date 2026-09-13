@@ -17,9 +17,10 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
 from asset_texture_report import inspect_current_file  # noqa: E402 -- Blender --python path setup.
+from btlib.source_paths import resolve_source_blend  # noqa: E402 -- Blender --python path setup.
 from btlib.texture_paths import (  # noqa: E402 -- Blender --python path setup.
+    LazyTextureIndex,
     default_texture_roots,
-    index_texture_basenames,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -156,7 +157,7 @@ def proxy_path(asset: dict) -> Path:
 
 
 def source_path(asset: dict) -> Path:
-    return Path(asset["source_blend"]).expanduser()
+    return resolve_source_blend(asset["source_blend"], ROOT)
 
 
 def load_manifest(path: Path) -> dict:
@@ -304,7 +305,7 @@ def main() -> None:
 
     GLB_DIR.mkdir(parents=True, exist_ok=True)
     texture_roots = default_texture_roots(ROOT)
-    texture_index = index_texture_basenames(texture_roots)
+    texture_index = LazyTextureIndex(texture_roots)
 
     generated = datetime.now(UTC).isoformat()
     receipt_assets = []
